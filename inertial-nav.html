@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inertial Navigation System - SOUPY LABS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --card: #12121a;
+            --accent: #ffcd00;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, rgba(255,205,0,0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255,205,0,0.2);
+        }
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(255,205,0,0.3);
+            margin-bottom: 8px;
+        }
+        .header p { color: var(--dim); font-size: 0.9rem; }
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: opacity 0.3s;
+        }
+        .back-link:hover { opacity: 0.7; }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        .controls {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255,205,0,0.1);
+            height: fit-content;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: block;
+            color: var(--accent);
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,205,0,0.2);
+            outline: none;
+            border-radius: 3px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .value-display {
+            color: var(--text);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(255,205,0,0.2), rgba(255,205,0,0.1));
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: linear-gradient(135deg, rgba(255,205,0,0.3), rgba(255,205,0,0.2));
+            box-shadow: 0 0 20px rgba(255,205,0,0.2);
+        }
+        .simulation-area {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255,205,0,0.1);
+        }
+        #canvas {
+            width: 100%;
+            height: 600px;
+            background: #080810;
+            border-radius: 8px;
+            border: 1px solid rgba(255,205,0,0.1);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: rgba(255,205,0,0.05);
+            border: 1px solid rgba(255,205,0,0.1);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 4px;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+        }
+        .info-panel {
+            background: rgba(255,205,0,0.05);
+            border-left: 3px solid var(--accent);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .info-panel h3 {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        .info-panel p {
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: var(--dim);
+        }
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to SOUPY LABS</a>
+
+    <div class="header">
+        <h1>🧭 INERTIAL NAVIGATION SYSTEM</h1>
+        <p>IMU sensor fusion with truth anchors to bound drift</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h3 style="color: var(--accent); margin-bottom: 15px; font-size: 1rem;">Control Panel</h3>
+
+            <div class="control-group">
+                <label>IMU Update Rate (Hz)</label>
+                <input type="range" id="imuRate" min="10" max="1000" value="100" step="10">
+                <div class="value-display" id="imuRateVal">100 Hz</div>
+            </div>
+
+            <div class="control-group">
+                <label>Gyro Noise (deg/s)</label>
+                <input type="range" id="gyroNoise" min="0" max="5" value="0.5" step="0.1">
+                <div class="value-display" id="gyroNoiseVal">0.5 deg/s</div>
+            </div>
+
+            <div class="control-group">
+                <label>Accel Noise (m/s²)</label>
+                <input type="range" id="accelNoise" min="0" max="1" value="0.1" step="0.01">
+                <div class="value-display" id="accelNoiseVal">0.1 m/s²</div>
+            </div>
+
+            <div class="control-group">
+                <label>Gyro Bias Drift (deg/h)</label>
+                <input type="range" id="gyroBias" min="0" max="10" value="1" step="0.1">
+                <div class="value-display" id="gyroBiasVal">1.0 deg/h</div>
+            </div>
+
+            <div class="control-group">
+                <label>Truth Anchor Interval (s)</label>
+                <input type="range" id="anchorInterval" min="5" max="120" value="30" step="5">
+                <div class="value-display" id="anchorIntervalVal">30 s</div>
+            </div>
+
+            <div class="control-group">
+                <label>Simulation Speed</label>
+                <input type="range" id="simSpeed" min="0.1" max="5" value="1" step="0.1">
+                <div class="value-display" id="simSpeedVal">1.0x</div>
+            </div>
+
+            <button id="resetBtn">🔄 Reset Simulation</button>
+            <button id="toggleAnchor">⚓ Toggle Truth Anchors</button>
+            <button id="addWaypoint">📍 Add Waypoint</button>
+        </div>
+
+        <div class="simulation-area">
+            <canvas id="canvas" width="1000" height="600"></canvas>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Position Error</div>
+                    <div class="stat-value" id="posError">0.0 m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Heading Error</div>
+                    <div class="stat-value" id="headError">0.0°</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Velocity</div>
+                    <div class="stat-value" id="velocity">0.0 m/s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Runtime</div>
+                    <div class="stat-value" id="runtime">0.0 s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Anchors Used</div>
+                    <div class="stat-value" id="anchors">0</div>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <h3>About Inertial Navigation</h3>
+                <p>
+                    An <strong>Inertial Navigation System (INS)</strong> uses accelerometers and gyroscopes (IMU) to calculate position,
+                    velocity, and orientation. Without corrections, sensor noise and bias cause position errors to grow quadratically
+                    over time. This simulation demonstrates how periodic <strong>truth anchors</strong> (GPS fixes, landmarks, beacons)
+                    can reset accumulated drift using sensor fusion (e.g., Kalman filtering). Watch the blue estimated path diverge
+                    from the green truth path, then snap back when anchors are applied. Yellow markers show anchor correction events.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // State
+        let truePath = [];
+        let estimatedPath = [];
+        let anchorPoints = [];
+        let waypoints = [];
+        let time = 0;
+        let lastAnchorTime = 0;
+        let anchorsEnabled = true;
+        let anchorCount = 0;
+
+        // IMU state
+        let truePos = { x: 100, y: 300 };
+        let trueVel = { x: 50, y: 0 };
+        let trueHeading = 0;
+        let estPos = { x: 100, y: 300 };
+        let estVel = { x: 50, y: 0 };
+        let estHeading = 0;
+        let gyroBiasCurrent = 0;
+
+        // Parameters
+        let imuRate = 100;
+        let gyroNoise = 0.5;
+        let accelNoise = 0.1;
+        let gyroBias = 1.0;
+        let anchorInterval = 30;
+        let simSpeed = 1;
+
+        // Update controls
+        document.getElementById('imuRate').addEventListener('input', e => {
+            imuRate = parseFloat(e.target.value);
+            document.getElementById('imuRateVal').textContent = imuRate + ' Hz';
+        });
+        document.getElementById('gyroNoise').addEventListener('input', e => {
+            gyroNoise = parseFloat(e.target.value);
+            document.getElementById('gyroNoiseVal').textContent = gyroNoise.toFixed(1) + ' deg/s';
+        });
+        document.getElementById('accelNoise').addEventListener('input', e => {
+            accelNoise = parseFloat(e.target.value);
+            document.getElementById('accelNoiseVal').textContent = accelNoise.toFixed(2) + ' m/s²';
+        });
+        document.getElementById('gyroBias').addEventListener('input', e => {
+            gyroBias = parseFloat(e.target.value);
+            document.getElementById('gyroBiasVal').textContent = gyroBias.toFixed(1) + ' deg/h';
+        });
+        document.getElementById('anchorInterval').addEventListener('input', e => {
+            anchorInterval = parseFloat(e.target.value);
+            document.getElementById('anchorIntervalVal').textContent = anchorInterval + ' s';
+        });
+        document.getElementById('simSpeed').addEventListener('input', e => {
+            simSpeed = parseFloat(e.target.value);
+            document.getElementById('simSpeedVal').textContent = simSpeed.toFixed(1) + 'x';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        document.getElementById('toggleAnchor').addEventListener('click', () => {
+            anchorsEnabled = !anchorsEnabled;
+            document.getElementById('toggleAnchor').textContent =
+                anchorsEnabled ? '⚓ Truth Anchors ON' : '⚓ Truth Anchors OFF';
+        });
+        document.getElementById('addWaypoint').addEventListener('click', () => {
+            waypoints.push({ x: Math.random() * 800 + 100, y: Math.random() * 400 + 100 });
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            waypoints.push({ x, y });
+        });
+
+        function reset() {
+            truePath = [];
+            estimatedPath = [];
+            anchorPoints = [];
+            time = 0;
+            lastAnchorTime = 0;
+            anchorCount = 0;
+            truePos = { x: 100, y: 300 };
+            trueVel = { x: 50, y: 0 };
+            trueHeading = 0;
+            estPos = { x: 100, y: 300 };
+            estVel = { x: 50, y: 0 };
+            estHeading = 0;
+            gyroBiasCurrent = 0;
+        }
+
+        function gaussian(mean, stdDev) {
+            let u1 = Math.random();
+            let u2 = Math.random();
+            let z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            return mean + z0 * stdDev;
+        }
+
+        function updateSimulation(dt) {
+            // Update true motion (simple sinusoidal path or waypoint following)
+            if (waypoints.length > 0) {
+                const target = waypoints[0];
+                const dx = target.x - truePos.x;
+                const dy = target.y - truePos.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 10) {
+                    waypoints.shift();
+                } else {
+                    trueHeading = Math.atan2(dy, dx);
+                }
+            } else {
+                trueHeading += 0.3 * dt * Math.sin(time * 0.5);
+            }
+
+            const speed = 50;
+            trueVel.x = speed * Math.cos(trueHeading);
+            trueVel.y = speed * Math.sin(trueHeading);
+            truePos.x += trueVel.x * dt;
+            truePos.y += trueVel.y * dt;
+
+            // Boundary wrap
+            if (truePos.x < 0) truePos.x = canvas.width;
+            if (truePos.x > canvas.width) truePos.x = 0;
+            if (truePos.y < 0) truePos.y = canvas.height;
+            if (truePos.y > canvas.height) truePos.y = 0;
+
+            truePath.push({ ...truePos });
+            if (truePath.length > 500) truePath.shift();
+
+            // Simulate IMU measurements with noise and bias
+            gyroBiasCurrent += (gyroBias / 3600) * dt * (Math.random() - 0.5);
+            const measuredGyro = trueHeading + gaussian(0, gyroNoise * Math.PI / 180) + gyroBiasCurrent * Math.PI / 180;
+            const measuredAccelX = trueVel.x + gaussian(0, accelNoise);
+            const measuredAccelY = trueVel.y + gaussian(0, accelNoise);
+
+            // Dead reckoning integration
+            estHeading = measuredGyro;
+            estVel.x = measuredAccelX;
+            estVel.y = measuredAccelY;
+            estPos.x += estVel.x * dt;
+            estPos.y += estVel.y * dt;
+
+            estimatedPath.push({ ...estPos });
+            if (estimatedPath.length > 500) estimatedPath.shift();
+
+            // Truth anchor correction
+            if (anchorsEnabled && (time - lastAnchorTime) >= anchorInterval) {
+                estPos.x = truePos.x;
+                estPos.y = truePos.y;
+                estHeading = trueHeading;
+                gyroBiasCurrent = 0;
+                anchorPoints.push({ ...truePos });
+                lastAnchorTime = time;
+                anchorCount++;
+            }
+
+            time += dt;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#080810';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(255,205,0,0.05)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Waypoints
+            ctx.fillStyle = 'rgba(255,100,255,0.5)';
+            waypoints.forEach(wp => {
+                ctx.beginPath();
+                ctx.arc(wp.x, wp.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // True path (green)
+            ctx.strokeStyle = '#00ff9d';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            truePath.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Estimated path (blue)
+            ctx.strokeStyle = '#00aaff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            estimatedPath.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Anchor points (yellow)
+            ctx.fillStyle = '#ffcd00';
+            anchorPoints.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Current positions
+            ctx.fillStyle = '#00ff9d';
+            ctx.beginPath();
+            ctx.arc(truePos.x, truePos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#00aaff';
+            ctx.beginPath();
+            ctx.arc(estPos.x, estPos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Legend
+            ctx.font = '12px Roboto';
+            ctx.fillStyle = '#00ff9d';
+            ctx.fillText('● True Path', 20, 30);
+            ctx.fillStyle = '#00aaff';
+            ctx.fillText('● Estimated (INS)', 20, 50);
+            ctx.fillStyle = '#ffcd00';
+            ctx.fillText('● Truth Anchors', 20, 70);
+
+            // Update stats
+            const posError = Math.sqrt((estPos.x - truePos.x)**2 + (estPos.y - truePos.y)**2);
+            const headError = Math.abs((estHeading - trueHeading) * 180 / Math.PI) % 360;
+            const vel = Math.sqrt(trueVel.x**2 + trueVel.y**2);
+
+            document.getElementById('posError').textContent = posError.toFixed(1) + ' m';
+            document.getElementById('headError').textContent = headError.toFixed(1) + '°';
+            document.getElementById('velocity').textContent = vel.toFixed(1) + ' m/s';
+            document.getElementById('runtime').textContent = time.toFixed(1) + ' s';
+            document.getElementById('anchors').textContent = anchorCount;
+        }
+
+        function animate() {
+            const dt = 0.02 * simSpeed;
+            updateSimulation(dt);
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        reset();
+        animate();
+    </script>
+</body>
+</html>
