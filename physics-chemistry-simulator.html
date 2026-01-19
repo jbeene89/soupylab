@@ -302,6 +302,7 @@
                         <option value="steel">Steel (Fe-C)</option>
                         <option value="graphene">Graphene Oxide</option>
                         <option value="boron">Boron Nitride (BN)</option>
+                        <option value="aerogel">Aerogel (SiO₂ Gel + CO₂)</option>
                         <option value="custom">Custom Material</option>
                     </select>
                 </div>
@@ -366,6 +367,44 @@
                     </div>
                 </div>
 
+                <div class="control-group" style="background: linear-gradient(135deg, rgba(255,200,100,0.1) 0%, rgba(255,150,50,0.1) 100%); border: 2px solid #ff9944;">
+                    <label>
+                        🫧 Bubble Nucleation Mode
+                        <span class="tooltip" data-tooltip="Enable rapid depressurization to simulate bubble nucleation and aerogel formation">?</span>
+                    </label>
+                    <label style="display: flex; align-items: center; margin-top: 10px;">
+                        <input type="checkbox" id="nucleationMode" style="width: auto; margin-right: 8px;">
+                        <span>Enable Depressurization</span>
+                    </label>
+                </div>
+
+                <div class="control-group" id="depressControlGroup" style="display: none;">
+                    <label>
+                        Depressurization Rate
+                        <span class="tooltip" data-tooltip="Rate of pressure drop (bar/s). Higher rates cause more rapid bubble nucleation">?</span>
+                    </label>
+                    <input type="range" id="depressRate" min="0.1" max="20" value="2" step="0.1">
+                    <div class="slider-value">
+                        <span>0.1 bar/s</span>
+                        <span class="value-display" id="depressRateValue">2.0 bar/s</span>
+                        <span>20 bar/s</span>
+                    </div>
+                </div>
+
+                <div class="control-group" id="targetPressControlGroup" style="display: none;">
+                    <label>
+                        Target Pressure
+                        <span class="tooltip" data-tooltip="Final pressure after depressurization">?</span>
+                    </label>
+                    <input type="range" id="targetPressure" min="0.1" max="10" value="1" step="0.1">
+                    <div class="slider-value">
+                        <span>0.1 atm</span>
+                        <span class="value-display" id="targetPressureValue">1.0 atm</span>
+                        <span>10 atm</span>
+                    </div>
+                </div>
+
+                <button id="startDepressBtn" style="display: none; background: linear-gradient(135deg, #ff9944 0%, #ff6644 100%);">💥 Start Depressurization</button>
                 <button id="exportBtn">📊 Export Data to CSV</button>
                 <button id="resetBtn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🔄 Reset Simulation</button>
             </div>
@@ -408,6 +447,29 @@
                         <div class="info-card">
                             <h3>Boiling Point</h3>
                             <div class="value" id="boilingValue">373 K</div>
+                        </div>
+                    </div>
+
+                    <!-- Nucleation Properties (shown when enabled) -->
+                    <div id="nucleationInfo" style="display: none; margin-top: 20px;">
+                        <h2 style="margin-bottom: 15px; color: #ff9944;">🫧 Bubble Nucleation Properties</h2>
+                        <div class="info-grid">
+                            <div class="info-card" style="background: linear-gradient(135deg, rgba(255,200,100,0.2) 0%, rgba(255,150,50,0.1) 100%);">
+                                <h3>Supersaturation (S)</h3>
+                                <div class="value" id="supersaturationValue">1.00</div>
+                            </div>
+                            <div class="info-card" style="background: linear-gradient(135deg, rgba(255,200,100,0.2) 0%, rgba(255,150,50,0.1) 100%);">
+                                <h3>Critical Radius (r*)</h3>
+                                <div class="value" id="criticalRadiusValue">— nm</div>
+                            </div>
+                            <div class="info-card" style="background: linear-gradient(135deg, rgba(255,200,100,0.2) 0%, rgba(255,150,50,0.1) 100%);">
+                                <h3>Nucleation Rate (J)</h3>
+                                <div class="value" id="nucleationRateValue">0 /m³·s</div>
+                            </div>
+                            <div class="info-card" style="background: linear-gradient(135deg, rgba(255,200,100,0.2) 0%, rgba(255,150,50,0.1) 100%);">
+                                <h3>Bubble Count</h3>
+                                <div class="value" id="bubbleCountValue">0</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -574,6 +636,33 @@
                 },
                 color: { r: 240, g: 240, b: 240 }
             },
+            aerogel: {
+                name: "Aerogel (Silica Gel + CO₂)",
+                formula: "SiO₂·nH₂O + CO₂",
+                meltingPoint: 273, // K (gel state)
+                boilingPoint: 373, // K (solvent boiling)
+                viscosity: {
+                    A: 0.015, // Pa·s (gel has yield stress)
+                    B: 2800,
+                    T_ref: 298
+                },
+                density: {
+                    ref: 150, // kg/m³ (ultra-low density!)
+                    alpha: 0.0001
+                },
+                heatCapacity: 800,
+                thermalConductivity: 0.015, // Extremely low
+                henryConstants: {
+                    co2: { kH: 0.05, deltaH: -22000 }, // High CO₂ solubility
+                    o2: { kH: 0.002, deltaH: -14000 },
+                    n2: { kH: 0.001, deltaH: -15000 },
+                    h2: { kH: 0.003, deltaH: -6000 }
+                },
+                color: { r: 180, g: 220, b: 255 },
+                surfaceTension: 0.020, // N/m (gel-gas interface)
+                supercriticalPressure: 73.8, // atm (CO₂)
+                supercriticalTemp: 304.13 // K (CO₂)
+            },
             custom: {
                 name: "Custom Material",
                 formula: "Custom",
@@ -604,7 +693,20 @@
         let gasType = 'co2';
         let simulationSpeed = 1;
         let particles = [];
+        let bubbles = [];
         let animationId = null;
+
+        // Nucleation mode variables
+        let nucleationMode = false;
+        let depressurizationActive = false;
+        let initialPressure = 1;
+        let targetPressure = 1;
+        let depressRate = 2; // bar/s
+        let supersaturation = 1.0;
+
+        // Constants for nucleation
+        const k_B = 1.380649e-23; // Boltzmann constant (J/K)
+        const N_A = 6.02214076e23; // Avogadro's number
 
         // ===== CANVAS SETUP =====
         const canvas = document.getElementById('mainCanvas');
@@ -665,6 +767,163 @@
             if (temp < material.meltingPoint) return 'solid';
             if (temp < material.boilingPoint) return 'liquid';
             return 'gas';
+        }
+
+        // ===== CLASSICAL NUCLEATION THEORY =====
+
+        // Calculate critical bubble radius: r* = 2γ / ΔP
+        function calculateCriticalRadius(surfaceTension, pressureDiff) {
+            if (pressureDiff <= 0) return Infinity;
+            return (2 * surfaceTension) / (pressureDiff * ATM_TO_PA);
+        }
+
+        // Calculate Gibbs free energy barrier: ΔG* = 16πγ³ / (3(ΔP)²)
+        function calculateEnergyBarrier(surfaceTension, pressureDiff) {
+            if (pressureDiff <= 0) return Infinity;
+            const gamma = surfaceTension;
+            const deltaP = pressureDiff * ATM_TO_PA;
+            return (16 * Math.PI * Math.pow(gamma, 3)) / (3 * deltaP * deltaP);
+        }
+
+        // Calculate Zeldovich factor: Z = √(γ / (3πkT × r*²))
+        function calculateZeldovichFactor(surfaceTension, temp, criticalRadius) {
+            if (criticalRadius === Infinity) return 0;
+            return Math.sqrt(surfaceTension / (3 * Math.PI * k_B * temp * criticalRadius * criticalRadius));
+        }
+
+        // Calculate nucleation rate: J = A × exp(-ΔG*/kT)
+        function calculateNucleationRate(material, temp, press, equilibriumPress) {
+            const surfaceTension = material.surfaceTension || 0.072; // Default to water
+            const pressureDiff = press - equilibriumPress;
+
+            if (pressureDiff <= 0) return 0; // No supersaturation
+
+            const r_star = calculateCriticalRadius(surfaceTension, pressureDiff);
+            const deltaG = calculateEnergyBarrier(surfaceTension, pressureDiff);
+            const Z = calculateZeldovichFactor(surfaceTension, temp, r_star);
+
+            // Pre-exponential factor (simplified)
+            const n0 = (calculateDensity(material, temp, press) / 0.018) * N_A; // molecules/m³
+            const beta_star = Math.sqrt(surfaceTension / (Math.PI * 0.018 / N_A)); // Attachment rate
+            const A = n0 * Z * beta_star;
+
+            // Nucleation rate
+            const J = A * Math.exp(-deltaG / (k_B * temp));
+            return isFinite(J) ? J : 0;
+        }
+
+        // Calculate supersaturation ratio: S = P_actual / P_equilibrium
+        function calculateSupersaturation(actual_press, equilibrium_press) {
+            return actual_press / equilibrium_press;
+        }
+
+        // Calculate equilibrium vapor pressure (simplified Antoine equation)
+        function calculateVaporPressure(material, temp) {
+            // Simplified Clausius-Clapeyron for rough estimate
+            const T_b = material.boilingPoint; // Boiling point at 1 atm
+            const L = 40000; // Latent heat (J/mol) - rough estimate
+
+            if (temp >= T_b) return 1.0; // Above boiling point
+
+            const P_eq = Math.exp((L / R) * (1/T_b - 1/temp));
+            return P_eq; // in atm
+        }
+
+        // ===== BUBBLE PARTICLE CLASS =====
+        class Bubble {
+            constructor(x, y, initialRadius = 0.5) {
+                this.x = x;
+                this.y = y;
+                this.radius = initialRadius; // pixels
+                this.physicalRadius = initialRadius * 1e-6; // Convert to meters
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = -Math.abs(Math.random()) * 0.5 - 0.2; // Buoyancy
+                this.age = 0;
+                this.maxAge = 300 + Math.random() * 200;
+                this.alpha = 0.7;
+            }
+
+            update(viscosity, density, pressure, temp, surfaceTension, speed) {
+                // Rayleigh-Plesset simplified: bubble growth
+                const P_bubble = pressure * ATM_TO_PA + (2 * surfaceTension / this.physicalRadius);
+                const P_liquid = pressure * ATM_TO_PA;
+                const deltaP = P_bubble - P_liquid;
+
+                // Growth rate: dR/dt ∝ √(ΔP/ρ)
+                if (deltaP > 0 && density > 0) {
+                    const growthRate = Math.sqrt(Math.abs(deltaP) / density) * speed;
+                    this.physicalRadius += growthRate * 0.00001;
+                    this.radius = this.physicalRadius * 1e6; // Back to pixels (micrometers)
+                }
+
+                // Buoyancy (upward motion)
+                this.vy -= 0.02 * speed;
+
+                // Viscous drag
+                const drag = 1 / (1 + viscosity * 10);
+                this.vx *= 0.99 * drag;
+                this.vy *= 0.99 * drag;
+
+                // Brownian motion
+                this.vx += (Math.random() - 0.5) * 0.1 * speed;
+                this.vy += (Math.random() - 0.5) * 0.05 * speed;
+
+                // Update position
+                this.x += this.vx * speed;
+                this.y += this.vy * speed;
+
+                // Boundary wrap
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < -this.radius) this.y = canvas.height;
+
+                // Age
+                this.age += speed;
+                this.alpha = Math.max(0, 0.7 * (1 - this.age / this.maxAge));
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+
+                // Bubble gradient
+                const gradient = ctx.createRadialGradient(
+                    this.x - this.radius * 0.3,
+                    this.y - this.radius * 0.3,
+                    0,
+                    this.x,
+                    this.y,
+                    this.radius
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(0.4, 'rgba(200, 230, 255, 0.6)');
+                gradient.addColorStop(0.7, 'rgba(150, 200, 255, 0.3)');
+                gradient.addColorStop(1, 'rgba(100, 180, 255, 0.1)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius * 0.4, this.y - this.radius * 0.4, this.radius * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Edge
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            isDead() {
+                return this.age >= this.maxAge || this.y < -50;
+            }
         }
 
         // ===== PARTICLE SYSTEM =====
@@ -870,6 +1129,34 @@
             const phase = determinePhase(currentMaterial, temperature);
             const viscosity = calculateViscosity(currentMaterial, temperature, pressure);
             const solubility = calculateSolubility(currentMaterial, temperature, pressure, gasType);
+            const density = calculateDensity(currentMaterial, temperature, pressure);
+            const surfaceTension = currentMaterial.surfaceTension || 0.072;
+
+            // Handle depressurization
+            if (nucleationMode && depressurizationActive && pressure > targetPressure) {
+                pressure -= depressRate * 0.016 * simulationSpeed; // 0.016 = approx 1/60 for 60fps
+                if (pressure < targetPressure) {
+                    pressure = targetPressure;
+                    depressurizationActive = false;
+                }
+
+                // Calculate nucleation
+                const P_vapor = calculateVaporPressure(currentMaterial, temperature);
+                supersaturation = calculateSupersaturation(pressure, P_vapor);
+                const nucleationRate = calculateNucleationRate(currentMaterial, temperature, pressure, P_vapor);
+
+                // Spawn bubbles based on nucleation rate
+                if (supersaturation < 1 && nucleationRate > 1e10) {
+                    const spawnProb = Math.min(nucleationRate / 1e20, 0.5);
+                    if (Math.random() < spawnProb * simulationSpeed) {
+                        bubbles.push(new Bubble(
+                            Math.random() * canvas.width,
+                            Math.random() * canvas.height,
+                            0.5 + Math.random() * 1.5
+                        ));
+                    }
+                }
+            }
 
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -880,8 +1167,10 @@
             // Draw viscosity flow lines for liquids
             drawViscosityLines(viscosity, phase);
 
-            // Draw bubbles for gas evolution
-            drawBubbles(solubility, pressure);
+            // Draw bubbles for gas evolution (original function)
+            if (!nucleationMode) {
+                drawBubbles(solubility, pressure);
+            }
 
             // Update and draw particles
             particles.forEach(particle => {
@@ -889,14 +1178,29 @@
                 particle.draw(ctx, currentMaterial.color, phase, temperature);
             });
 
+            // Update and draw nucleation bubbles
+            if (nucleationMode) {
+                for (let i = bubbles.length - 1; i >= 0; i--) {
+                    bubbles[i].update(viscosity, density, pressure, temperature, surfaceTension, simulationSpeed);
+                    bubbles[i].draw(ctx);
+
+                    if (bubbles[i].isDead()) {
+                        bubbles.splice(i, 1);
+                    }
+                }
+            }
+
             // Draw temperature/pressure info on canvas
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(10, 10, 200, 60);
+            ctx.fillRect(10, 10, 200, nucleationMode ? 80 : 60);
             ctx.fillStyle = 'white';
             ctx.font = '14px monospace';
             ctx.fillText(`T: ${temperature.toFixed(1)} K`, 20, 30);
             ctx.fillText(`P: ${pressure.toFixed(2)} atm`, 20, 50);
             ctx.fillText(`Phase: ${phase.toUpperCase()}`, 20, 70);
+            if (nucleationMode) {
+                ctx.fillText(`Bubbles: ${bubbles.length}`, 20, 90);
+            }
 
             updateUI();
             animationId = requestAnimationFrame(animate);
@@ -930,6 +1234,23 @@
             document.getElementById('solubilityValue').textContent = `${solubility.toFixed(4)} M`;
             document.getElementById('meltingValue').textContent = `${currentMaterial.meltingPoint.toFixed(1)} K`;
             document.getElementById('boilingValue').textContent = `${currentMaterial.boilingPoint.toFixed(1)} K`;
+
+            // Update nucleation properties if in nucleation mode
+            if (nucleationMode) {
+                const P_vapor = calculateVaporPressure(currentMaterial, temperature);
+                const S = calculateSupersaturation(pressure, P_vapor);
+                const surfaceTension = currentMaterial.surfaceTension || 0.072;
+                const pressureDiff = pressure - P_vapor;
+                const r_crit = calculateCriticalRadius(surfaceTension, pressureDiff);
+                const J = calculateNucleationRate(currentMaterial, temperature, pressure, P_vapor);
+
+                document.getElementById('supersaturationValue').textContent = S.toFixed(3);
+                document.getElementById('criticalRadiusValue').textContent =
+                    isFinite(r_crit) ? `${(r_crit * 1e9).toFixed(2)} nm` : '∞';
+                document.getElementById('nucleationRateValue').textContent =
+                    J > 1e6 ? `${J.toExponential(2)} /m³·s` : `${J.toFixed(2)} /m³·s`;
+                document.getElementById('bubbleCountValue').textContent = bubbles.length;
+            }
         }
 
         // ===== GRAPH PLOTTING =====
@@ -1145,6 +1466,43 @@
             document.getElementById('speedValue').textContent = `${simulationSpeed.toFixed(1)}x`;
         });
 
+        // Nucleation mode toggle
+        document.getElementById('nucleationMode').addEventListener('change', (e) => {
+            nucleationMode = e.target.checked;
+
+            // Show/hide controls
+            document.getElementById('depressControlGroup').style.display = nucleationMode ? 'block' : 'none';
+            document.getElementById('targetPressControlGroup').style.display = nucleationMode ? 'block' : 'none';
+            document.getElementById('startDepressBtn').style.display = nucleationMode ? 'block' : 'none';
+            document.getElementById('nucleationInfo').style.display = nucleationMode ? 'block' : 'none';
+
+            if (!nucleationMode) {
+                bubbles = [];
+                depressurizationActive = false;
+            }
+        });
+
+        // Depressurization rate
+        document.getElementById('depressRate').addEventListener('input', (e) => {
+            depressRate = parseFloat(e.target.value);
+            document.getElementById('depressRateValue').textContent = `${depressRate.toFixed(1)} bar/s`;
+        });
+
+        // Target pressure
+        document.getElementById('targetPressure').addEventListener('input', (e) => {
+            targetPressure = parseFloat(e.target.value);
+            document.getElementById('targetPressureValue').textContent = `${targetPressure.toFixed(1)} atm`;
+        });
+
+        // Start depressurization button
+        document.getElementById('startDepressBtn').addEventListener('click', () => {
+            if (!depressurizationActive) {
+                initialPressure = pressure;
+                depressurizationActive = true;
+                bubbles = []; // Clear existing bubbles
+            }
+        });
+
         document.getElementById('tempUnit').addEventListener('change', (e) => {
             const unit = e.target.value;
             const displayValue = unit === 'K' ?
@@ -1195,6 +1553,16 @@
             document.getElementById('tempValue').textContent = '298 K (25°C)';
             document.getElementById('pressureValue').textContent = '1.0 atm';
             document.getElementById('speedValue').textContent = '1.0x';
+
+            // Reset nucleation mode
+            nucleationMode = false;
+            depressurizationActive = false;
+            bubbles = [];
+            document.getElementById('nucleationMode').checked = false;
+            document.getElementById('depressControlGroup').style.display = 'none';
+            document.getElementById('targetPressControlGroup').style.display = 'none';
+            document.getElementById('startDepressBtn').style.display = 'none';
+            document.getElementById('nucleationInfo').style.display = 'none';
 
             const phase = determinePhase(currentMaterial, temperature);
             initializeParticles(phase);
