@@ -175,6 +175,7 @@
     <div class="header">
         <h1>SOUPY LABS</h1>
         <p>Technical Physics Simulation Modules</p>
+        <p class="subtitle">30 interactive simulations • Fusion reactors • Plasma physics • Optics • WebAssembly • Chemistry & materials • Propulsion systems • Aerodynamics • Acoustics • Navigation • GPU visualization • Gemini AI assistant</p>
         <p class="subtitle">22 interactive simulations • Fusion reactors • Plasma physics • Optics • Chemistry & materials • Propulsion systems • Acoustics • Navigation • GPU visualization • Gemini AI assistant</p>
         <p class="subtitle">23 interactive simulations • Fusion reactors • Plasma physics • Optics • WebAssembly • Chemistry & materials • Propulsion systems • Acoustics • Navigation • GPU visualization • Gemini AI assistant</p>
 
@@ -272,14 +273,6 @@
     
     <div class="section-title magnetic">⚡ FIELDS & SIMULATION</div>
     <div class="grid">
-        <a href="magnetic-gpu.html" class="card magnetic">
-            <div class="card-preview">🧲<span class="badge gpu">GPU</span></div>
-            <div class="card-content">
-                <div class="card-title">MagneticGPU</div>
-                <div class="card-desc">WebGL2 vector fields with draggable probe</div>
-                <div class="card-tags"><span class="tag">WebGL2</span><span class="tag">Vector</span></div>
-            </div>
-        </a>
         <a href="em-wave.html" class="card magnetic">
             <div class="card-preview">〰️</div>
             <div class="card-content">
@@ -296,6 +289,22 @@
                 <div class="card-tags"><span class="tag">LBM</span><span class="tag">CFD</span></div>
             </div>
         </a>
+        <a href="thermal-convection-wasm.html" class="card magnetic">
+            <div class="card-preview">🔥<span class="badge">WASM</span></div>
+            <div class="card-content">
+                <div class="card-title">Thermal Convection</div>
+                <div class="card-desc">Rayleigh-Bénard convection with full Navier-Stokes solver. Watch thermal plumes rise and convection cells form</div>
+                <div class="card-tags"><span class="tag">C++</span><span class="tag">N-S Solver</span><span class="tag">Convection</span></div>
+            </div>
+        </a>
+        <a href="supersonic-aero-wasm.html" class="card magnetic">
+            <div class="card-preview">✈️<span class="badge">WASM</span></div>
+            <div class="card-content">
+                <div class="card-title">Supersonic Aerodynamics</div>
+                <div class="card-desc">Compressible Euler equations with Roe Riemann solver. See shock waves, Mach diamonds, and supersonic flow patterns</div>
+                <div class="card-tags"><span class="tag">C++</span><span class="tag">Riemann</span><span class="tag">Shocks</span></div>
+            </div>
+        </a>
         <a href="physics.html" class="card magnetic">
             <div class="card-preview">⚙️</div>
             <div class="card-content">
@@ -310,6 +319,14 @@
                 <div class="card-title">Acoustic Levitation & SL</div>
                 <div class="card-desc">Sound waves suspend matter & bubble collapse creates light. Standing waves, radiation pressure, sonoluminescence</div>
                 <div class="card-tags"><span class="tag">Acoustic</span><span class="tag">Levitation</span><span class="tag">SL</span></div>
+            </div>
+        </a>
+        <a href="nbody-gravity-wasm.html" class="card magnetic">
+            <div class="card-preview">⭐<span class="badge">WASM</span></div>
+            <div class="card-content">
+                <div class="card-title">N-Body Gravity Sim</div>
+                <div class="card-desc">Barnes-Hut algorithm simulates 10,000+ stars with real Newtonian gravity. Galaxy collisions, orbital mechanics, gravitational interactions</div>
+                <div class="card-tags"><span class="tag">C++</span><span class="tag">Barnes-Hut</span><span class="tag">10K Stars</span></div>
             </div>
         </a>
         <a href="laser-optics-raytracer.html" class="card magnetic">
@@ -358,6 +375,38 @@
                 <div class="card-title">DPEP: WASM vs JS</div>
                 <div class="card-desc">C++ WebAssembly performance demo. 10,000+ particles with real-time physics. Compare native speed vs JavaScript</div>
                 <div class="card-tags"><span class="tag">C++</span><span class="tag">WASM</span><span class="tag">10K Particles</span></div>
+            </div>
+        </a>
+        <a href="stratospheric-glider-wasm.html" class="card plasma">
+            <div class="card-preview">⛅<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
+            <div class="card-content">
+                <div class="card-title">Stratospheric Glider</div>
+                <div class="card-desc">Thin atmosphere soaring with thermals, ridge lift, mountain waves, McCready theory, and variometer. Pan/zoom camera with follow mode</div>
+                <div class="card-tags"><span class="tag">L/D 60</span><span class="tag">Thermals</span><span class="tag">Pan/Zoom</span></div>
+            </div>
+        </a>
+        <a href="hypersonic-flight-wasm.html" class="card plasma">
+            <div class="card-preview">🔥<span class="badge">WASM</span></div>
+            <div class="card-content">
+                <div class="card-title">Hypersonic Flight</div>
+                <div class="card-desc">Mach 5-25 flight dynamics with aerothermal heating, plasma sheath, and thermal protection system modeling</div>
+                <div class="card-tags"><span class="tag">Mach 25</span><span class="tag">Re-entry</span><span class="tag">X-43</span></div>
+            </div>
+        </a>
+        <a href="ground-effect-wasm.html" class="card plasma">
+            <div class="card-preview">🌊<span class="badge">WASM</span></div>
+            <div class="card-content">
+                <div class="card-title">Ground Effect Vehicle</div>
+                <div class="card-desc">Ekranoplan wing-in-ground effect with RAM pressure, wave interaction, and cushion lift dynamics</div>
+                <div class="card-tags"><span class="tag">Ekranoplan</span><span class="tag">WIG</span><span class="tag">RAM Effect</span></div>
+            </div>
+        </a>
+        <a href="vehicle-downforce-wasm.html" class="card plasma">
+            <div class="card-preview">🏎️<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
+            <div class="card-content">
+                <div class="card-title">Vehicle Downforce Simulator</div>
+                <div class="card-desc">F1/NASCAR aerodynamics with adjustable wings, DRS, ground effect, tire loads, and real-time telemetry. Pan/zoom camera controls</div>
+                <div class="card-tags"><span class="tag">F1</span><span class="tag">DRS</span><span class="tag">Downforce</span><span class="tag">Pan/Zoom</span></div>
             </div>
         </a>
     </div>

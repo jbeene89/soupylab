@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stratospheric Glider - WebAssembly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #2a1f3a 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+            padding: 15px 20px;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+            text-align: center;
+            position: relative;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 2em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.5);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.7);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 100px);
+        }
+
+        .container.fullscreen-mode {
+            grid-template-columns: 1fr;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .container.fullscreen-mode .panel {
+            display: none;
+        }
+
+        .container.fullscreen-mode .canvas-container {
+            border-radius: 0;
+            border: none;
+        }
+
+        .panel {
+            background: rgba(20, 25, 45, 0.8);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .panel h2 {
+            color: #4facfe;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+            padding-bottom: 8px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(10, 14, 39, 0.9);
+            border: 2px solid rgba(79, 172, 254, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(79, 172, 254, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .camera-btn {
+            background: rgba(79, 172, 254, 0.3);
+            border: 1px solid rgba(79, 172, 254, 0.6);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .camera-btn:hover {
+            background: rgba(79, 172, 254, 0.5);
+            transform: scale(1.05);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #4facfe;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(79, 172, 254, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.8);
+        }
+
+        .value-display {
+            float: right;
+            color: #00f2fe;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .stat-box {
+            background: rgba(79, 172, 254, 0.05);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.7em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #00f2fe;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.75em;
+            margin-left: 2px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(79, 172, 254, 0.1);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 5px;
+            color: #e0e0e0;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .vario-display {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 8px;
+            position: relative;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .vario-bar {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            width: 8px;
+            background: linear-gradient(180deg, #00ff00, #ff0000);
+            transform: translateX(-50%);
+            transition: height 0.2s, bottom 0.2s;
+        }
+
+        .vario-zero-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .vario-labels {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 0.7em;
+            color: #888;
+        }
+
+        .thermal-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 100, 100, 0.6), rgba(255, 0, 0, 0.2));
+            border: 2px solid rgba(255, 100, 100, 0.8);
+            pointer-events: none;
+        }
+
+        .help-text {
+            background: rgba(79, 172, 254, 0.1);
+            border-left: 3px solid #4facfe;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 0.75em;
+            color: #aaa;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⛅ STRATOSPHERIC GLIDER SIMULATOR</h1>
+        <p class="subtitle">Thin Atmosphere • Thermals • Ridge Lift • Mountain Waves • McCready Theory • C++ WebAssembly</p>
+        <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()">📺 FULLSCREEN</button>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Left Panel -->
+        <div class="panel">
+            <h2>Glider Configuration</h2>
+
+            <label style="color: #4facfe; font-size: 0.85em; display: block; margin-bottom: 5px;">Glider Type</label>
+            <select id="gliderType">
+                <option value="0">High-Performance (L/D 60)</option>
+                <option value="1">Standard Class (L/D 45)</option>
+                <option value="2">Paraglider (L/D 10)</option>
+                <option value="3">Hang Glider (L/D 15)</option>
+            </select>
+
+            <button id="resetBtn">🔄 Reset Flight</button>
+            <button id="thermalBtn">🌡️ Spawn Thermal</button>
+
+            <div class="help-text">
+                🌤️ Look for rising air currents (thermals) to gain altitude
+            </div>
+
+            <h2 style="margin-top: 15px;">Flight Controls</h2>
+
+            <div class="control-group">
+                <label>
+                    Bank Angle
+                    <span class="value-display" id="bankValue">0°</span>
+                </label>
+                <input type="range" id="bankSlider" min="-45" max="45" step="5" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Ballast
+                    <span class="value-display" id="ballastValue">0 kg</span>
+                </label>
+                <input type="range" id="ballastSlider" min="0" max="150" step="10" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    McCready Setting
+                    <span class="value-display" id="mcCreadyValue">2.0 m/s</span>
+                </label>
+                <input type="range" id="mcCreadySlider" min="0" max="5" step="0.5" value="2">
+            </div>
+
+            <div class="help-text">
+                📊 McCready: Expected climb rate for speed-to-fly calculations
+            </div>
+
+            <h2 style="margin-top: 15px;">Variometer</h2>
+            <div class="vario-display">
+                <div class="vario-zero-line"></div>
+                <div class="vario-bar" id="varioBar"></div>
+                <div class="vario-labels">
+                    <div>+5 m/s ▲</div>
+                    <div style="margin-top: 25px;">0</div>
+                    <div style="margin-top: 25px;">-5 m/s ▼</div>
+                </div>
+            </div>
+            <div style="text-align: center; color: #00f2fe; font-size: 1.2em; font-weight: bold;">
+                <span id="varioValue">0.0</span> m/s
+            </div>
+        </div>
+
+        <!-- Center: Canvas -->
+        <div class="panel" style="padding: 0; position: relative;">
+            <div class="canvas-container">
+                <canvas id="gliderCanvas" width="1200" height="800"></canvas>
+
+                <div class="camera-controls">
+                    <button class="camera-btn" onclick="zoomIn()">🔍 Zoom In</button>
+                    <button class="camera-btn" onclick="zoomOut()">🔍 Zoom Out</button>
+                    <button class="camera-btn" onclick="resetCamera()">🎯 Reset View</button>
+                    <button class="camera-btn" onclick="followGlider()">📍 Follow</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="panel">
+            <h2>Flight Data</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">ALTITUDE</div>
+                    <div class="stat-value">
+                        <span id="altitudeStat">2000</span>
+                        <span class="stat-unit">m</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">AIRSPEED</div>
+                    <div class="stat-value">
+                        <span id="speedStat">30</span>
+                        <span class="stat-unit">m/s</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">CLIMB RATE</div>
+                    <div class="stat-value">
+                        <span id="climbStat">0.0</span>
+                        <span class="stat-unit">m/s</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">L/D RATIO</div>
+                    <div class="stat-value">
+                        <span id="ldStat">45</span>
+                        <span class="stat-unit">:1</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;">Speed Command</h2>
+            <div style="background: rgba(79, 172, 254, 0.05); border: 1px solid rgba(79, 172, 254, 0.2); border-radius: 8px; padding: 12px; margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Speed-to-Fly:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="speedToFly">30 m/s</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Min Sink Speed:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="minSinkSpeed">22 m/s</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Best L/D Speed:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="bestLDSpeed">30 m/s</span>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;">Atmospheric Conditions</h2>
+            <div style="background: rgba(79, 172, 254, 0.05); border: 1px solid rgba(79, 172, 254, 0.2); border-radius: 8px; padding: 12px; margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Temperature:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="tempStat">15°C</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Pressure:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="pressureStat">800 hPa</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Wind X:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="windXStat">5 m/s</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 6px 0; font-size: 0.85em;">
+                    <span style="color: #888;">Wind Y:</span>
+                    <span style="color: #4facfe; font-weight: bold;" id="windYStat">2 m/s</span>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;">Flight Statistics</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">MAX ALTITUDE</div>
+                    <div class="stat-value">
+                        <span id="maxAltStat">2000</span>
+                        <span class="stat-unit">m</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DISTANCE</div>
+                    <div class="stat-value">
+                        <span id="distanceStat">0.0</span>
+                        <span class="stat-unit">km</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">BEST L/D</div>
+                    <div class="stat-value">
+                        <span id="bestLDStat">45</span>
+                        <span class="stat-unit">:1</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">AVG CLIMB</div>
+                    <div class="stat-value">
+                        <span id="avgClimbStat">0.0</span>
+                        <span class="stat-unit">m/s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createGliderModule from './glider_engine.js';
+
+        let Module, glider;
+        let canvas, ctx;
+        let isRunning = false;
+
+        // Camera state
+        let cameraX = 0;
+        let cameraY = 0;
+        let cameraZoom = 0.8;
+        let followMode = true;
+
+        // Pan state
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        async function init() {
+            try {
+                Module = await createGliderModule();
+                glider = new Module.Glider();
+
+                canvas = document.getElementById('gliderCanvas');
+                ctx = canvas.getContext('2d');
+
+                setupControls();
+                setupMouseControls();
+                animate();
+                isRunning = true;
+
+                console.log('⛅ Stratospheric glider initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                canvas = document.getElementById('gliderCanvas');
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile glider_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupMouseControls() {
+            canvas.addEventListener('mousedown', (e) => {
+                isPanning = true;
+                followMode = false;
+                panStartX = cameraX;
+                panStartY = cameraY;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isPanning) {
+                    const dx = (e.clientX - lastMouseX) / cameraZoom;
+                    const dy = (e.clientY - lastMouseY) / cameraZoom;
+                    cameraX = panStartX - dx;
+                    cameraY = panStartY - dy;
+                    panStartX = cameraX;
+                    panStartY = cameraY;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isPanning = false;
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isPanning = false;
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                cameraZoom *= zoomFactor;
+                cameraZoom = Math.max(0.2, Math.min(cameraZoom, 3.0));
+            });
+        }
+
+        window.zoomIn = () => {
+            cameraZoom *= 1.2;
+            cameraZoom = Math.min(cameraZoom, 3.0);
+        };
+
+        window.zoomOut = () => {
+            cameraZoom *= 0.8;
+            cameraZoom = Math.max(cameraZoom, 0.2);
+        };
+
+        window.resetCamera = () => {
+            cameraX = 0;
+            cameraY = 0;
+            cameraZoom = 0.8;
+            followMode = false;
+        };
+
+        window.followGlider = () => {
+            followMode = !followMode;
+        };
+
+        window.toggleFullscreen = () => {
+            const container = document.getElementById('mainContainer');
+            const btn = document.getElementById('fullscreenBtn');
+
+            if (!document.fullscreenElement) {
+                container.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen();
+                btn.textContent = '❌ EXIT FULLSCREEN';
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.exitFullscreen();
+                btn.textContent = '📺 FULLSCREEN';
+            }
+        };
+
+        document.addEventListener('fullscreenchange', () => {
+            const container = document.getElementById('mainContainer');
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                container.classList.remove('fullscreen-mode');
+                btn.textContent = '📺 FULLSCREEN';
+            }
+        });
+
+        function setupControls() {
+            const gliderType = document.getElementById('gliderType');
+            const bankSlider = document.getElementById('bankSlider');
+            const ballastSlider = document.getElementById('ballastSlider');
+            const mcCreadySlider = document.getElementById('mcCreadySlider');
+            const resetBtn = document.getElementById('resetBtn');
+            const thermalBtn = document.getElementById('thermalBtn');
+
+            gliderType.addEventListener('change', (e) => {
+                glider.setGliderType(parseInt(e.target.value));
+            });
+
+            bankSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                glider.setBankAngle(value);
+                document.getElementById('bankValue').textContent = value + '°';
+            });
+
+            ballastSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                glider.setBallast(value);
+                document.getElementById('ballastValue').textContent = value + ' kg';
+            });
+
+            mcCreadySlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                glider.setMcCready(value);
+                document.getElementById('mcCreadyValue').textContent = value.toFixed(1) + ' m/s';
+            });
+
+            resetBtn.addEventListener('click', () => {
+                glider.reset();
+                glider.setGliderType(parseInt(gliderType.value));
+                glider.setBankAngle(parseFloat(bankSlider.value));
+                glider.setBallast(parseFloat(ballastSlider.value));
+                glider.setMcCready(parseFloat(mcCreadySlider.value));
+                resetCamera();
+            });
+
+            thermalBtn.addEventListener('click', () => {
+                const gx = glider.getX();
+                const gy = glider.getY();
+                const alt = glider.getAltitude();
+
+                glider.addThermal(
+                    gx + (Math.random() * 2000 - 1000),
+                    gy + (Math.random() * 2000 - 1000),
+                    Math.max(200, alt - 500),
+                    2.0 + Math.random() * 3.0,
+                    150 + Math.random() * 100
+                );
+            });
+        }
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Update physics
+            for (let i = 0; i < 3; i++) {
+                glider.update(0.05);
+            }
+
+            updateTelemetry();
+            drawScene();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateTelemetry() {
+            const altitude = glider.getAltitude();
+            const speed = glider.getVelocity();
+            const vspeed = glider.getVerticalSpeed();
+            const vario = glider.getVarioSmoothed();
+            const ld = glider.getCurrentLD();
+
+            document.getElementById('altitudeStat').textContent = altitude.toFixed(0);
+            document.getElementById('speedStat').textContent = speed.toFixed(1);
+            document.getElementById('climbStat').textContent = vspeed.toFixed(1);
+            document.getElementById('ldStat').textContent = ld.toFixed(1);
+            document.getElementById('varioValue').textContent = vario.toFixed(1);
+
+            // Variometer bar
+            const varioBar = document.getElementById('varioBar');
+            const varioPercent = Math.max(-5, Math.min(5, vario)) / 5;
+            const barHeight = Math.abs(varioPercent) * 35;
+            varioBar.style.height = barHeight + 'px';
+            if (varioPercent >= 0) {
+                varioBar.style.bottom = '40px';
+                varioBar.style.background = 'linear-gradient(180deg, #00ff00, #00aa00)';
+            } else {
+                varioBar.style.bottom = (40 - barHeight) + 'px';
+                varioBar.style.background = 'linear-gradient(180deg, #ff0000, #aa0000)';
+            }
+
+            // Speed command
+            document.getElementById('speedToFly').textContent = glider.getSpeedToFlyMcCready().toFixed(1) + ' m/s';
+            document.getElementById('minSinkSpeed').textContent = glider.getMinSinkSpeed().toFixed(1) + ' m/s';
+            document.getElementById('bestLDSpeed').textContent = glider.getBestLDSpeed().toFixed(1) + ' m/s';
+
+            // Atmosphere
+            document.getElementById('tempStat').textContent = glider.getAtmosphericTemp().toFixed(1) + '°C';
+            document.getElementById('pressureStat').textContent = glider.getAtmosphericPressure().toFixed(0) + ' hPa';
+            document.getElementById('windXStat').textContent = glider.getWindX().toFixed(1) + ' m/s';
+            document.getElementById('windYStat').textContent = glider.getWindY().toFixed(1) + ' m/s';
+
+            // Statistics
+            document.getElementById('maxAltStat').textContent = glider.getMaxAltitude().toFixed(0);
+            document.getElementById('distanceStat').textContent = glider.getTotalDistance().toFixed(1);
+            document.getElementById('bestLDStat').textContent = glider.getBestGlideRatio().toFixed(1);
+            document.getElementById('avgClimbStat').textContent = glider.getAverageClimbRate().toFixed(1);
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear with sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            gradient.addColorStop(0, '#0a0520');
+            gradient.addColorStop(0.5, '#1a1a40');
+            gradient.addColorStop(1, '#2a2a50');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+
+            // Camera follow mode
+            if (followMode) {
+                cameraX = glider.getX();
+                cameraY = glider.getAltitude();
+            }
+
+            // Apply camera transform
+            ctx.translate(w / 2, h / 2);
+            ctx.scale(cameraZoom, cameraZoom);
+            ctx.translate(-cameraX, -cameraY);
+
+            // Draw altitude grid
+            ctx.strokeStyle = 'rgba(79, 172, 254, 0.1)';
+            ctx.lineWidth = 1 / cameraZoom;
+            for (let alt = 0; alt <= 6000; alt += 500) {
+                ctx.beginPath();
+                ctx.moveTo(cameraX - 5000, alt);
+                ctx.lineTo(cameraX + 5000, alt);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(79, 172, 254, 0.3)';
+                ctx.font = (12 / cameraZoom) + 'px Orbitron';
+                ctx.fillText(alt + 'm', cameraX - 4900, alt - 5);
+            }
+
+            // Draw thermals
+            const thermals = glider.getThermals();
+            const thermalCount = thermals.length / 5;
+
+            for (let i = 0; i < thermalCount; i++) {
+                const tx = thermals[i * 5];
+                const ty = thermals[i * 5 + 1];
+                const radius = thermals[i * 5 + 2];
+                const strength = thermals[i * 5 + 3];
+                const cloudBase = thermals[i * 5 + 4];
+
+                // Thermal visualization (column)
+                const radialGrad = ctx.createRadialGradient(tx, ty + 500, 0, tx, ty + 500, radius);
+                radialGrad.addColorStop(0, 'rgba(255, 100, 100, 0.3)');
+                radialGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.fillStyle = radialGrad;
+                ctx.fillRect(tx - radius, ty, radius * 2, cloudBase - ty);
+
+                // Cloud at top
+                ctx.fillStyle = 'rgba(200, 200, 255, 0.4)';
+                ctx.beginPath();
+                ctx.ellipse(tx, cloudBase, radius * 1.5, radius * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw trail (vario colored)
+            const trail = glider.getTrail();
+            const varioTrail = glider.getTrailVario();
+            const trailLen = trail.length / 2;
+
+            for (let i = 1; i < trailLen; i++) {
+                const x1 = trail[(i - 1) * 2];
+                const y1 = trail[(i - 1) * 2 + 1];
+                const x2 = trail[i * 2];
+                const y2 = trail[i * 2 + 1];
+                const vario = varioTrail[i];
+
+                // Color based on vario
+                if (vario > 0) {
+                    const intensity = Math.min(1, vario / 5);
+                    ctx.strokeStyle = `rgba(0, ${Math.floor(255 * intensity)}, 0, 0.6)`;
+                } else {
+                    const intensity = Math.min(1, Math.abs(vario) / 5);
+                    ctx.strokeStyle = `rgba(${Math.floor(255 * intensity)}, 0, 0, 0.6)`;
+                }
+
+                ctx.lineWidth = 3 / cameraZoom;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+
+            // Draw glider
+            const gx = glider.getX();
+            const gy = glider.getAltitude();
+            const bank = glider.getBankAngle() * Math.PI / 180;
+
+            ctx.save();
+            ctx.translate(gx, gy);
+            ctx.rotate(bank);
+            ctx.scale(1 / cameraZoom, 1 / cameraZoom);
+
+            // Glider wings
+            ctx.fillStyle = '#4facfe';
+            ctx.shadowColor = '#4facfe';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.moveTo(-40, 0);
+            ctx.lineTo(40, 0);
+            ctx.lineTo(35, -5);
+            ctx.lineTo(-35, -5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Fuselage
+            ctx.fillStyle = '#00f2fe';
+            ctx.fillRect(-8, -3, 16, 6);
+
+            ctx.restore();
+
+            // Ground
+            ctx.fillStyle = 'rgba(50, 70, 50, 0.8)';
+            ctx.fillRect(cameraX - 10000, 0, 20000, -50);
+
+            ctx.restore();
+
+            // Draw HUD
+            ctx.fillStyle = '#4facfe';
+            ctx.font = 'bold 30px Orbitron';
+            ctx.fillText(glider.getAltitude().toFixed(0) + ' m', 20, 40);
+
+            ctx.font = 'bold 24px Orbitron';
+            const varioColor = glider.getVarioSmoothed() > 0 ? '#00ff00' : '#ff0000';
+            ctx.fillStyle = varioColor;
+            ctx.fillText((glider.getVarioSmoothed() > 0 ? '+' : '') + glider.getVarioSmoothed().toFixed(1) + ' m/s', 20, 70);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Orbitron';
+            ctx.fillText(`Zoom: ${(cameraZoom * 100).toFixed(0)}%`, w - 100, 30);
+            ctx.fillText(followMode ? '📍 Following' : '🖐️ Manual', w - 100, 50);
+        }
+
+        init();
+    </script>
+</body>
+</html>

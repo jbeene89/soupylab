@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Convection - Rayleigh-Bénard - WebAssembly - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&display=swap');
+
+        :root {
+            --bg: #000208;
+            --panel: #0a0515;
+            --hot: #ff3300;
+            --cold: #0099ff;
+            --text: #e0e0e0;
+            --dim: #6688aa;
+            --accent: #ff6600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at center, #0a0520 0%, var(--bg) 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: linear-gradient(180deg, rgba(255,51,0,0.1) 0%, rgba(0,153,255,0.1) 100%);
+            border-bottom: 2px solid rgba(255,102,0,0.3);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--hot) 0%, var(--accent) 50%, var(--cold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.1em;
+            animation: heatWave 4s ease-in-out infinite;
+        }
+
+        @keyframes heatWave {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(20deg); }
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--dim);
+        }
+
+        .visualization-mode {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .mode-btn {
+            padding: 0.8rem 1.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: 2px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(10,5,21,0.7);
+        }
+
+        .mode-btn.temperature {
+            border-color: var(--hot);
+            color: var(--hot);
+        }
+
+        .mode-btn.temperature.active {
+            background: linear-gradient(135deg, var(--hot), var(--accent));
+            color: #000;
+            box-shadow: 0 0 20px var(--hot);
+        }
+
+        .mode-btn.vorticity {
+            border-color: var(--cold);
+            color: var(--cold);
+        }
+
+        .mode-btn.vorticity.active {
+            background: linear-gradient(135deg, var(--cold), #0066cc);
+            color: #fff;
+            box-shadow: 0 0 20px var(--cold);
+        }
+
+        .mode-btn.velocity {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .mode-btn.velocity.active {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            color: #000;
+            box-shadow: 0 0 20px #00ff88;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(10,5,21,0.9);
+            border: 1px solid rgba(255,102,0,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .canvas-container {
+            background: rgba(0,2,8,0.95);
+            border: 2px solid rgba(255,102,0,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 60px rgba(255,102,0,0.05);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            image-rendering: pixelated;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,102,0,0.3);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--cold), var(--hot));
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, var(--hot), var(--accent));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 8px rgba(255,102,0,0.6);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(255,102,0,0.05);
+            border: 1px solid rgba(255,102,0,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        .stat-box {
+            background: rgba(255,102,0,0.05);
+            border: 1px solid rgba(255,102,0,0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .color-bar {
+            width: 30px;
+            height: 15px;
+            border-radius: 3px;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(10,5,21,0.9);
+            border: 1px solid rgba(255,102,0,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .back-link:hover {
+            background: rgba(255,102,0,0.2);
+            transform: translateX(-3px);
+            box-shadow: 0 0 20px rgba(255,102,0,0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        button {
+            width: 100%;
+            padding: 0.7rem;
+            background: linear-gradient(135deg, var(--hot), var(--accent));
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255,102,0,0.6);
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>🔥 THERMAL CONVECTION 🌊</h1>
+        <p class="subtitle">Rayleigh-Bénard Convection • Navier-Stokes Solver • WebAssembly C++ Engine</p>
+        
+        <div class="visualization-mode">
+            <button class="mode-btn temperature active" id="tempBtn">🌡️ Temperature</button>
+            <button class="mode-btn vorticity" id="vortBtn">🌀 Vorticity</button>
+            <button class="mode-btn velocity" id="velBtn">💨 Velocity</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Left: Controls -->
+        <div class="panel">
+            <div class="section-title">Fluid Properties</div>
+            
+            <div class="control-group">
+                <label>Fluid Type</label>
+                <select id="fluidSelect">
+                    <option value="0">Air (300K)</option>
+                    <option value="1">Water (300K)</option>
+                    <option value="2">Oil (SAE 30)</option>
+                    <option value="3">Glycerin</option>
+                    <option value="4">Liquid Sodium</option>
+                </select>
+            </div>
+
+            <div class="section-title">Thermal Conditions</div>
+
+            <div class="control-group">
+                <label>
+                    Hot Temperature
+                    <span class="value-display" id="hotTempValue">330</span> K
+                </label>
+                <input type="range" id="hotTempSlider" min="300" max="400" step="1" value="330">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Cold Temperature
+                    <span class="value-display" id="coldTempValue">290</span> K
+                </label>
+                <input type="range" id="coldTempSlider" min="250" max="300" step="1" value="290">
+            </div>
+
+            <div class="section-title">Simulation</div>
+
+            <div class="control-group">
+                <label>
+                    Steps per Frame
+                    <span class="value-display" id="stepsValue">10</span>
+                </label>
+                <input type="range" id="stepsSlider" min="1" max="50" step="1" value="10">
+            </div>
+
+            <button id="resetBtn">🔄 Reset Simulation</button>
+        </div>
+
+        <!-- Center: Visualization -->
+        <div>
+            <div class="canvas-container">
+                <div id="loadingMsg" class="loading">
+                    🔥 Loading Thermal Convection Engine...<br>
+                    <span style="font-size: 0.8rem;">Compiling Navier-Stokes solver...</span>
+                </div>
+                <canvas id="convectionCanvas" width="200" height="150" style="display:none;"></canvas>
+                <div class="legend" id="legend" style="display:none;">
+                    <div class="legend-item">
+                        <div class="color-bar" style="background: linear-gradient(90deg, #0099ff, #00ffff);"></div>
+                        <span>Cold</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-bar" style="background: linear-gradient(90deg, #ffff00, #ff3300);"></div>
+                        <span>Hot</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Stats -->
+        <div class="panel">
+            <div class="section-title">Performance</div>
+
+            <div class="stat-box">
+                <div class="stat-label">FPS</div>
+                <div class="stat-value">
+                    <span id="fpsValue">60</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Iteration</div>
+                <div class="stat-value">
+                    <span id="iterValue">0</span>
+                </div>
+            </div>
+
+            <div class="section-title">Dimensionless Numbers</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Rayleigh Number</div>
+                <div class="stat-value" style="font-size: 1rem;">
+                    <span id="raValue">0</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Prandtl Number</div>
+                <div class="stat-value" style="font-size: 1rem;">
+                    <span id="prValue">0</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Nusselt Number</div>
+                <div class="stat-value" style="font-size: 1rem;">
+                    <span id="nuValue">1.0</span>
+                </div>
+            </div>
+
+            <div class="section-title">Flow Metrics</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Max Velocity</div>
+                <div class="stat-value" style="font-size: 1rem;">
+                    <span id="maxVelValue">0</span> m/s
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Max Vorticity</div>
+                <div class="stat-value" style="font-size: 1rem;">
+                    <span id="maxVortValue">0</span> /s
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Avg Temperature</div>
+                <div class="stat-value" style="font-size: 1rem;">
+                    <span id="avgTempValue">0</span> K
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // WASM MODULE LOADER
+        // ====================================================================
+
+        let convectionEngine = null;
+        let isWASMReady = false;
+
+        const canvas = document.getElementById('convectionCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let visualizationMode = 'temperature'; // 'temperature', 'vorticity', 'velocity'
+        let stepsPerFrame = 10;
+
+        // Performance tracking
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 60;
+
+        // Load WASM module
+        async function loadWASM() {
+            try {
+                const createModule = (await import('./convection_engine.js')).default;
+                const Module = await createModule();
+                
+                convectionEngine = new Module.ConvectionEngine(canvas.width, canvas.height);
+                isWASMReady = true;
+                
+                document.getElementById('loadingMsg').style.display = 'none';
+                canvas.style.display = 'block';
+                document.getElementById('legend').style.display = 'flex';
+                
+                console.log('✅ Convection WASM module loaded!');
+                updateStats();
+                animate();
+            } catch (error) {
+                console.error('❌ Failed to load WASM:', error);
+                document.getElementById('loadingMsg').innerHTML = 
+                    '⚠️ Failed to load WebAssembly module<br><span style="font-size:0.8rem;">Check console for details</span>';
+            }
+        }
+
+        // ====================================================================
+        // COLOR MAPPING
+        // ====================================================================
+
+        function temperatureToColor(T, T_min, T_max) {
+            const t = (T - T_min) / (T_max - T_min);
+            
+            // Cool to hot: blue -> cyan -> green -> yellow -> orange -> red
+            let r, g, b;
+            
+            if (t < 0.25) {
+                const u = t / 0.25;
+                r = 0;
+                g = Math.floor(153 * u);
+                b = Math.floor(255);
+            } else if (t < 0.5) {
+                const u = (t - 0.25) / 0.25;
+                r = 0;
+                g = Math.floor(153 + 102 * u);
+                b = Math.floor(255 * (1 - u));
+            } else if (t < 0.75) {
+                const u = (t - 0.5) / 0.25;
+                r = Math.floor(255 * u);
+                g = 255;
+                b = 0;
+            } else {
+                const u = (t - 0.75) / 0.25;
+                r = 255;
+                g = Math.floor(255 * (1 - u));
+                b = 0;
+            }
+            
+            return [r, g, b];
+        }
+
+        function vorticityToColor(vort, maxVort) {
+            const t = (vort + maxVort) / (2 * maxVort);
+            
+            // Negative vorticity: blue, Positive: red
+            let r, g, b;
+            
+            if (t < 0.5) {
+                const u = t * 2;
+                r = 0;
+                g = Math.floor(100 * u);
+                b = Math.floor(255);
+            } else {
+                const u = (t - 0.5) * 2;
+                r = Math.floor(255 * u);
+                g = Math.floor(100 * (1 - u));
+                b = Math.floor(255 * (1 - u));
+            }
+            
+            return [r, g, b];
+        }
+
+        function velocityToColor(vel, maxVel) {
+            const t = vel / maxVel;
+            
+            // Black -> purple -> cyan -> white
+            let r, g, b;
+            
+            if (t < 0.33) {
+                const u = t / 0.33;
+                r = Math.floor(128 * u);
+                g = 0;
+                b = Math.floor(128 * u);
+            } else if (t < 0.67) {
+                const u = (t - 0.33) / 0.34;
+                r = Math.floor(128 * (1 - u));
+                g = Math.floor(255 * u);
+                b = Math.floor(128 + 127 * u);
+            } else {
+                const u = (t - 0.67) / 0.33;
+                r = Math.floor(255 * u);
+                g = 255;
+                b = 255;
+            }
+            
+            return [r, g, b];
+        }
+
+        // ====================================================================
+        // RENDERING
+        // ====================================================================
+
+        function render() {
+            if (!isWASMReady || !convectionEngine) return;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+
+            if (visualizationMode === 'temperature') {
+                const tempField = convectionEngine.getTemperatureField();
+                const T_hot = parseFloat(document.getElementById('hotTempSlider').value);
+                const T_cold = parseFloat(document.getElementById('coldTempSlider').value);
+
+                for (let i = 0; i < width * height; ++i) {
+                    const T = tempField[i];
+                    const [r, g, b] = temperatureToColor(T, T_cold, T_hot);
+                    
+                    data[i * 4 + 0] = r;
+                    data[i * 4 + 1] = g;
+                    data[i * 4 + 2] = b;
+                    data[i * 4 + 3] = 255;
+                }
+            } else if (visualizationMode === 'vorticity') {
+                const vortField = convectionEngine.getVorticityField();
+                const maxVort = convectionEngine.getMaxVorticity();
+
+                for (let i = 0; i < width * height; ++i) {
+                    const vort = vortField[i];
+                    const [r, g, b] = vorticityToColor(vort, maxVort);
+                    
+                    data[i * 4 + 0] = r;
+                    data[i * 4 + 1] = g;
+                    data[i * 4 + 2] = b;
+                    data[i * 4 + 3] = 255;
+                }
+            } else if (visualizationMode === 'velocity') {
+                const velField = convectionEngine.getVelocityField();
+                const maxVel = convectionEngine.getMaxVelocity();
+
+                for (let i = 0; i < width * height; ++i) {
+                    const vx = velField[i * 2];
+                    const vy = velField[i * 2 + 1];
+                    const vel = Math.sqrt(vx * vx + vy * vy);
+                    
+                    const [r, g, b] = velocityToColor(vel, maxVel);
+                    
+                    data[i * 4 + 0] = r;
+                    data[i * 4 + 1] = g;
+                    data[i * 4 + 2] = b;
+                    data[i * 4 + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // ====================================================================
+        // UPDATE STATS
+        // ====================================================================
+
+        function updateStats() {
+            if (!isWASMReady || !convectionEngine) return;
+
+            document.getElementById('iterValue').textContent = convectionEngine.getIteration();
+            document.getElementById('raValue').textContent = convectionEngine.getRayleighNumber().toExponential(2);
+            document.getElementById('prValue').textContent = convectionEngine.getPrandtlNumber().toFixed(3);
+            document.getElementById('nuValue').textContent = convectionEngine.getNusseltNumber().toFixed(3);
+            document.getElementById('maxVelValue').textContent = convectionEngine.getMaxVelocity().toExponential(2);
+            document.getElementById('maxVortValue').textContent = convectionEngine.getMaxVorticity().toExponential(2);
+            document.getElementById('avgTempValue').textContent = convectionEngine.getAverageTemperature().toFixed(1);
+        }
+
+        // ====================================================================
+        // ANIMATION LOOP
+        // ====================================================================
+
+        function animate() {
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            frameCount++;
+            if (frameCount % 10 === 0) {
+                fps = Math.round(1 / deltaTime);
+                document.getElementById('fpsValue').textContent = fps;
+            }
+
+            if (isWASMReady && convectionEngine) {
+                convectionEngine.update(stepsPerFrame);
+                render();
+                
+                if (frameCount % 30 === 0) {
+                    updateStats();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ====================================================================
+        // EVENT LISTENERS
+        // ====================================================================
+
+        document.getElementById('tempBtn').addEventListener('click', () => {
+            visualizationMode = 'temperature';
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tempBtn').classList.add('active');
+        });
+
+        document.getElementById('vortBtn').addEventListener('click', () => {
+            visualizationMode = 'vorticity';
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('vortBtn').classList.add('active');
+        });
+
+        document.getElementById('velBtn').addEventListener('click', () => {
+            visualizationMode = 'velocity';
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('velBtn').classList.add('active');
+        });
+
+        document.getElementById('fluidSelect').addEventListener('change', (e) => {
+            if (convectionEngine) {
+                convectionEngine.setFluid(parseInt(e.target.value));
+                updateStats();
+            }
+        });
+
+        document.getElementById('hotTempSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('hotTempValue').textContent = val;
+            if (convectionEngine) {
+                convectionEngine.setHotTemperature(val);
+                updateStats();
+            }
+        });
+
+        document.getElementById('coldTempSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('coldTempValue').textContent = val;
+            if (convectionEngine) {
+                convectionEngine.setColdTemperature(val);
+                updateStats();
+            }
+        });
+
+        document.getElementById('stepsSlider').addEventListener('input', (e) => {
+            stepsPerFrame = parseInt(e.target.value);
+            document.getElementById('stepsValue').textContent = stepsPerFrame;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', async () => {
+            const createModule = (await import('./convection_engine.js')).default;
+            const Module = await createModule();
+            convectionEngine = new Module.ConvectionEngine(canvas.width, canvas.height);
+            
+            const fluidIdx = parseInt(document.getElementById('fluidSelect').value);
+            const T_hot = parseFloat(document.getElementById('hotTempSlider').value);
+            const T_cold = parseFloat(document.getElementById('coldTempSlider').value);
+            
+            convectionEngine.setFluid(fluidIdx);
+            convectionEngine.setHotTemperature(T_hot);
+            convectionEngine.setColdTemperature(T_cold);
+            
+            updateStats();
+        });
+
+        // ====================================================================
+        // INITIALIZATION
+        // ====================================================================
+
+        loadWASM();
+    </script>
+</body>
+</html>

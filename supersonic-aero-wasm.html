@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supersonic Aerodynamics - Shock Waves - WebAssembly</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&display=swap');
+
+        :root {
+            --bg: #000208;
+            --panel: #0a0515;
+            --shock: #ff0055;
+            --mach: #00ff88;
+            --text: #e0e0e0;
+            --dim: #6688aa;
+            --accent: #ff5500;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #000;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--shock) 0%, var(--accent) 50%, var(--mach) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.1em;
+        }
+
+        .controls {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            width: 280px;
+            background: rgba(10,5,21,0.95);
+            border: 1px solid rgba(255,85,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .stats {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 280px;
+            background: rgba(10,5,21,0.95);
+            border: 1px solid rgba(255,85,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1rem 0 0.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,85,0,0.3);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255,85,0,0.2), rgba(255,85,0,0.5));
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(255,85,0,0.05);
+            border: 1px solid rgba(255,85,0,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        .stat-box {
+            background: rgba(255,85,0,0.05);
+            border: 1px solid rgba(255,85,0,0.2);
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            image-rendering: pixelated;
+        }
+
+        .back-link {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(10,5,21,0.9);
+            border: 1px solid rgba(255,85,0,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-link:hover {
+            background: rgba(255,85,0,0.2);
+            transform: translateX(-3px);
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            animation: pulse 1.5s ease-in-out infinite;
+            z-index: 100;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .legend {
+            display: flex;
+            gap: 10px;
+            font-size: 0.7rem;
+            margin-top: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 15px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>✈️ SUPERSONIC AERODYNAMICS 💨</h1>
+        <p style="font-size: 0.85rem; color: var(--dim); margin-top: 0.5rem;">
+            Roe Riemann Solver • Shock Wave Capturing • Schlieren Visualization
+        </p>
+    </div>
+
+    <div class="controls">
+        <div class="section-title">Flow Conditions</div>
+        
+        <div class="control-group">
+            <label>
+                Mach Number
+                <span class="value-display" id="machValue">2.0</span>
+            </label>
+            <input type="range" id="machSlider" min="0.5" max="5" step="0.1" value="2.0">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Angle of Attack
+                <span class="value-display" id="aoaValue">0</span>°
+            </label>
+            <input type="range" id="aoaSlider" min="-15" max="15" step="1" value="0">
+        </div>
+
+        <div class="section-title">Visualization</div>
+
+        <div class="control-group">
+            <label>Display Mode</label>
+            <select id="modeSelect">
+                <option value="schlieren">Schlieren (Density Gradient)</option>
+                <option value="mach">Mach Number</option>
+                <option value="pressure">Pressure</option>
+                <option value="density">Density</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>
+                Steps per Frame
+                <span class="value-display" id="stepsValue">50</span>
+            </label>
+            <input type="range" id="stepsSlider" min="1" max="200" step="10" value="50">
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="color-box" style="background: linear-gradient(90deg, #000055, #ff0055);"></div>
+                <span>Shock</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: linear-gradient(90deg, #003300, #00ff88);"></div>
+                <span>Expansion</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="section-title">Performance</div>
+
+        <div class="stat-box">
+            <div class="stat-label">FPS</div>
+            <div class="stat-value">
+                <span id="fpsValue">60</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Iteration</div>
+            <div class="stat-value">
+                <span id="iterValue">0</span>
+            </div>
+        </div>
+
+        <div class="section-title">Flow Metrics</div>
+
+        <div class="stat-box">
+            <div class="stat-label">Max Mach Number</div>
+            <div class="stat-value" style="font-size: 1rem;">
+                <span id="maxMachValue">0.0</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Grid Resolution</div>
+            <div class="stat-value" style="font-size: 1rem;">
+                <span id="gridValue">300 × 200</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Solver</div>
+            <div class="stat-value" style="font-size: 0.8rem;">
+                Roe Riemann
+            </div>
+        </div>
+    </div>
+
+    <canvas id="aeroCanvas" width="300" height="200"></canvas>
+
+    <div id="loadingMsg" class="loading">
+        ✈️ Loading Aero Engine...<br>
+        <span style="font-size: 0.8rem;">Compiling Riemann solver...</span>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // WASM MODULE LOADER
+        // ====================================================================
+
+        let aeroEngine = null;
+        let isWASMReady = false;
+
+        const canvas = document.getElementById('aeroCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let visualizationMode = 'schlieren';
+        let stepsPerFrame = 50;
+
+        // Performance
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // Load WASM
+        async function loadWASM() {
+            try {
+                const createModule = (await import('./aero_engine.js')).default;
+                const Module = await createModule();
+                
+                aeroEngine = new Module.AeroEngine(canvas.width, canvas.height);
+                isWASMReady = true;
+                
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.getElementById('gridValue').textContent = 
+                    `${canvas.width} × ${canvas.height}`;
+                
+                console.log('✅ Aero WASM module loaded!');
+                animate();
+            } catch (error) {
+                console.error('❌ Failed to load WASM:', error);
+                document.getElementById('loadingMsg').innerHTML = 
+                    '⚠️ WASM load failed';
+            }
+        }
+
+        // ====================================================================
+        // RENDERING
+        // ====================================================================
+
+        function render() {
+            if (!isWASMReady || !aeroEngine) return;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const imageData = ctx.createImageData(width, height);
+            const data = imageData.data;
+
+            if (visualizationMode === 'schlieren') {
+                // Schlieren: density gradient
+                const densityField = aeroEngine.getDensityField();
+
+                for (let y = 1; y < height - 1; ++y) {
+                    for (let x = 1; x < width - 1; ++x) {
+                        const i = y * width + x;
+
+                        const rho = densityField[i];
+                        const rhoL = densityField[i - 1];
+                        const rhoR = densityField[i + 1];
+                        const rhoD = densityField[i - width];
+                        const rhoU = densityField[i + width];
+
+                        // Gradient magnitude
+                        const gradX = (rhoR - rhoL) * 0.5;
+                        const gradY = (rhoU - rhoD) * 0.5;
+                        const gradMag = Math.sqrt(gradX * gradX + gradY * gradY);
+
+                        // Map to color
+                        const intensity = Math.min(gradMag * 1000, 1.0);
+
+                        let r, g, b;
+                        if (gradMag > 0.01) {
+                            // Shock wave (red)
+                            r = Math.floor(255 * intensity);
+                            g = 0;
+                            b = Math.floor(100 * intensity);
+                        } else {
+                            // Smooth flow (dark)
+                            r = g = b = Math.floor(20);
+                        }
+
+                        data[i * 4 + 0] = r;
+                        data[i * 4 + 1] = g;
+                        data[i * 4 + 2] = b;
+                        data[i * 4 + 3] = 255;
+                    }
+                }
+            } else if (visualizationMode === 'mach') {
+                const machField = aeroEngine.getMachField();
+
+                for (let i = 0; i < width * height; ++i) {
+                    const mach = machField[i];
+                    const t = Math.min(mach / 5.0, 1.0);
+
+                    let r, g, b;
+                    if (t < 0.5) {
+                        const u = t * 2;
+                        r = 0;
+                        g = Math.floor(255 * u);
+                        b = Math.floor(255 * (1 - u));
+                    } else {
+                        const u = (t - 0.5) * 2;
+                        r = Math.floor(255 * u);
+                        g = Math.floor(255 * (1 - u));
+                        b = 0;
+                    }
+
+                    data[i * 4 + 0] = r;
+                    data[i * 4 + 1] = g;
+                    data[i * 4 + 2] = b;
+                    data[i * 4 + 3] = 255;
+                }
+            } else if (visualizationMode === 'pressure') {
+                const pressureField = aeroEngine.getPressureField();
+
+                for (let i = 0; i < width * height; ++i) {
+                    const p = pressureField[i];
+                    const t = (p - 50000) / 100000;
+
+                    const r = Math.floor(255 * Math.max(0, Math.min(1, t)));
+                    const b = Math.floor(255 * Math.max(0, Math.min(1, 1 - t)));
+                    const g = Math.floor(100);
+
+                    data[i * 4 + 0] = r;
+                    data[i * 4 + 1] = g;
+                    data[i * 4 + 2] = b;
+                    data[i * 4 + 3] = 255;
+                }
+            } else if (visualizationMode === 'density') {
+                const densityField = aeroEngine.getDensityField();
+
+                for (let i = 0; i < width * height; ++i) {
+                    const rho = densityField[i];
+                    const t = (rho - 0.5) / 2.0;
+
+                    const gray = Math.floor(255 * Math.max(0, Math.min(1, t)));
+
+                    data[i * 4 + 0] = gray;
+                    data[i * 4 + 1] = gray;
+                    data[i * 4 + 2] = gray;
+                    data[i * 4 + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // ====================================================================
+        // ANIMATION LOOP
+        // ====================================================================
+
+        function animate() {
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            fps = Math.round(1 / deltaTime);
+            document.getElementById('fpsValue').textContent = fps;
+
+            if (isWASMReady && aeroEngine) {
+                aeroEngine.update(stepsPerFrame);
+                render();
+
+                document.getElementById('iterValue').textContent = aeroEngine.getIteration();
+                document.getElementById('maxMachValue').textContent = aeroEngine.getMaxMach().toFixed(2);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ====================================================================
+        // EVENT LISTENERS
+        // ====================================================================
+
+        document.getElementById('machSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('machValue').textContent = val.toFixed(1);
+            if (aeroEngine) aeroEngine.setMachNumber(val);
+        });
+
+        document.getElementById('aoaSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('aoaValue').textContent = val;
+            if (aeroEngine) aeroEngine.setAngleOfAttack(val);
+        });
+
+        document.getElementById('modeSelect').addEventListener('change', (e) => {
+            visualizationMode = e.target.value;
+        });
+
+        document.getElementById('stepsSlider').addEventListener('input', (e) => {
+            stepsPerFrame = parseInt(e.target.value);
+            document.getElementById('stepsValue').textContent = stepsPerFrame;
+        });
+
+        // ====================================================================
+        // INITIALIZATION
+        // ====================================================================
+
+        loadWASM();
+    </script>
+</body>
+</html>
