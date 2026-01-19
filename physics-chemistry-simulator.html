@@ -1143,10 +1143,14 @@
                 // Calculate nucleation
                 const P_vapor = calculateVaporPressure(currentMaterial, temperature);
                 supersaturation = calculateSupersaturation(pressure, P_vapor);
-                const nucleationRate = calculateNucleationRate(currentMaterial, temperature, pressure, P_vapor);
 
-                // Spawn bubbles based on nucleation rate
-                if (supersaturation < 1 && nucleationRate > 1e10) {
+                // For dissolved gas nucleation, we need pressure BELOW saturation
+                // which creates negative pressure difference driving bubble formation
+                const pressureDiff = pressure - P_vapor;
+                const nucleationRate = pressureDiff < 0 ? calculateNucleationRate(currentMaterial, temperature, pressure, P_vapor) : 0;
+
+                // Spawn bubbles when pressure drops below equilibrium (supersaturated state)
+                if (pressureDiff < 0 && nucleationRate > 1e10) {
                     const spawnProb = Math.min(nucleationRate / 1e20, 0.5);
                     if (Math.random() < spawnProb * simulationSpeed) {
                         bubbles.push(new Bubble(
