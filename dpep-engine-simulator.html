@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual-Phase Effervescent Propulsion (DPEP) Simulator - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&display=swap');
+
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #00aaff;
+            --accent-glow: #00ddff;
+            --text: #e0e0e0;
+            --dim: #606080;
+            --warning: #ff6b35;
+            --success: #4caf50;
+            --gas-color: rgba(100, 200, 255, 0.6);
+            --liquid-color: rgba(0, 170, 255, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, var(--bg) 100%);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            background: linear-gradient(180deg, rgba(0, 170, 255, 0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(0, 170, 255, 0.2);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--accent-glow);
+            text-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: var(--dim);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            height: fit-content;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 170, 255, 0.2);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .tooltip {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 50%;
+            text-align: center;
+            font-size: 0.7rem;
+            line-height: 16px;
+            cursor: help;
+            margin-left: 6px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(0, 170, 255, 0.6);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 12px rgba(0, 170, 255, 0.9);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(0, 170, 255, 0.6);
+        }
+
+        .slider-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.85rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, var(--accent) 0%, #0088cc 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 170, 255, 0.4);
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent-glow);
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin-left: 0.3rem;
+        }
+
+        .canvas-container {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .canvas-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            background: #0a0a0f;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-badge {
+            display: inline-block;
+            background: rgba(0, 170, 255, 0.2);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
+            color: var(--accent-glow);
+            margin-top: 0.5rem;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 170, 255, 0.2);
+            border-color: var(--accent);
+            transform: translateX(-3px);
+        }
+
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 280px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>DUAL-PHASE EFFERVESCENT PROPULSION</h1>
+        <p>Model a conceptual rocket engine using gas-saturated propellants to create effervescent two-phase flow. Explore how micro-bubble formation, chamber dynamics, and nozzle geometry affect thrust and specific impulse.</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <div class="section-title">Propellant System</div>
+
+            <div class="control-group">
+                <label>
+                    Propellant Type
+                    <span class="tooltip" title="Select propellant combination">?</span>
+                </label>
+                <select id="propellantType">
+                    <option value="LOX-RP1">LOX/RP-1 (Kerosene)</option>
+                    <option value="LOX-LH2">LOX/LH2 (Hydrogen)</option>
+                    <option value="NTO-MMH">NTO/MMH (Hypergolic)</option>
+                    <option value="LOX-CH4">LOX/Methane</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Gas-to-Liquid Ratio (GLR)
+                    <span class="tooltip" title="Volume ratio of gas to liquid">?</span>
+                </label>
+                <input type="range" id="glr" min="0.01" max="0.5" step="0.01" value="0.15">
+                <div class="slider-value">
+                    <span>0.01</span>
+                    <span class="value-display" id="glrValue">0.15</span>
+                    <span>0.50</span>
+                </div>
+            </div>
+
+            <div class="section-title">Chamber Conditions</div>
+
+            <div class="control-group">
+                <label>
+                    Chamber Pressure (P<sub>c</sub>)
+                    <span class="tooltip" title="Combustion chamber pressure">?</span>
+                </label>
+                <input type="range" id="chamberPressure" min="5" max="200" step="1" value="100">
+                <div class="slider-value">
+                    <span>5 bar</span>
+                    <span class="value-display" id="chamberPressureValue">100 bar</span>
+                    <span>200 bar</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Chamber Temperature (T<sub>c</sub>)
+                    <span class="tooltip" title="Combustion chamber temperature">?</span>
+                </label>
+                <input type="range" id="chamberTemp" min="2000" max="4000" step="50" value="3400">
+                <div class="slider-value">
+                    <span>2000 K</span>
+                    <span class="value-display" id="chamberTempValue">3400 K</span>
+                    <span>4000 K</span>
+                </div>
+            </div>
+
+            <div class="section-title">Nozzle Geometry</div>
+
+            <div class="control-group">
+                <label>
+                    Throat Diameter (D<sub>t</sub>)
+                    <span class="tooltip" title="Nozzle throat diameter">?</span>
+                </label>
+                <input type="range" id="throatDiameter" min="5" max="50" step="1" value="20">
+                <div class="slider-value">
+                    <span>5 cm</span>
+                    <span class="value-display" id="throatDiameterValue">20 cm</span>
+                    <span>50 cm</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Expansion Ratio (ε)
+                    <span class="tooltip" title="Exit area / Throat area">?</span>
+                </label>
+                <input type="range" id="expansionRatio" min="5" max="100" step="1" value="40">
+                <div class="slider-value">
+                    <span>5</span>
+                    <span class="value-display" id="expansionRatioValue">40</span>
+                    <span>100</span>
+                </div>
+            </div>
+
+            <div class="section-title">Injection Parameters</div>
+
+            <div class="control-group">
+                <label>
+                    Injection Velocity
+                    <span class="tooltip" title="Propellant injection velocity">?</span>
+                </label>
+                <input type="range" id="injectionVelocity" min="5" max="50" step="1" value="25">
+                <div class="slider-value">
+                    <span>5 m/s</span>
+                    <span class="value-display" id="injectionVelocityValue">25 m/s</span>
+                    <span>50 m/s</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Bubble Density
+                    <span class="tooltip" title="Number of bubbles per unit volume">?</span>
+                </label>
+                <input type="range" id="bubbleDensity" min="100" max="1000" step="50" value="400">
+                <div class="slider-value">
+                    <span>Low</span>
+                    <span class="value-display" id="bubbleDensityValue">400</span>
+                    <span>High</span>
+                </div>
+            </div>
+
+            <button id="resetBtn">Reset to Defaults</button>
+        </div>
+
+        <!-- Center Panel: Visualizations -->
+        <div>
+            <div class="canvas-container">
+                <div class="canvas-title">INJECTOR & CHAMBER FLOW DYNAMICS</div>
+                <canvas id="flowCanvas" width="800" height="350"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(100, 200, 255, 0.6);"></div>
+                        <span>Gas Bubbles</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(0, 170, 255, 0.8);"></div>
+                        <span>Liquid Propellant</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: rgba(255, 100, 50, 0.8);"></div>
+                        <span>Combustion Zone</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <div class="canvas-title">CHAMBER PRESSURE VS. TIME</div>
+                <canvas id="pressureCanvas" width="800" height="200"></canvas>
+            </div>
+
+            <div class="canvas-container">
+                <div class="canvas-title">MIXTURE DENSITY PROFILE</div>
+                <canvas id="densityCanvas" width="800" height="200"></canvas>
+            </div>
+
+            <div class="canvas-container">
+                <div class="canvas-title">EXIT VELOCITY DISTRIBUTION</div>
+                <canvas id="velocityCanvas" width="800" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Panel: Statistics -->
+        <div class="panel">
+            <div class="section-title">Performance Metrics</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Thrust (F)</div>
+                <div class="stat-value">
+                    <span id="thrustValue">0</span>
+                    <span class="stat-unit">kN</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Specific Impulse (I<sub>sp</sub>)</div>
+                <div class="stat-value">
+                    <span id="ispValue">0</span>
+                    <span class="stat-unit">s</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Mass Flow Rate (ṁ)</div>
+                <div class="stat-value">
+                    <span id="massFlowValue">0</span>
+                    <span class="stat-unit">kg/s</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Exit Velocity (v<sub>e</sub>)</div>
+                <div class="stat-value">
+                    <span id="exitVelValue">0</span>
+                    <span class="stat-unit">m/s</span>
+                </div>
+            </div>
+
+            <div class="section-title">Two-Phase Flow</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Void Fraction (α)</div>
+                <div class="stat-value">
+                    <span id="voidFractionValue">0</span>
+                    <span class="stat-unit">%</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Mixture Density (ρ<sub>m</sub>)</div>
+                <div class="stat-value">
+                    <span id="mixtureDensityValue">0</span>
+                    <span class="stat-unit">kg/m³</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Bubble Size</div>
+                <div class="stat-value">
+                    <span id="bubbleSizeValue">0</span>
+                    <span class="stat-unit">μm</span>
+                </div>
+            </div>
+
+            <div class="section-title">Mass Fraction Analysis</div>
+
+            <div class="stat-box">
+                <div class="stat-label">DPEP Mass Fraction</div>
+                <div class="stat-value">
+                    <span id="dpepMassFracValue">0</span>
+                    <span class="stat-unit">%</span>
+                </div>
+                <div class="info-badge">Single-stage benefit</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Traditional Staged</div>
+                <div class="stat-value">
+                    <span id="stagedMassFracValue">0</span>
+                    <span class="stat-unit">%</span>
+                </div>
+                <div class="info-badge">Two-stage comparison</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Mass Saving</div>
+                <div class="stat-value">
+                    <span id="massSavingValue">0</span>
+                    <span class="stat-unit">%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONSTANTS ==========
+        const R = 8.314;  // Universal gas constant (J/mol·K)
+        const g0 = 9.81;  // Standard gravity (m/s²)
+        const P_atm = 1.013e5;  // Atmospheric pressure (Pa)
+
+        // ========== PROPELLANT DATABASE ==========
+        const PROPELLANTS = {
+            'LOX-RP1': {
+                name: 'LOX/RP-1',
+                gamma: 1.24,
+                molecularWeight: 23.3,  // g/mol
+                c_star: 1700,  // Characteristic velocity (m/s)
+                density_liquid: 1000,  // kg/m³
+                density_gas: 1.4,  // kg/m³
+                optimumOF: 2.56
+            },
+            'LOX-LH2': {
+                name: 'LOX/LH2',
+                gamma: 1.26,
+                molecularWeight: 12.0,
+                c_star: 2340,
+                density_liquid: 350,
+                density_gas: 0.9,
+                optimumOF: 6.0
+            },
+            'NTO-MMH': {
+                name: 'NTO/MMH',
+                gamma: 1.21,
+                molecularWeight: 25.0,
+                c_star: 1640,
+                density_liquid: 1150,
+                density_gas: 1.8,
+                optimumOF: 1.65
+            },
+            'LOX-CH4': {
+                name: 'LOX/Methane',
+                gamma: 1.25,
+                molecularWeight: 20.5,
+                c_star: 1900,
+                density_liquid: 820,
+                density_gas: 1.2,
+                optimumOF: 3.5
+            }
+        };
+
+        // ========== STATE VARIABLES ==========
+        let currentPropellant = PROPELLANTS['LOX-RP1'];
+        let glr = 0.15;  // Gas-to-liquid ratio
+        let P_chamber = 100e5;  // Chamber pressure (Pa)
+        let T_chamber = 3400;  // Chamber temperature (K)
+        let D_throat = 0.2;  // Throat diameter (m)
+        let expansionRatio = 40;
+        let v_injection = 25;  // Injection velocity (m/s)
+        let bubbleDensityParam = 400;
+
+        // Particle system for visualization
+        let bubbles = [];
+        let liquidParticles = [];
+
+        // Time series data
+        let timeData = [];
+        let pressureData = [];
+        let timeStep = 0;
+        const maxDataPoints = 100;
+
+        // Canvas contexts
+        let flowCtx, pressureCtx, densityCtx, velocityCtx;
+
+        // ========== INITIALIZATION ==========
+        window.addEventListener('DOMContentLoaded', () => {
+            // Get canvas contexts
+            flowCtx = document.getElementById('flowCanvas').getContext('2d');
+            pressureCtx = document.getElementById('pressureCanvas').getContext('2d');
+            densityCtx = document.getElementById('densityCanvas').getContext('2d');
+            velocityCtx = document.getElementById('velocityCanvas').getContext('2d');
+
+            // Initialize particles
+            initializeParticles();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Start animation
+            updateSimulation();
+            animate();
+        });
+
+        // ========== PARTICLE CLASSES ==========
+        class Bubble {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = Math.random() * 2 - 1;
+                this.vy = Math.random() * 2 - 1;
+                this.size = 2 + Math.random() * 4;
+                this.life = 1.0;
+                this.angle = Math.random() * Math.PI * 2;
+            }
+
+            update(flowVelocity, nozzleShape) {
+                // Flow acceleration
+                const flowAccel = flowVelocity / 100;
+                this.vx += flowAccel;
+
+                // Buoyancy (bubbles rise slightly)
+                this.vy -= 0.05;
+
+                // Brownian motion
+                this.vx += (Math.random() - 0.5) * 0.3;
+                this.vy += (Math.random() - 0.5) * 0.3;
+
+                // Velocity damping
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+
+                // Position update
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Nozzle flow constraint
+                if (this.x > 200) {
+                    const progress = (this.x - 200) / 500;
+                    const targetY = 175 + nozzleShape(progress) * (this.y > 175 ? 1 : -1);
+                    this.vy += (targetY - this.y) * 0.02;
+                }
+
+                // Life decay
+                this.life -= 0.003;
+
+                // Expansion in nozzle
+                if (this.x > 200) {
+                    this.size += 0.02;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.6;
+
+                // Gradient bubble
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.size
+                );
+                gradient.addColorStop(0, 'rgba(150, 220, 255, 0.8)');
+                gradient.addColorStop(0.7, 'rgba(100, 200, 255, 0.4)');
+                gradient.addColorStop(1, 'rgba(100, 200, 255, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(this.x - this.size * 0.3, this.y - this.size * 0.3, this.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class LiquidParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = Math.random() * 1 - 0.5;
+                this.vy = Math.random() * 1 - 0.5;
+                this.size = 1.5 + Math.random() * 2;
+                this.life = 1.0;
+            }
+
+            update(flowVelocity) {
+                // Flow acceleration
+                this.vx += flowVelocity / 80;
+
+                // Gravity
+                this.vy += 0.08;
+
+                // Velocity damping
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+
+                // Position update
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Life decay
+                this.life -= 0.002;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.7;
+                ctx.fillStyle = 'rgba(0, 170, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // ========== PARTICLE INITIALIZATION ==========
+        function initializeParticles() {
+            bubbles = [];
+            liquidParticles = [];
+
+            // Create initial bubbles in injector region
+            for (let i = 0; i < 50; i++) {
+                bubbles.push(new Bubble(
+                    30 + Math.random() * 100,
+                    100 + Math.random() * 150
+                ));
+            }
+
+            // Create liquid particles
+            for (let i = 0; i < 80; i++) {
+                liquidParticles.push(new LiquidParticle(
+                    30 + Math.random() * 100,
+                    100 + Math.random() * 150
+                ));
+            }
+        }
+
+        // ========== PHYSICS CALCULATIONS ==========
+        function calculateNozzleShape(normalizedPosition) {
+            // Returns the half-height at a given position (0 = throat, 1 = exit)
+            const throatRadius = D_throat / 2;
+            const exitRadius = throatRadius * Math.sqrt(expansionRatio);
+
+            if (normalizedPosition < 0.3) {
+                // Converging section (before visualization)
+                return throatRadius * (1 + normalizedPosition);
+            } else if (normalizedPosition < 0.5) {
+                // Throat region
+                return throatRadius;
+            } else {
+                // Diverging section
+                const divProgress = (normalizedPosition - 0.5) / 0.5;
+                return throatRadius + (exitRadius - throatRadius) * divProgress;
+            }
+        }
+
+        function calculateVoidFraction() {
+            // Void fraction based on GLR and densities
+            const beta = glr; // Gas volume fraction
+            return beta / (beta + (1 - beta) * (currentPropellant.density_gas / currentPropellant.density_liquid));
+        }
+
+        function calculateMixtureDensity() {
+            const alpha = calculateVoidFraction();
+            return alpha * currentPropellant.density_gas + (1 - alpha) * currentPropellant.density_liquid;
+        }
+
+        function calculateThroatArea() {
+            return Math.PI * (D_throat / 2) ** 2;
+        }
+
+        function calculateExitArea() {
+            return calculateThroatArea() * expansionRatio;
+        }
+
+        function calculateMassFlowRate() {
+            // Using characteristic velocity
+            const A_throat = calculateThroatArea();
+            const c_star = currentPropellant.c_star;
+            return (P_chamber * A_throat) / c_star;
+        }
+
+        function calculateExitVelocity() {
+            // Using isentropic expansion
+            const gamma = currentPropellant.gamma;
+            const M = currentPropellant.molecularWeight / 1000;  // Convert to kg/mol
+            const R_specific = R / M;
+
+            // Pressure ratio for given expansion ratio
+            const pressureRatio = Math.pow(expansionRatio, -gamma);
+            const P_exit = P_chamber * pressureRatio;
+
+            // Exit velocity from energy equation
+            const term = (2 * gamma / (gamma - 1)) * R_specific * T_chamber;
+            const ve = Math.sqrt(term * (1 - Math.pow(P_exit / P_chamber, (gamma - 1) / gamma)));
+
+            return ve;
+        }
+
+        function calculateThrust() {
+            const m_dot = calculateMassFlowRate();
+            const ve = calculateExitVelocity();
+            const A_exit = calculateExitArea();
+
+            // Exit pressure (simplified)
+            const gamma = currentPropellant.gamma;
+            const pressureRatio = Math.pow(expansionRatio, -gamma);
+            const P_exit = P_chamber * pressureRatio;
+
+            // Thrust equation: F = ṁ*ve + (Pe - Pa)*Ae
+            const thrust = m_dot * ve + (P_exit - P_atm) * A_exit;
+
+            return thrust / 1000;  // Convert to kN
+        }
+
+        function calculateSpecificImpulse() {
+            const thrust = calculateThrust() * 1000;  // Convert back to N
+            const m_dot = calculateMassFlowRate();
+            return thrust / (m_dot * g0);
+        }
+
+        function calculateBubbleSize() {
+            // Weber number based bubble size estimation
+            const sigma = 0.07;  // Surface tension (N/m)
+            const We = 10;  // Typical Weber number
+
+            const rho = currentPropellant.density_liquid;
+            const v_rel = v_injection;
+
+            const d_bubble = (We * sigma) / (rho * v_rel * v_rel);
+            return d_bubble * 1e6;  // Convert to micrometers
+        }
+
+        function calculateMassFractions() {
+            // DPEP single-stage mass fraction
+            const Isp_dpep = calculateSpecificImpulse();
+            const deltaV = 9500;  // Target orbit velocity (m/s)
+            const structural_coeff = 0.15;  // Structural mass fraction
+
+            // Tsiolkovsky rocket equation: ΔV = Isp * g0 * ln(m0/mf)
+            const mass_ratio_dpep = Math.exp(deltaV / (Isp_dpep * g0));
+            const propellant_fraction_dpep = (mass_ratio_dpep - 1) / mass_ratio_dpep;
+            const payload_fraction_dpep = 1 - propellant_fraction_dpep - structural_coeff;
+
+            // Traditional two-stage (approximation)
+            const Isp_stage1 = 280;  // Sea-level Isp
+            const Isp_stage2 = 350;  // Vacuum Isp
+            const deltaV1 = 4500;
+            const deltaV2 = 5000;
+
+            const mr1 = Math.exp(deltaV1 / (Isp_stage1 * g0));
+            const mr2 = Math.exp(deltaV2 / (Isp_stage2 * g0));
+
+            const structural_coeff_staged = 0.12;  // Better for staged
+            const interstage_mass = 0.03;  // Interstage structure
+
+            const payload_fraction_staged = 1 / (mr1 * mr2 * (1 + structural_coeff_staged + interstage_mass));
+
+            return {
+                dpep: payload_fraction_dpep * 100,
+                staged: payload_fraction_staged * 100,
+                saving: ((payload_fraction_dpep - payload_fraction_staged) / payload_fraction_staged) * 100
+            };
+        }
+
+        // ========== UPDATE SIMULATION ==========
+        function updateSimulation() {
+            // Calculate all metrics
+            const thrust = calculateThrust();
+            const isp = calculateSpecificImpulse();
+            const massFlow = calculateMassFlowRate();
+            const exitVel = calculateExitVelocity();
+            const voidFrac = calculateVoidFraction();
+            const mixDensity = calculateMixtureDensity();
+            const bubbleSize = calculateBubbleSize();
+            const massFractions = calculateMassFractions();
+
+            // Update displays
+            document.getElementById('thrustValue').textContent = thrust.toFixed(1);
+            document.getElementById('ispValue').textContent = isp.toFixed(1);
+            document.getElementById('massFlowValue').textContent = massFlow.toFixed(2);
+            document.getElementById('exitVelValue').textContent = exitVel.toFixed(0);
+            document.getElementById('voidFractionValue').textContent = (voidFrac * 100).toFixed(1);
+            document.getElementById('mixtureDensityValue').textContent = mixDensity.toFixed(1);
+            document.getElementById('bubbleSizeValue').textContent = bubbleSize.toFixed(0);
+            document.getElementById('dpepMassFracValue').textContent = massFractions.dpep.toFixed(2);
+            document.getElementById('stagedMassFracValue').textContent = massFractions.staged.toFixed(2);
+            document.getElementById('massSavingValue').textContent = massFractions.saving.toFixed(1);
+
+            // Store pressure data for time series
+            timeData.push(timeStep * 0.1);
+            pressureData.push(P_chamber / 1e5);  // Convert to bar
+
+            if (timeData.length > maxDataPoints) {
+                timeData.shift();
+                pressureData.shift();
+            }
+
+            timeStep++;
+        }
+
+        // ========== ANIMATION LOOP ==========
+        function animate() {
+            // Update simulation
+            updateSimulation();
+
+            // Draw all canvases
+            drawFlowVisualization();
+            drawPressureGraph();
+            drawDensityProfile();
+            drawVelocityDistribution();
+
+            requestAnimationFrame(animate);
+        }
+
+        // ========== FLOW VISUALIZATION ==========
+        function drawFlowVisualization() {
+            const canvas = flowCtx.canvas;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear
+            flowCtx.fillStyle = '#0a0a0f';
+            flowCtx.fillRect(0, 0, w, h);
+
+            // Draw injector
+            flowCtx.strokeStyle = 'rgba(100, 150, 200, 0.6)';
+            flowCtx.lineWidth = 3;
+            flowCtx.strokeRect(20, 120, 120, 110);
+
+            flowCtx.fillStyle = 'rgba(0, 170, 255, 0.3)';
+            flowCtx.fillRect(20, 120, 120, 110);
+
+            flowCtx.fillStyle = '#00aaff';
+            flowCtx.font = '12px Orbitron';
+            flowCtx.fillText('INJECTOR', 45, 110);
+
+            // Draw chamber
+            flowCtx.strokeStyle = 'rgba(255, 100, 50, 0.6)';
+            flowCtx.lineWidth = 3;
+            flowCtx.strokeRect(140, 80, 260, 190);
+
+            // Combustion zone gradient
+            const combustGrad = flowCtx.createLinearGradient(140, 175, 400, 175);
+            combustGrad.addColorStop(0, 'rgba(255, 100, 50, 0.3)');
+            combustGrad.addColorStop(0.5, 'rgba(255, 150, 50, 0.4)');
+            combustGrad.addColorStop(1, 'rgba(255, 50, 20, 0.2)');
+            flowCtx.fillStyle = combustGrad;
+            flowCtx.fillRect(140, 80, 260, 190);
+
+            flowCtx.fillStyle = '#ff6b35';
+            flowCtx.font = '12px Orbitron';
+            flowCtx.fillText('COMBUSTION CHAMBER', 200, 70);
+
+            // Draw nozzle
+            flowCtx.strokeStyle = 'rgba(0, 170, 255, 0.6)';
+            flowCtx.lineWidth = 3;
+
+            const nozzleStart = 400;
+            const nozzleLength = 350;
+            const centerY = h / 2;
+
+            flowCtx.beginPath();
+            flowCtx.moveTo(nozzleStart, 80);
+
+            // Upper nozzle contour
+            for (let x = 0; x <= nozzleLength; x += 5) {
+                const progress = x / nozzleLength;
+                const radius = calculateNozzleShape(progress) * 200;
+                flowCtx.lineTo(nozzleStart + x, centerY - radius);
+            }
+
+            // Lower nozzle contour
+            for (let x = nozzleLength; x >= 0; x -= 5) {
+                const progress = x / nozzleLength;
+                const radius = calculateNozzleShape(progress) * 200;
+                flowCtx.lineTo(nozzleStart + x, centerY + radius);
+            }
+
+            flowCtx.closePath();
+
+            // Nozzle gradient
+            const nozzleGrad = flowCtx.createLinearGradient(nozzleStart, centerY, nozzleStart + nozzleLength, centerY);
+            nozzleGrad.addColorStop(0, 'rgba(255, 100, 50, 0.2)');
+            nozzleGrad.addColorStop(0.5, 'rgba(100, 150, 255, 0.2)');
+            nozzleGrad.addColorStop(1, 'rgba(50, 100, 255, 0.1)');
+            flowCtx.fillStyle = nozzleGrad;
+            flowCtx.fill();
+            flowCtx.stroke();
+
+            flowCtx.fillStyle = '#00aaff';
+            flowCtx.font = '12px Orbitron';
+            flowCtx.fillText('NOZZLE', 550, 70);
+
+            // Update and draw particles
+            const flowVel = v_injection * (P_chamber / 1e6);
+
+            // Update bubbles
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const bubble = bubbles[i];
+                bubble.update(flowVel, (p) => calculateNozzleShape(p) * 200);
+
+                if (bubble.life <= 0 || bubble.x > w + 10) {
+                    bubbles.splice(i, 1);
+                } else {
+                    bubble.draw(flowCtx);
+                }
+            }
+
+            // Update liquid particles
+            for (let i = liquidParticles.length - 1; i >= 0; i--) {
+                const particle = liquidParticles[i];
+                particle.update(flowVel);
+
+                if (particle.life <= 0 || particle.x > w + 10 || particle.y > h + 10) {
+                    liquidParticles.splice(i, 1);
+                } else {
+                    particle.draw(flowCtx);
+                }
+            }
+
+            // Spawn new particles
+            const spawnRate = bubbleDensityParam / 100;
+
+            if (Math.random() < spawnRate * 0.3) {
+                bubbles.push(new Bubble(
+                    40 + Math.random() * 80,
+                    140 + Math.random() * 70
+                ));
+            }
+
+            if (Math.random() < spawnRate * 0.2) {
+                liquidParticles.push(new LiquidParticle(
+                    40 + Math.random() * 80,
+                    140 + Math.random() * 70
+                ));
+            }
+
+            // Draw flow direction arrows
+            flowCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            flowCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            flowCtx.lineWidth = 2;
+
+            for (let y = 120; y <= 220; y += 30) {
+                drawArrow(flowCtx, 160, y, 220, y);
+                drawArrow(flowCtx, 250, y, 320, y);
+                drawArrow(flowCtx, 420, y, 520, y);
+            }
+        }
+
+        function drawArrow(ctx, x1, y1, x2, y2) {
+            const headlen = 8;
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.stroke();
+        }
+
+        // ========== PRESSURE GRAPH ==========
+        function drawPressureGraph() {
+            const canvas = pressureCtx.canvas;
+            const w = canvas.width;
+            const h = canvas.height;
+            const padding = 50;
+
+            // Clear
+            pressureCtx.fillStyle = '#0a0a0f';
+            pressureCtx.fillRect(0, 0, w, h);
+
+            if (pressureData.length < 2) return;
+
+            // Draw grid
+            pressureCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            pressureCtx.lineWidth = 1;
+
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (h - 2 * padding) * i / 5;
+                pressureCtx.beginPath();
+                pressureCtx.moveTo(padding, y);
+                pressureCtx.lineTo(w - padding, y);
+                pressureCtx.stroke();
+            }
+
+            // Draw axes
+            pressureCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            pressureCtx.lineWidth = 2;
+            pressureCtx.beginPath();
+            pressureCtx.moveTo(padding, padding);
+            pressureCtx.lineTo(padding, h - padding);
+            pressureCtx.lineTo(w - padding, h - padding);
+            pressureCtx.stroke();
+
+            // Labels
+            pressureCtx.fillStyle = '#888';
+            pressureCtx.font = '11px Arial';
+            pressureCtx.textAlign = 'right';
+            pressureCtx.fillText('Pressure (bar)', padding - 10, padding - 10);
+            pressureCtx.textAlign = 'center';
+            pressureCtx.fillText('Time (s)', w / 2, h - 10);
+
+            // Draw pressure curve
+            const minP = Math.min(...pressureData) * 0.95;
+            const maxP = Math.max(...pressureData) * 1.05;
+            const rangeP = maxP - minP || 1;
+
+            pressureCtx.strokeStyle = '#00ddff';
+            pressureCtx.lineWidth = 2;
+            pressureCtx.beginPath();
+
+            for (let i = 0; i < pressureData.length; i++) {
+                const x = padding + (w - 2 * padding) * i / (maxDataPoints - 1);
+                const y = h - padding - ((pressureData[i] - minP) / rangeP) * (h - 2 * padding);
+
+                if (i === 0) {
+                    pressureCtx.moveTo(x, y);
+                } else {
+                    pressureCtx.lineTo(x, y);
+                }
+            }
+
+            pressureCtx.stroke();
+
+            // Draw glow
+            pressureCtx.shadowColor = '#00ddff';
+            pressureCtx.shadowBlur = 10;
+            pressureCtx.stroke();
+            pressureCtx.shadowBlur = 0;
+
+            // Y-axis labels
+            pressureCtx.fillStyle = '#00aaff';
+            pressureCtx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const value = minP + (maxP - minP) * (1 - i / 5);
+                const y = padding + (h - 2 * padding) * i / 5;
+                pressureCtx.fillText(value.toFixed(1), padding - 10, y + 4);
+            }
+        }
+
+        // ========== DENSITY PROFILE ==========
+        function drawDensityProfile() {
+            const canvas = densityCtx.canvas;
+            const w = canvas.width;
+            const h = canvas.height;
+            const padding = 50;
+
+            // Clear
+            densityCtx.fillStyle = '#0a0a0f';
+            densityCtx.fillRect(0, 0, w, h);
+
+            // Draw grid
+            densityCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            densityCtx.lineWidth = 1;
+
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (h - 2 * padding) * i / 5;
+                densityCtx.beginPath();
+                densityCtx.moveTo(padding, y);
+                densityCtx.lineTo(w - padding, y);
+                densityCtx.stroke();
+            }
+
+            // Draw axes
+            densityCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            densityCtx.lineWidth = 2;
+            densityCtx.beginPath();
+            densityCtx.moveTo(padding, padding);
+            densityCtx.lineTo(padding, h - padding);
+            densityCtx.lineTo(w - padding, h - padding);
+            densityCtx.stroke();
+
+            // Labels
+            densityCtx.fillStyle = '#888';
+            densityCtx.font = '11px Arial';
+            densityCtx.textAlign = 'right';
+            densityCtx.fillText('Density (kg/m³)', padding - 10, padding - 10);
+            densityCtx.textAlign = 'center';
+            densityCtx.fillText('Position: Injector → Throat → Nozzle Exit', w / 2, h - 10);
+
+            // Calculate density profile
+            const points = 100;
+            const densities = [];
+
+            for (let i = 0; i < points; i++) {
+                const progress = i / (points - 1);
+
+                // Density decreases as flow expands through nozzle
+                const mixDensity = calculateMixtureDensity();
+                const expansionFactor = 1 + progress * (expansionRatio - 1);
+                const density = mixDensity / Math.sqrt(expansionFactor);
+
+                densities.push(density);
+            }
+
+            const minD = Math.min(...densities);
+            const maxD = Math.max(...densities);
+            const rangeD = maxD - minD;
+
+            // Draw density curve
+            densityCtx.strokeStyle = '#ff6b35';
+            densityCtx.lineWidth = 2.5;
+            densityCtx.beginPath();
+
+            for (let i = 0; i < densities.length; i++) {
+                const x = padding + (w - 2 * padding) * i / (points - 1);
+                const y = h - padding - ((densities[i] - minD) / rangeD) * (h - 2 * padding);
+
+                if (i === 0) {
+                    densityCtx.moveTo(x, y);
+                } else {
+                    densityCtx.lineTo(x, y);
+                }
+            }
+
+            densityCtx.stroke();
+
+            // Glow effect
+            densityCtx.shadowColor = '#ff6b35';
+            densityCtx.shadowBlur = 10;
+            densityCtx.stroke();
+            densityCtx.shadowBlur = 0;
+
+            // Fill under curve
+            densityCtx.lineTo(w - padding, h - padding);
+            densityCtx.lineTo(padding, h - padding);
+            densityCtx.closePath();
+
+            const gradient = densityCtx.createLinearGradient(0, padding, 0, h - padding);
+            gradient.addColorStop(0, 'rgba(255, 107, 53, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 107, 53, 0)');
+            densityCtx.fillStyle = gradient;
+            densityCtx.fill();
+
+            // Y-axis labels
+            densityCtx.fillStyle = '#ff6b35';
+            densityCtx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const value = minD + (maxD - minD) * (1 - i / 5);
+                const y = padding + (h - 2 * padding) * i / 5;
+                densityCtx.fillText(value.toFixed(0), padding - 10, y + 4);
+            }
+
+            // Mark key positions
+            const injectorX = padding + (w - 2 * padding) * 0.1;
+            const throatX = padding + (w - 2 * padding) * 0.4;
+            const exitX = w - padding;
+
+            densityCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            densityCtx.setLineDash([5, 5]);
+            densityCtx.beginPath();
+            densityCtx.moveTo(injectorX, padding);
+            densityCtx.lineTo(injectorX, h - padding);
+            densityCtx.moveTo(throatX, padding);
+            densityCtx.lineTo(throatX, h - padding);
+            densityCtx.stroke();
+            densityCtx.setLineDash([]);
+
+            densityCtx.fillStyle = '#888';
+            densityCtx.font = '10px Arial';
+            densityCtx.fillText('Inj', injectorX, h - padding + 15);
+            densityCtx.fillText('Throat', throatX, h - padding + 15);
+            densityCtx.fillText('Exit', exitX, h - padding + 15);
+        }
+
+        // ========== VELOCITY DISTRIBUTION ==========
+        function drawVelocityDistribution() {
+            const canvas = velocityCtx.canvas;
+            const w = canvas.width;
+            const h = canvas.height;
+            const padding = 50;
+
+            // Clear
+            velocityCtx.fillStyle = '#0a0a0f';
+            velocityCtx.fillRect(0, 0, w, h);
+
+            // Draw grid
+            velocityCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            velocityCtx.lineWidth = 1;
+
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (h - 2 * padding) * i / 5;
+                velocityCtx.beginPath();
+                velocityCtx.moveTo(padding, y);
+                velocityCtx.lineTo(w - padding, y);
+                velocityCtx.stroke();
+            }
+
+            // Draw axes
+            velocityCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            velocityCtx.lineWidth = 2;
+            velocityCtx.beginPath();
+            velocityCtx.moveTo(padding, padding);
+            velocityCtx.lineTo(padding, h - padding);
+            velocityCtx.lineTo(w - padding, h - padding);
+            velocityCtx.stroke();
+
+            // Labels
+            velocityCtx.fillStyle = '#888';
+            velocityCtx.font = '11px Arial';
+            velocityCtx.textAlign = 'right';
+            velocityCtx.fillText('Velocity (m/s)', padding - 10, padding - 10);
+            velocityCtx.textAlign = 'center';
+            velocityCtx.fillText('Radial Position (Normalized)', w / 2, h - 10);
+
+            // Calculate velocity profile (parabolic for viscous flow)
+            const points = 100;
+            const exitVel = calculateExitVelocity();
+            const velocities = [];
+
+            for (let i = 0; i < points; i++) {
+                const r = (i / (points - 1)) * 2 - 1;  // -1 to 1 (center to wall)
+
+                // Parabolic velocity profile with boundary layer
+                const boundaryLayer = 0.15;  // 15% boundary layer
+                const centerVel = exitVel;
+                const wallVel = exitVel * (1 - boundaryLayer);
+
+                const velocity = wallVel + (centerVel - wallVel) * (1 - r * r);
+                velocities.push(velocity);
+            }
+
+            const minV = Math.min(...velocities) * 0.9;
+            const maxV = Math.max(...velocities) * 1.05;
+            const rangeV = maxV - minV;
+
+            // Draw velocity profile
+            velocityCtx.strokeStyle = '#4caf50';
+            velocityCtx.lineWidth = 2.5;
+            velocityCtx.beginPath();
+
+            for (let i = 0; i < velocities.length; i++) {
+                const x = padding + (w - 2 * padding) * i / (points - 1);
+                const y = h - padding - ((velocities[i] - minV) / rangeV) * (h - 2 * padding);
+
+                if (i === 0) {
+                    velocityCtx.moveTo(x, y);
+                } else {
+                    velocityCtx.lineTo(x, y);
+                }
+            }
+
+            velocityCtx.stroke();
+
+            // Glow effect
+            velocityCtx.shadowColor = '#4caf50';
+            velocityCtx.shadowBlur = 10;
+            velocityCtx.stroke();
+            velocityCtx.shadowBlur = 0;
+
+            // Fill under curve
+            velocityCtx.lineTo(w - padding, h - padding);
+            velocityCtx.lineTo(padding, h - padding);
+            velocityCtx.closePath();
+
+            const gradient = velocityCtx.createLinearGradient(0, padding, 0, h - padding);
+            gradient.addColorStop(0, 'rgba(76, 175, 80, 0.3)');
+            gradient.addColorStop(1, 'rgba(76, 175, 80, 0)');
+            velocityCtx.fillStyle = gradient;
+            velocityCtx.fill();
+
+            // Y-axis labels
+            velocityCtx.fillStyle = '#4caf50';
+            velocityCtx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const value = minV + (maxV - minV) * (1 - i / 5);
+                const y = padding + (h - 2 * padding) * i / 5;
+                velocityCtx.fillText(value.toFixed(0), padding - 10, y + 4);
+            }
+
+            // X-axis labels
+            velocityCtx.fillStyle = '#888';
+            velocityCtx.textAlign = 'center';
+            velocityCtx.fillText('Wall', padding, h - padding + 15);
+            velocityCtx.fillText('Center', w / 2, h - padding + 15);
+            velocityCtx.fillText('Wall', w - padding, h - padding + 15);
+        }
+
+        // ========== EVENT LISTENERS ==========
+        function setupEventListeners() {
+            // Propellant type
+            document.getElementById('propellantType').addEventListener('change', (e) => {
+                currentPropellant = PROPELLANTS[e.target.value];
+            });
+
+            // GLR
+            document.getElementById('glr').addEventListener('input', (e) => {
+                glr = parseFloat(e.target.value);
+                document.getElementById('glrValue').textContent = glr.toFixed(2);
+            });
+
+            // Chamber pressure
+            document.getElementById('chamberPressure').addEventListener('input', (e) => {
+                P_chamber = parseFloat(e.target.value) * 1e5;  // Convert bar to Pa
+                document.getElementById('chamberPressureValue').textContent = e.target.value + ' bar';
+            });
+
+            // Chamber temperature
+            document.getElementById('chamberTemp').addEventListener('input', (e) => {
+                T_chamber = parseFloat(e.target.value);
+                document.getElementById('chamberTempValue').textContent = e.target.value + ' K';
+            });
+
+            // Throat diameter
+            document.getElementById('throatDiameter').addEventListener('input', (e) => {
+                D_throat = parseFloat(e.target.value) / 100;  // Convert cm to m
+                document.getElementById('throatDiameterValue').textContent = e.target.value + ' cm';
+            });
+
+            // Expansion ratio
+            document.getElementById('expansionRatio').addEventListener('input', (e) => {
+                expansionRatio = parseFloat(e.target.value);
+                document.getElementById('expansionRatioValue').textContent = e.target.value;
+            });
+
+            // Injection velocity
+            document.getElementById('injectionVelocity').addEventListener('input', (e) => {
+                v_injection = parseFloat(e.target.value);
+                document.getElementById('injectionVelocityValue').textContent = e.target.value + ' m/s';
+            });
+
+            // Bubble density
+            document.getElementById('bubbleDensity').addEventListener('input', (e) => {
+                bubbleDensityParam = parseFloat(e.target.value);
+                document.getElementById('bubbleDensityValue').textContent = e.target.value;
+            });
+
+            // Reset button
+            document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
+        }
+
+        function resetToDefaults() {
+            document.getElementById('propellantType').value = 'LOX-RP1';
+            document.getElementById('glr').value = '0.15';
+            document.getElementById('chamberPressure').value = '100';
+            document.getElementById('chamberTemp').value = '3400';
+            document.getElementById('throatDiameter').value = '20';
+            document.getElementById('expansionRatio').value = '40';
+            document.getElementById('injectionVelocity').value = '25';
+            document.getElementById('bubbleDensity').value = '400';
+
+            currentPropellant = PROPELLANTS['LOX-RP1'];
+            glr = 0.15;
+            P_chamber = 100e5;
+            T_chamber = 3400;
+            D_throat = 0.2;
+            expansionRatio = 40;
+            v_injection = 25;
+            bubbleDensityParam = 400;
+
+            // Update displays
+            document.getElementById('glrValue').textContent = '0.15';
+            document.getElementById('chamberPressureValue').textContent = '100 bar';
+            document.getElementById('chamberTempValue').textContent = '3400 K';
+            document.getElementById('throatDiameterValue').textContent = '20 cm';
+            document.getElementById('expansionRatioValue').textContent = '40';
+            document.getElementById('injectionVelocityValue').textContent = '25 m/s';
+            document.getElementById('bubbleDensityValue').textContent = '400';
+
+            // Reset particles
+            initializeParticles();
+
+            // Reset time series
+            timeData = [];
+            pressureData = [];
+            timeStep = 0;
+        }
+    </script>
+</body>
+</html>
