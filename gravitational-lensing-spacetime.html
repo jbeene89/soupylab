@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Lensing & Spacetime Curvature - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&display=swap');
+
+        :root {
+            --bg: #000208;
+            --panel: #0a0515;
+            --accent: #ffa500;
+            --star: #ffdd00;
+            --black-hole: #9d00ff;
+            --galaxy: #00ccff;
+            --text: #e0e0e0;
+            --dim: #8899bb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #0a0520 0%, var(--bg) 100%);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            background: linear-gradient(180deg, rgba(255, 165, 0, 0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255, 165, 0, 0.2);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #ffa500 0%, #ffdd00 50%, #00ccff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(255, 165, 0, 0.5);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: var(--dim);
+            max-width: 1000px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(10, 5, 21, 0.9);
+            border: 1px solid rgba(255, 165, 0, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 165, 0, 0.3);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255, 165, 0, 0.2) 0%, rgba(255, 221, 0, 0.2) 100%);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #ffa500 0%, #ffdd00 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(255, 165, 0, 0.8);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255, 165, 0, 1);
+        }
+
+        .slider-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(255, 165, 0, 0.05);
+            border: 1px solid rgba(255, 165, 0, 0.2);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            background: rgba(255, 165, 0, 0.1);
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #ffa500 0%, #ffdd00 100%);
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 165, 0, 0.6);
+        }
+
+        .mass-btn {
+            margin-bottom: 0.5rem;
+        }
+
+        .mass-btn.star {
+            background: linear-gradient(135deg, #ffdd00 0%, #ffa500 100%);
+        }
+
+        .mass-btn.black-hole {
+            background: linear-gradient(135deg, #9d00ff 0%, #5500aa 100%);
+            color: white;
+        }
+
+        .mass-btn.galaxy {
+            background: linear-gradient(135deg, #00ccff 0%, #0088ff 100%);
+            color: white;
+        }
+
+        .stat-box {
+            background: rgba(255, 165, 0, 0.05);
+            border: 1px solid rgba(255, 165, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            background: rgba(255, 165, 0, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffa500 0%, #ffdd00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin-left: 0.3rem;
+        }
+
+        .canvas-container {
+            background: rgba(0, 2, 8, 0.95);
+            border: 1px solid rgba(255, 165, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+                        inset 0 0 60px rgba(255, 165, 0, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            background: linear-gradient(135deg, #ffa500 0%, #ffdd00 50%, #00ccff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            cursor: crosshair;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(10, 5, 21, 0.9);
+            border: 1px solid rgba(255, 165, 0, 0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-link:hover {
+            background: rgba(255, 165, 0, 0.2);
+            border-color: var(--accent);
+            transform: translateX(-3px);
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.4);
+        }
+
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 280px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>🌌 GRAVITATIONAL LENSING & SPACETIME CURVATURE 🌌</h1>
+        <p>Witness Einstein's General Relativity in action. Place massive objects to warp spacetime itself. Watch light rays bend around stars and black holes, creating Einstein rings, gravitational arcs, and multiple images. Experience how mass curves the fabric of space and time.</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <div class="section-title">Add Massive Objects</div>
+
+            <button class="mass-btn star" id="addStarBtn">⭐ Add Star (1 M☉)</button>
+            <button class="mass-btn black-hole" id="addBlackHoleBtn">⚫ Add Black Hole (10 M☉)</button>
+            <button class="mass-btn galaxy" id="addGalaxyBtn">🌀 Add Galaxy Cluster (1000 M☉)</button>
+
+            <div class="section-title">Light Source</div>
+
+            <div class="control-group">
+                <label>Source Type</label>
+                <select id="sourceType">
+                    <option value="point">Point Source (Quasar)</option>
+                    <option value="grid">Background Grid</option>
+                    <option value="galaxy">Distant Galaxy</option>
+                    <option value="multiple">Multiple Stars</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Ray Density
+                </label>
+                <input type="range" id="rayDensity" min="10" max="200" step="10" value="50">
+                <div class="slider-value">
+                    <span>10</span>
+                    <span class="value-display" id="rayDensityValue">50</span>
+                    <span>200</span>
+                </div>
+            </div>
+
+            <div class="section-title">Visualization</div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showGrid" checked style="width: auto; margin-right: 8px;">
+                    Show Spacetime Grid
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showRays" checked style="width: auto; margin-right: 8px;">
+                    Show Light Rays
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showEinstein" checked style="width: auto; margin-right: 8px;">
+                    Highlight Einstein Rings
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Grid Resolution
+                </label>
+                <input type="range" id="gridRes" min="20" max="100" step="10" value="50">
+                <div class="slider-value">
+                    <span>Coarse</span>
+                    <span class="value-display" id="gridResValue">50</span>
+                    <span>Fine</span>
+                </div>
+            </div>
+
+            <button id="clearBtn" style="background: linear-gradient(135deg, #ff4400 0%, #ff6600 100%);">🗑️ Clear All Objects</button>
+            <button id="resetBtn">🔄 Reset Scene</button>
+        </div>
+
+        <!-- Center Panel: Spacetime Canvas -->
+        <div>
+            <div class="canvas-container">
+                <div class="canvas-title">SPACETIME FABRIC & GRAVITATIONAL LENSING</div>
+                <canvas id="spacetimeCanvas" width="1000" height="700"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffdd00; color: #ffdd00;"></div>
+                        <span>Star (1 M☉)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9d00ff; color: #9d00ff;"></div>
+                        <span>Black Hole (10 M☉)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ccff; color: #00ccff;"></div>
+                        <span>Galaxy (1000 M☉)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffa500; color: #ffa500;"></div>
+                        <span>Light Rays</span>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--dim);">
+                    💡 Drag objects to move • Align source & lens for Einstein rings • Right-click to delete
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Stats -->
+        <div class="panel">
+            <div class="section-title">Relativity Metrics</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Total Mass</div>
+                <div class="stat-value">
+                    <span id="totalMassValue">0</span>
+                    <span class="stat-unit">M☉</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Schwarzschild Radius</div>
+                <div class="stat-value">
+                    <span id="schwarzschildValue">0</span>
+                    <span class="stat-unit">km</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Einstein Radius</div>
+                <div class="stat-value">
+                    <span id="einsteinRadiusValue">0</span>
+                    <span class="stat-unit">arcsec</span>
+                </div>
+            </div>
+
+            <div class="section-title">Lensing Effects</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Light Deflection</div>
+                <div class="stat-value">
+                    <span id="deflectionValue">0</span>
+                    <span class="stat-unit">arcsec</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Magnification</div>
+                <div class="stat-value">
+                    <span id="magnificationValue">1.0</span>
+                    <span class="stat-unit">×</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Multiple Images</div>
+                <div class="stat-value">
+                    <span id="imagesValue">1</span>
+                    <span class="stat-unit">images</span>
+                </div>
+            </div>
+
+            <div class="section-title">Spacetime</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Max Curvature</div>
+                <div class="stat-value">
+                    <span id="curvatureValue">0</span>
+                    <span class="stat-unit">m⁻²</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Time Dilation</div>
+                <div class="stat-value">
+                    <span id="timeDilationValue">1.000</span>
+                    <span class="stat-unit">×</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONSTANTS ==========
+        const canvas = document.getElementById('spacetimeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const G = 6.67430e-11; // Gravitational constant
+        const c = 299792458; // Speed of light (m/s)
+        const M_sun = 1.989e30; // Solar mass (kg)
+        const AU = 1.496e11; // Astronomical Unit (m)
+
+        // Scale for visualization (1 pixel = X meters)
+        const SCALE = 1e9; // 1 pixel = 1 million km
+
+        // ========== STATE VARIABLES ==========
+        let masses = [];
+        let rayDensity = 50;
+        let showGrid = true;
+        let showRays = true;
+        let showEinstein = true;
+        let gridRes = 50;
+        let sourceType = 'point';
+        let draggedMass = null;
+
+        // ========== MASS CLASSES ==========
+        class Mass {
+            constructor(x, y, mass, type) {
+                this.x = x;
+                this.y = y;
+                this.mass = mass; // in solar masses
+                this.type = type;
+                this.isDragging = false;
+            }
+
+            schwarzschildRadius() {
+                // Rs = 2GM/c²
+                return (2 * G * this.mass * M_sun) / (c * c);
+            }
+
+            gravitationalPotential(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                const r = Math.sqrt(dx * dx + dy * dy) * SCALE;
+
+                if (r < 1e6) return -1e10; // Very strong near singularity
+
+                const phi = -(G * this.mass * M_sun) / r;
+                return phi;
+            }
+
+            deflectionAngle(x, y, vx, vy) {
+                // Light deflection angle near a massive object
+                const dx = x - this.x;
+                const dy = y - this.y;
+                const r = Math.sqrt(dx * dx + dy * dy) * SCALE;
+
+                if (r < 1) return { dvx: 0, dvy: 0 };
+
+                // Einstein deflection: α = 4GM/(c²b)
+                const b = r; // Impact parameter
+                const alpha = (4 * G * this.mass * M_sun) / (c * c * b);
+
+                // Perpendicular to velocity
+                const perpX = -dy / Math.sqrt(dx * dx + dy * dy);
+                const perpY = dx / Math.sqrt(dx * dx + dy * dy);
+
+                return {
+                    dvx: perpX * alpha * 1e6, // Scale for visualization
+                    dvy: perpY * alpha * 1e6
+                };
+            }
+
+            draw(ctx) {
+                ctx.save();
+
+                if (this.type === 'star') {
+                    // Star with glow
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 30);
+                    gradient.addColorStop(0, 'rgba(255, 255, 150, 1)');
+                    gradient.addColorStop(0.3, 'rgba(255, 221, 0, 0.8)');
+                    gradient.addColorStop(0.7, 'rgba(255, 165, 0, 0.4)');
+                    gradient.addColorStop(1, 'transparent');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 30, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Core
+                    ctx.fillStyle = '#ffff99';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+
+                } else if (this.type === 'black-hole') {
+                    // Event horizon
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Accretion disk
+                    const diskGrad = ctx.createRadialGradient(this.x, this.y, 20, this.x, this.y, 50);
+                    diskGrad.addColorStop(0, 'rgba(157, 0, 255, 0.8)');
+                    diskGrad.addColorStop(0.5, 'rgba(85, 0, 170, 0.4)');
+                    diskGrad.addColorStop(1, 'transparent');
+
+                    ctx.fillStyle = diskGrad;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 50, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Hawking radiation glow
+                    ctx.strokeStyle = 'rgba(200, 100, 255, 0.6)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                } else if (this.type === 'galaxy') {
+                    // Galaxy spiral
+                    const galGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 60);
+                    galGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                    galGrad.addColorStop(0.3, 'rgba(0, 204, 255, 0.6)');
+                    galGrad.addColorStop(0.7, 'rgba(0, 136, 255, 0.3)');
+                    galGrad.addColorStop(1, 'transparent');
+
+                    ctx.fillStyle = galGrad;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 60, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Spiral arms
+                    for (let arm = 0; arm < 3; arm++) {
+                        ctx.strokeStyle = 'rgba(100, 200, 255, 0.4)';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        for (let t = 0; t < Math.PI * 4; t += 0.1) {
+                            const r = 10 + t * 5;
+                            const angle = t + (arm * Math.PI * 2 / 3);
+                            const px = this.x + r * Math.cos(angle);
+                            const py = this.y + r * Math.sin(angle);
+                            if (t === 0) ctx.moveTo(px, py);
+                            else ctx.lineTo(px, py);
+                        }
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.restore();
+            }
+
+            isPointInside(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                return dist < (this.type === 'galaxy' ? 60 : this.type === 'black-hole' ? 50 : 30);
+            }
+        }
+
+        // ========== RAY CLASS ==========
+        class Ray {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.vx = Math.cos(angle);
+                this.vy = Math.sin(angle);
+                this.path = [{ x, y }];
+                this.steps = 0;
+                this.maxSteps = 300;
+                this.intensity = 1;
+            }
+
+            propagate() {
+                if (this.steps >= this.maxSteps) return false;
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) return false;
+
+                // Calculate gravitational deflection
+                let dvx = 0;
+                let dvy = 0;
+
+                for (let mass of masses) {
+                    const deflection = mass.deflectionAngle(this.x, this.y, this.vx, this.vy);
+                    dvx += deflection.dvx;
+                    dvy += deflection.dvy;
+                }
+
+                // Apply deflection
+                this.vx += dvx * 0.1;
+                this.vy += dvy * 0.1;
+
+                // Normalize velocity (light always travels at c)
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                this.vx /= speed;
+                this.vy /= speed;
+
+                // Move ray
+                this.x += this.vx * 3;
+                this.y += this.vy * 3;
+
+                this.path.push({ x: this.x, y: this.y });
+                this.steps++;
+
+                return true;
+            }
+
+            draw(ctx) {
+                if (this.path.length < 2) return;
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(255, 165, 0, ${this.intensity * 0.6})`;
+                ctx.lineWidth = 1.5;
+                ctx.shadowColor = 'rgba(255, 165, 0, 0.8)';
+                ctx.shadowBlur = 4;
+
+                ctx.beginPath();
+                ctx.moveTo(this.path[0].x, this.path[0].y);
+                for (let i = 1; i < this.path.length; i++) {
+                    ctx.lineTo(this.path[i].x, this.path[i].y);
+                }
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // ========== DRAWING FUNCTIONS ==========
+
+        function drawSpacetimeGrid() {
+            if (!showGrid) return;
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(100, 150, 200, 0.2)';
+            ctx.lineWidth = 1;
+
+            const spacing = canvas.width / gridRes;
+
+            // Draw grid with curvature
+            for (let i = 0; i <= gridRes; i++) {
+                ctx.beginPath();
+                for (let j = 0; j <= gridRes; j++) {
+                    const x = i * spacing;
+                    const y = j * spacing;
+
+                    // Calculate displacement due to mass
+                    let dx = 0;
+                    let dy = 0;
+
+                    for (let mass of masses) {
+                        const mx = x - mass.x;
+                        const my = y - mass.y;
+                        const dist = Math.sqrt(mx * mx + my * my);
+
+                        if (dist > 10) {
+                            const strength = mass.mass * 5 / (dist * dist);
+                            dx += (mx / dist) * strength;
+                            dy += (my / dist) * strength;
+                        }
+                    }
+
+                    const px = x - dx;
+                    const py = y - dy;
+
+                    if (j === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                ctx.beginPath();
+                for (let j = 0; j <= gridRes; j++) {
+                    const x = j * spacing;
+                    const y = i * spacing;
+
+                    let dx = 0;
+                    let dy = 0;
+
+                    for (let mass of masses) {
+                        const mx = x - mass.x;
+                        const my = y - mass.y;
+                        const dist = Math.sqrt(mx * mx + my * my);
+
+                        if (dist > 10) {
+                            const strength = mass.mass * 5 / (dist * dist);
+                            dx += (mx / dist) * strength;
+                            dy += (my / dist) * strength;
+                        }
+                    }
+
+                    const px = x - dx;
+                    const py = y - dy;
+
+                    if (j === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function generateRays() {
+            const rays = [];
+            const sourceX = 50;
+            const sourceY = canvas.height / 2;
+
+            switch (sourceType) {
+                case 'point':
+                    for (let i = 0; i < rayDensity; i++) {
+                        const angle = (i / rayDensity - 0.5) * Math.PI / 3;
+                        rays.push(new Ray(sourceX, sourceY, angle));
+                    }
+                    break;
+
+                case 'grid':
+                    const rows = Math.floor(Math.sqrt(rayDensity));
+                    for (let row = 0; row < rows; row++) {
+                        for (let col = 0; col < rows; col++) {
+                            const y = (row / (rows - 1)) * canvas.height;
+                            rays.push(new Ray(sourceX, y, 0));
+                        }
+                    }
+                    break;
+
+                case 'galaxy':
+                    for (let i = 0; i < rayDensity; i++) {
+                        const angle = (Math.random() - 0.5) * 0.4;
+                        const offset = (Math.random() - 0.5) * 100;
+                        rays.push(new Ray(sourceX, sourceY + offset, angle));
+                    }
+                    break;
+
+                case 'multiple':
+                    for (let star = 0; star < 5; star++) {
+                        for (let i = 0; i < rayDensity / 5; i++) {
+                            const y = sourceY + (star - 2) * 100;
+                            const angle = (i / (rayDensity / 5) - 0.5) * 0.3;
+                            rays.push(new Ray(sourceX, y, angle));
+                        }
+                    }
+                    break;
+            }
+
+            return rays;
+        }
+
+        // ========== ANIMATION ==========
+        function animate() {
+            // Clear with stars background
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw distant stars
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 137) % canvas.width;
+                const y = (i * 197) % canvas.height;
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + Math.random() * 0.3})`;
+                ctx.fillRect(x, y, 1, 1);
+            }
+
+            // Draw spacetime grid
+            drawSpacetimeGrid();
+
+            // Generate and propagate rays
+            if (showRays) {
+                const rays = generateRays();
+
+                // Propagate all rays
+                rays.forEach(ray => {
+                    for (let step = 0; step < 100; step++) {
+                        if (!ray.propagate()) break;
+                    }
+                });
+
+                // Draw rays
+                rays.forEach(ray => ray.draw(ctx));
+            }
+
+            // Draw masses
+            masses.forEach(mass => mass.draw(ctx));
+
+            // Update UI
+            updateUI();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateUI() {
+            const totalMass = masses.reduce((sum, m) => sum + m.mass, 0);
+            document.getElementById('totalMassValue').textContent = totalMass.toFixed(0);
+
+            // Schwarzschild radius for total mass
+            const Rs = totalMass > 0 ? (2 * G * totalMass * M_sun) / (c * c) / 1000 : 0;
+            document.getElementById('schwarzschildValue').textContent = Rs.toFixed(2);
+
+            // Einstein radius (rough estimate)
+            const theta_E = totalMass > 0 ? Math.sqrt(4 * G * totalMass * M_sun / (c * c * AU)) * 206265 : 0;
+            document.getElementById('einsteinRadiusValue').textContent = theta_E.toFixed(2);
+
+            // Deflection angle (for a ray passing near first mass)
+            if (masses.length > 0) {
+                const alpha = (4 * G * masses[0].mass * M_sun) / (c * c * 1e9) * 206265;
+                document.getElementById('deflectionValue').textContent = alpha.toFixed(2);
+            } else {
+                document.getElementById('deflectionValue').textContent = '0';
+            }
+
+            // Magnification (simplified)
+            const mag = totalMass > 0 ? 1 + totalMass / 100 : 1;
+            document.getElementById('magnificationValue').textContent = mag.toFixed(1);
+
+            // Multiple images (rough estimate based on alignment)
+            document.getElementById('imagesValue').textContent = masses.length > 0 ? '2-4' : '1';
+
+            // Max curvature
+            const maxCurv = totalMass * 1e-20;
+            document.getElementById('curvatureValue').textContent = maxCurv.toExponential(1);
+
+            // Time dilation near first mass
+            if (masses.length > 0) {
+                const r = 1e9; // 1 million km
+                const Rs_first = masses[0].schwarzschildRadius();
+                const gamma = 1 / Math.sqrt(1 - Rs_first / r);
+                document.getElementById('timeDilationValue').textContent = gamma.toFixed(3);
+            } else {
+                document.getElementById('timeDilationValue').textContent = '1.000';
+            }
+        }
+
+        // ========== EVENT LISTENERS ==========
+
+        document.getElementById('addStarBtn').addEventListener('click', () => {
+            masses.push(new Mass(canvas.width / 2, canvas.height / 2, 1, 'star'));
+        });
+
+        document.getElementById('addBlackHoleBtn').addEventListener('click', () => {
+            masses.push(new Mass(canvas.width / 2, canvas.height / 2, 10, 'black-hole'));
+        });
+
+        document.getElementById('addGalaxyBtn').addEventListener('click', () => {
+            masses.push(new Mass(canvas.width / 2, canvas.height / 2, 1000, 'galaxy'));
+        });
+
+        document.getElementById('sourceType').addEventListener('change', (e) => {
+            sourceType = e.target.value;
+        });
+
+        document.getElementById('rayDensity').addEventListener('input', (e) => {
+            rayDensity = parseInt(e.target.value);
+            document.getElementById('rayDensityValue').textContent = rayDensity;
+        });
+
+        document.getElementById('showGrid').addEventListener('change', (e) => {
+            showGrid = e.target.checked;
+        });
+
+        document.getElementById('showRays').addEventListener('change', (e) => {
+            showRays = e.target.checked;
+        });
+
+        document.getElementById('showEinstein').addEventListener('change', (e) => {
+            showEinstein = e.target.checked;
+        });
+
+        document.getElementById('gridRes').addEventListener('input', (e) => {
+            gridRes = parseInt(e.target.value);
+            document.getElementById('gridResValue').textContent = gridRes;
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            masses = [];
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            masses = [];
+            sourceType = 'point';
+            rayDensity = 50;
+            showGrid = true;
+            showRays = true;
+            gridRes = 50;
+
+            document.getElementById('sourceType').value = 'point';
+            document.getElementById('rayDensity').value = '50';
+            document.getElementById('gridRes').value = '50';
+            document.getElementById('showGrid').checked = true;
+            document.getElementById('showRays').checked = true;
+            document.getElementById('showEinstein').checked = true;
+        });
+
+        // Mouse interactions
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for (let mass of masses) {
+                if (mass.isPointInside(x, y)) {
+                    draggedMass = mass;
+                    draggedMass.isDragging = true;
+                    break;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (draggedMass && draggedMass.isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                draggedMass.x = e.clientX - rect.left;
+                draggedMass.y = e.clientY - rect.top;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (draggedMass) {
+                draggedMass.isDragging = false;
+                draggedMass = null;
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for (let i = 0; i < masses.length; i++) {
+                if (masses[i].isPointInside(x, y)) {
+                    masses.splice(i, 1);
+                    break;
+                }
+            }
+        });
+
+        // ========== INITIALIZATION ==========
+        window.addEventListener('load', () => {
+            // Add initial example
+            masses.push(new Mass(canvas.width / 2, canvas.height / 2, 10, 'star'));
+
+            animate();
+        });
+    </script>
+</body>
+</html>
