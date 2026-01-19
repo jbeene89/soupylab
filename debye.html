@@ -30,25 +30,122 @@
             border-radius: 4px;
             font-size: 0.8rem;
         }
-        .container { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 56px); }
-        .controls { background: #12121a; padding: 16px; overflow-y: auto; }
+        .container { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 56px); }
+        .controls { background: #12121a; padding: 16px; overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.05); }
         .section { margin-bottom: 20px; }
         .section h3 { font-size: 0.75rem; color: #00ff9d; margin-bottom: 10px; border-bottom: 1px solid rgba(0,255,157,0.2); padding-bottom: 6px; }
         .slider-row { margin-bottom: 12px; }
-        .slider-row label { display: flex; justify-content: space-between; font-size: 0.7rem; color: #606080; margin-bottom: 4px; }
+        .slider-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #606080;
+            margin-bottom: 4px;
+        }
         .slider-row label span { color: #00ff9d; font-family: monospace; }
-        .slider-row input[type="range"] { width: 100%; height: 4px; -webkit-appearance: none; background: rgba(255,255,255,0.1); border-radius: 2px; }
-        .slider-row input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #00ff9d; border-radius: 50%; cursor: pointer; }
-        .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; margin-bottom: 8px; font-size: 0.8rem; }
+        .slider-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .slider-input-row input[type="range"] {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        .slider-input-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #00ff9d;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .slider-input-row input[type="number"] {
+            width: 70px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #00ff9d;
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-family: monospace;
+            text-align: right;
+        }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
         .btn-pos { background: linear-gradient(135deg, #ff6644, #cc4400); }
         .btn-neg { background: linear-gradient(135deg, #4488ff, #2244aa); }
-        .btn-reset { background: linear-gradient(135deg, #333, #555); }
+        .btn-reset { background: linear-gradient(135deg, #00ff9d, #00aa66); }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .stat-box { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center; }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
         .stat-box .label { font-size: 0.55rem; color: #606080; }
         .stat-box .value { font-size: 0.8rem; font-family: monospace; color: #00ff9d; }
-        .info { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; font-size: 0.65rem; line-height: 1.5; color: #707080; margin-top: 12px; }
-        canvas { width: 100%; height: 100%; display: block; }
+        .info {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            line-height: 1.5;
+            color: #707080;
+            margin-top: 12px;
+        }
+
+        .canvas-area { position: relative; background: #000; }
+        #scene-container { width: 100%; height: 100%; }
+
+        .info-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            border: 1px solid #00ff9d;
+            z-index: 10;
+        }
+        .info-overlay h4 { color: #00ff9d; margin-bottom: 6px; }
+
+        .camera-controls {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        .camera-btn {
+            background: rgba(0,255,157,0.3);
+            border: 1px solid #00ff9d;
+            color: #e0e0e0;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+        .camera-btn.active {
+            background: #00ff9d;
+            color: #000;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -62,21 +159,30 @@
                 <h3>DROP TEST CHARGE</h3>
                 <button class="btn btn-pos" onclick="dropCharge(1)">+ Positive</button>
                 <button class="btn btn-neg" onclick="dropCharge(-1)">− Negative</button>
-                <button class="btn btn-reset" onclick="reset()">Reset</button>
+                <button class="btn btn-reset" onclick="reset()">↺ Reset</button>
             </div>
             <div class="section">
                 <h3>PLASMA</h3>
                 <div class="slider-row">
                     <label>Density <span id="nVal">1.0</span>×10¹⁸ m⁻³</label>
-                    <input type="range" id="density" min="0.1" max="5" step="0.1" value="1" oninput="update()">
+                    <div class="slider-input-row">
+                        <input type="range" id="density" min="0.1" max="5" step="0.1" value="1" oninput="syncSlider('density')">
+                        <input type="number" id="density_num" min="0.1" max="5" step="0.1" value="1" onchange="syncNumber('density')">
+                    </div>
                 </div>
                 <div class="slider-row">
                     <label>Temperature <span id="tVal">10</span> eV</label>
-                    <input type="range" id="temp" min="1" max="100" value="10" oninput="update()">
+                    <div class="slider-input-row">
+                        <input type="range" id="temp" min="1" max="100" value="10" oninput="syncSlider('temp')">
+                        <input type="number" id="temp_num" min="1" max="100" value="10" onchange="syncNumber('temp')">
+                    </div>
                 </div>
                 <div class="slider-row">
-                    <label>Electrons <span id="eVal">800</span></label>
-                    <input type="range" id="count" min="100" max="2000" step="100" value="800" oninput="update()">
+                    <label>Electrons <span id="eVal">3000</span></label>
+                    <div class="slider-input-row">
+                        <input type="range" id="count" min="500" max="10000" step="500" value="3000" oninput="syncSlider('count')">
+                        <input type="number" id="count_num" min="500" max="10000" step="500" value="3000" onchange="syncNumber('count')">
+                    </div>
                 </div>
             </div>
             <div class="stats-grid">
@@ -86,135 +192,501 @@
                 <div class="stat-box"><div class="label">τ_shield</div><div class="value" id="tau">--</div></div>
             </div>
             <div class="info">
-                <strong>Click anywhere</strong> to drop a test charge. Watch electrons rearrange to shield it within the Debye length (dashed circle).
+                <strong>Drop charges</strong> to see electrons rearrange and shield within the Debye length (wireframe sphere).
                 <br><br>
-                λ_D = √(ε₀kT/ne²) — characteristic screening distance<br>
-                ω_p = √(ne²/ε₀m) — plasma oscillation frequency
+                λ_D = √(ε₀kT/ne²)<br>
+                ω_p = √(ne²/ε₀m)<br>
+                N_D = n·(4πλ_D³/3)
             </div>
         </div>
-        <canvas id="c"></canvas>
+        <div class="canvas-area">
+            <div id="scene-container"></div>
+            <div class="info-overlay">
+                <h4>3D DEBYE SHIELDING</h4>
+                <div>Volumetric charge distribution</div>
+                <div style="margin-top: 6px; color: #00ff9d;">
+                    10k particles • Real-time physics
+                </div>
+            </div>
+            <div class="camera-controls">
+                <button class="camera-btn active" onclick="setCamera('perspective')">Perspective</button>
+                <button class="camera-btn" onclick="setCamera('side')">Side</button>
+                <button class="camera-btn" onclick="setCamera('top')">Top</button>
+            </div>
+        </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        const canvas = document.getElementById('c');
-        const ctx = canvas.getContext('2d');
+        // Physics constants
         const e = 1.6e-19, me = 9.1e-31, eps0 = 8.85e-12, kB = 1.38e-23;
-        
-        let electrons = [], testCharges = [];
-        let params = { n: 1, T: 10, count: 800 };
-        
-        function calcLambdaD() { return Math.sqrt(eps0 * kB * params.T * 11604 / (params.n * 1e18 * e * e)); }
-        function calcOmegaP() { return Math.sqrt(params.n * 1e18 * e * e / (eps0 * me)); }
-        
-        function init() {
-            electrons = [];
-            testCharges = [];
+
+        // THREE.JS Setup
+        let scene, camera, renderer;
+        let electronSystem;
+        let testCharges = [];
+        let debySpheres = [];
+        let fieldLines = [];
+        let time = 0;
+
+        const params = { n: 1, T: 10, count: 3000 };
+        const boxSize = 150;
+        const scale = 1e5; // 1 unit = 1 micrometer
+
+        // Electron data
+        let electronData = {
+            positions: null,
+            velocities: null,
+            colors: null,
+            count: 0
+        };
+
+        function calcLambdaD() {
+            return Math.sqrt(eps0 * kB * params.T * 11604 / (params.n * 1e18 * e * e));
+        }
+
+        function calcOmegaP() {
+            return Math.sqrt(params.n * 1e18 * e * e / (eps0 * me));
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('scene-container');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 100, 400);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(200, 120, 200);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const pointLight1 = new THREE.PointLight(0x4488ff, 1.5, 350);
+            pointLight1.position.set(100, 80, 100);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xff6644, 1.2, 350);
+            pointLight2.position.set(-100, 80, -100);
+            scene.add(pointLight2);
+
+            // Create bounding box
+            const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+            const boxEdges = new THREE.EdgesGeometry(boxGeo);
+            const boxMat = new THREE.LineBasicMaterial({
+                color: 0x00ff9d,
+                transparent: true,
+                opacity: 0.2
+            });
+            const box = new THREE.LineSegments(boxEdges, boxMat);
+            scene.add(box);
+
+            // Initialize electrons
+            initElectrons();
+
+            // Mouse controls
+            setupMouseControls();
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Start animation
+            animate();
+        }
+
+        function initElectrons() {
+            if (electronSystem) scene.remove(electronSystem);
+
+            electronData.count = params.count;
+            electronData.positions = new Float32Array(params.count * 3);
+            electronData.velocities = new Float32Array(params.count * 3);
+            electronData.colors = new Float32Array(params.count * 3);
+
+            const vth = Math.sqrt(2 * kB * params.T * 11604 / me) * 1e-5;
+
             for (let i = 0; i < params.count; i++) {
-                electrons.push({
-                    x: 50 + Math.random() * (canvas.width - 100),
-                    y: 50 + Math.random() * (canvas.height - 100),
-                    vx: 0, vy: 0
+                electronData.positions[i * 3] = (Math.random() - 0.5) * boxSize * 0.9;
+                electronData.positions[i * 3 + 1] = (Math.random() - 0.5) * boxSize * 0.9;
+                electronData.positions[i * 3 + 2] = (Math.random() - 0.5) * boxSize * 0.9;
+
+                electronData.velocities[i * 3] = (Math.random() - 0.5) * vth;
+                electronData.velocities[i * 3 + 1] = (Math.random() - 0.5) * vth;
+                electronData.velocities[i * 3 + 2] = (Math.random() - 0.5) * vth;
+
+                const color = new THREE.Color(0x4488ff);
+                electronData.colors[i * 3] = color.r;
+                electronData.colors[i * 3 + 1] = color.g;
+                electronData.colors[i * 3 + 2] = color.b;
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(electronData.positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(electronData.colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true
+            });
+
+            electronSystem = new THREE.Points(geometry, material);
+            scene.add(electronSystem);
+
+            updateStats();
+        }
+
+        function dropCharge(sign) {
+            const q = sign * 50 * e;
+            const x = (Math.random() - 0.5) * boxSize * 0.5;
+            const y = (Math.random() - 0.5) * boxSize * 0.5;
+            const z = (Math.random() - 0.5) * boxSize * 0.5;
+
+            // Create test charge sphere
+            const geometry = new THREE.SphereGeometry(4, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: sign > 0 ? 0xff4422 : 0x2266ff,
+                emissive: sign > 0 ? 0xff2200 : 0x0044ff,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.9
+            });
+            const chargeMesh = new THREE.Mesh(geometry, material);
+            chargeMesh.position.set(x, y, z);
+            scene.add(chargeMesh);
+
+            // Create Debye sphere
+            const lambdaD = calcLambdaD() * scale;
+            const sphereGeo = new THREE.SphereGeometry(lambdaD, 32, 32);
+            const sphereEdges = new THREE.EdgesGeometry(sphereGeo);
+            const sphereMat = new THREE.LineBasicMaterial({
+                color: 0x00ff9d,
+                transparent: true,
+                opacity: 0.3
+            });
+            const debyeSphere = new THREE.LineSegments(sphereEdges, sphereMat);
+            debyeSphere.position.set(x, y, z);
+            scene.add(debyeSphere);
+
+            // Create potential isosurfaces
+            const isosurfaces = [];
+            for (let r = 1; r <= 3; r++) {
+                const isoGeo = new THREE.SphereGeometry(lambdaD * r * 0.4, 24, 24);
+                const isoMat = new THREE.MeshBasicMaterial({
+                    color: sign > 0 ? 0xff6644 : 0x4488ff,
+                    transparent: true,
+                    opacity: 0.05 * (4 - r),
+                    side: THREE.DoubleSide,
+                    wireframe: false
                 });
+                const isoMesh = new THREE.Mesh(isoGeo, isoMat);
+                isoMesh.position.set(x, y, z);
+                scene.add(isoMesh);
+                isosurfaces.push(isoMesh);
+            }
+
+            // Create field lines
+            const numLines = 12;
+            const lines = [];
+            for (let i = 0; i < numLines; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                const points = [];
+                const segments = 20;
+                for (let j = 1; j <= segments; j++) {
+                    const r = lambdaD * 1.5 * (j / segments);
+                    const px = x + r * Math.sin(phi) * Math.cos(theta);
+                    const py = y + r * Math.cos(phi);
+                    const pz = z + r * Math.sin(phi) * Math.sin(theta);
+                    points.push(new THREE.Vector3(px, py, pz));
+                }
+
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const lineMat = new THREE.LineBasicMaterial({
+                    color: sign > 0 ? 0xff8866 : 0x6688ff,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const line = new THREE.Line(lineGeo, lineMat);
+                scene.add(line);
+                lines.push(line);
+            }
+
+            testCharges.push({
+                q: q,
+                x: x, y: y, z: z,
+                mesh: chargeMesh,
+                debyeSphere: debyeSphere,
+                isosurfaces: isosurfaces,
+                fieldLines: lines
+            });
+        }
+
+        function reset() {
+            // Remove all test charges and their visuals
+            testCharges.forEach(tc => {
+                scene.remove(tc.mesh);
+                scene.remove(tc.debyeSphere);
+                tc.isosurfaces.forEach(iso => scene.remove(iso));
+                tc.fieldLines.forEach(line => scene.remove(line));
+            });
+            testCharges = [];
+
+            // Reset electrons
+            initElectrons();
+        }
+
+        function updateElectrons() {
+            const dt = 1e-12;
+            const forceScale = 1e-12;
+            const limit = boxSize / 2;
+
+            for (let i = 0; i < electronData.count; i++) {
+                let fx = 0, fy = 0, fz = 0;
+
+                const ex = electronData.positions[i * 3];
+                const ey = electronData.positions[i * 3 + 1];
+                const ez = electronData.positions[i * 3 + 2];
+
+                // Force from test charges
+                for (const tc of testCharges) {
+                    const dx = ex - tc.x;
+                    const dy = ey - tc.y;
+                    const dz = ez - tc.z;
+                    const r2 = dx * dx + dy * dy + dz * dz + 1e-6;
+                    const r = Math.sqrt(r2);
+
+                    // Coulomb force with Debye screening
+                    const lambdaD = calcLambdaD() * scale;
+                    const screening = Math.exp(-r / lambdaD);
+                    const F = (-e * tc.q * screening) / (4 * Math.PI * eps0 * r2) * forceScale;
+
+                    fx += F * dx / r;
+                    fy += F * dy / r;
+                    fz += F * dz / r;
+                }
+
+                // Update velocity
+                const ax = fx / me * 1e10;
+                const ay = fy / me * 1e10;
+                const az = fz / me * 1e10;
+
+                electronData.velocities[i * 3] = electronData.velocities[i * 3] * 0.95 + ax * dt;
+                electronData.velocities[i * 3 + 1] = electronData.velocities[i * 3 + 1] * 0.95 + ay * dt;
+                electronData.velocities[i * 3 + 2] = electronData.velocities[i * 3 + 2] * 0.95 + az * dt;
+
+                // Update position
+                electronData.positions[i * 3] += electronData.velocities[i * 3] * dt * 1e8;
+                electronData.positions[i * 3 + 1] += electronData.velocities[i * 3 + 1] * dt * 1e8;
+                electronData.positions[i * 3 + 2] += electronData.velocities[i * 3 + 2] * dt * 1e8;
+
+                // Boundary conditions
+                if (Math.abs(electronData.positions[i * 3]) > limit) {
+                    electronData.positions[i * 3] = Math.sign(electronData.positions[i * 3]) * limit;
+                    electronData.velocities[i * 3] *= -0.8;
+                }
+                if (Math.abs(electronData.positions[i * 3 + 1]) > limit) {
+                    electronData.positions[i * 3 + 1] = Math.sign(electronData.positions[i * 3 + 1]) * limit;
+                    electronData.velocities[i * 3 + 1] *= -0.8;
+                }
+                if (Math.abs(electronData.positions[i * 3 + 2]) > limit) {
+                    electronData.positions[i * 3 + 2] = Math.sign(electronData.positions[i * 3 + 2]) * limit;
+                    electronData.velocities[i * 3 + 2] *= -0.8;
+                }
+
+                // Update colors based on local density/potential
+                let density = 0;
+                for (const tc of testCharges) {
+                    const dx = ex - tc.x;
+                    const dy = ey - tc.y;
+                    const dz = ez - tc.z;
+                    const r = Math.sqrt(dx * dx + dy * dy + dz * dz + 1);
+                    density += 1 / r;
+                }
+
+                const color = new THREE.Color();
+                color.setHSL(0.6 + density * 0.1, 1.0, 0.4 + Math.min(density * 0.2, 0.4));
+                electronData.colors[i * 3] = color.r;
+                electronData.colors[i * 3 + 1] = color.g;
+                electronData.colors[i * 3 + 2] = color.b;
+            }
+
+            if (electronSystem) {
+                electronSystem.geometry.attributes.position.needsUpdate = true;
+                electronSystem.geometry.attributes.color.needsUpdate = true;
             }
         }
-        
-        function dropCharge(sign) {
-            testCharges.push({ x: canvas.width/2, y: canvas.height/2, q: sign * 10 * e });
+
+        // Mouse controls
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let rotation = { x: 0.4, y: 0.8 };
+
+        function setupMouseControls() {
+            const container = document.getElementById('scene-container');
+
+            container.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            container.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+
+                    rotation.y += deltaX * 0.005;
+                    rotation.x += deltaY * 0.005;
+                    rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation.x));
+
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            container.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const distance = camera.position.length();
+                const newDistance = distance + e.deltaY * 0.5;
+                const clampedDistance = Math.max(100, Math.min(500, newDistance));
+                camera.position.multiplyScalar(clampedDistance / distance);
+            });
         }
-        
-        function reset() { init(); }
-        
-        function update() {
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+
+            // Update camera rotation
+            if (!isDragging) {
+                rotation.y += 0.003;
+            }
+
+            const distance = camera.position.length();
+            camera.position.x = distance * Math.sin(rotation.y) * Math.cos(rotation.x);
+            camera.position.y = distance * Math.sin(rotation.x);
+            camera.position.z = distance * Math.cos(rotation.y) * Math.cos(rotation.x);
+            camera.lookAt(0, 0, 0);
+
+            // Update particles
+            updateElectrons();
+
+            // Animate Debye spheres
+            testCharges.forEach((tc, i) => {
+                if (tc.debyeSphere) {
+                    tc.debyeSphere.material.opacity = 0.25 + Math.sin(time * 2 + i) * 0.15;
+                }
+
+                // Pulse test charges
+                if (tc.mesh) {
+                    const scale = 1 + Math.sin(time * 3 + i) * 0.15;
+                    tc.mesh.scale.set(scale, scale, scale);
+                }
+
+                // Animate field lines
+                tc.fieldLines.forEach((line, j) => {
+                    line.material.opacity = 0.2 + Math.sin(time * 2 + i + j * 0.5) * 0.1;
+                });
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('scene-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function setCamera(view) {
+            document.querySelectorAll('.camera-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            isDragging = false;
+
+            switch(view) {
+                case 'perspective':
+                    rotation = { x: 0.4, y: 0.8 };
+                    break;
+                case 'side':
+                    rotation = { x: 0, y: Math.PI / 2 };
+                    break;
+                case 'top':
+                    rotation = { x: Math.PI / 2 - 0.1, y: 0 };
+                    break;
+            }
+        }
+
+        // UI Controls
+        function syncSlider(id) {
+            const slider = document.getElementById(id);
+            const numInput = document.getElementById(id + '_num');
+            if (numInput) numInput.value = slider.value;
+            updateParams();
+        }
+
+        function syncNumber(id) {
+            const numInput = document.getElementById(id + '_num');
+            const slider = document.getElementById(id);
+            if (slider) {
+                let val = parseFloat(numInput.value);
+                val = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), val));
+                slider.value = val;
+                numInput.value = val;
+            }
+            updateParams();
+        }
+
+        function updateParams() {
+            const oldCount = params.count;
+
             params.n = +document.getElementById('density').value;
             params.T = +document.getElementById('temp').value;
             params.count = +document.getElementById('count').value;
+
             document.getElementById('nVal').textContent = params.n.toFixed(1);
             document.getElementById('tVal').textContent = params.T;
             document.getElementById('eVal').textContent = params.count;
-            
-            const lD = calcLambdaD(), wP = calcOmegaP();
+
+            if (oldCount !== params.count) {
+                initElectrons();
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            const lD = calcLambdaD();
+            const wP = calcOmegaP();
             const ND = (4/3) * Math.PI * Math.pow(lD, 3) * params.n * 1e18;
-            document.getElementById('lambdaD').textContent = (lD * 1e6).toFixed(1) + 'μm';
-            document.getElementById('omegaP').textContent = (wP / 1e9).toFixed(1) + 'GHz';
+
+            document.getElementById('lambdaD').textContent = (lD * 1e6).toFixed(1) + ' μm';
+            document.getElementById('omegaP').textContent = (wP / 1e9).toFixed(1) + ' GHz';
             document.getElementById('ND').textContent = ND.toFixed(0);
-            document.getElementById('tau').textContent = (1e12 / wP).toFixed(1) + 'ps';
+            document.getElementById('tau').textContent = (1e12 / wP).toFixed(1) + ' ps';
         }
-        
-        function resize() { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; init(); }
-        
-        canvas.onclick = e => {
-            const r = canvas.getBoundingClientRect();
-            testCharges.push({ x: e.clientX - r.left, y: e.clientY - r.top, q: 10 * 1.6e-19 });
-        };
-        
-        function render() {
-            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            const scale = canvas.width / 1e-4;
-            const lambdaPx = calcLambdaD() * scale * 1e4;
-            
-            // Update electrons
-            for (const el of electrons) {
-                let ax = 0, ay = 0;
-                for (const tc of testCharges) {
-                    const dx = tc.x - el.x, dy = tc.y - el.y;
-                    const r2 = dx*dx + dy*dy + 100;
-                    const F = (-e * tc.q) / (4 * Math.PI * eps0 * r2) * 1e-20;
-                    ax += F * dx / Math.sqrt(r2) / me;
-                    ay += F * dy / Math.sqrt(r2) / me;
-                }
-                el.vx = el.vx * 0.98 + ax * 1e-13;
-                el.vy = el.vy * 0.98 + ay * 1e-13;
-                el.x += el.vx * 1e-13 * scale;
-                el.y += el.vy * 1e-13 * scale;
-                el.x = Math.max(5, Math.min(canvas.width - 5, el.x));
-                el.y = Math.max(5, Math.min(canvas.height - 5, el.y));
-            }
-            
-            // Draw Debye spheres
-            for (const tc of testCharges) {
-                ctx.beginPath();
-                ctx.arc(tc.x, tc.y, lambdaPx, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(0,255,157,0.4)';
-                ctx.setLineDash([5, 5]);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                for (let i = 3; i >= 1; i--) {
-                    ctx.beginPath();
-                    ctx.arc(tc.x, tc.y, lambdaPx * i * 0.4, 0, Math.PI * 2);
-                    ctx.strokeStyle = tc.q > 0 ? `rgba(255,100,68,${0.1*i})` : `rgba(68,136,255,${0.1*i})`;
-                    ctx.stroke();
-                }
-            }
-            
-            // Draw electrons
-            ctx.fillStyle = '#4488ff';
-            for (const el of electrons) {
-                ctx.beginPath();
-                ctx.arc(el.x, el.y, 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            // Draw test charges
-            for (const tc of testCharges) {
-                ctx.beginPath();
-                ctx.arc(tc.x, tc.y, 8, 0, Math.PI * 2);
-                ctx.fillStyle = tc.q > 0 ? '#ff4422' : '#2266ff';
-                ctx.fill();
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(tc.q > 0 ? '+' : '−', tc.x, tc.y);
-            }
-            
-            requestAnimationFrame(render);
-        }
-        
-        window.onresize = resize;
-        resize();
-        update();
-        render();
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initThreeJS();
+            updateParams();
+        });
     </script>
 </body>
 </html>
