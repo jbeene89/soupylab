@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Fusion Navigation - SOUPY LABS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --card: #12121a;
+            --accent: #ffcd00;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255,205,0,0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255,205,0,0.2);
+        }
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(255,205,0,0.3);
+            margin-bottom: 5px;
+        }
+        .header p { color: var(--dim); font-size: 0.85rem; }
+        .back-link {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        .back-link:hover { opacity: 0.7; }
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            height: calc(100vh - 100px);
+            gap: 15px;
+            padding: 15px;
+        }
+        .controls {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255,205,0,0.1);
+            overflow-y: auto;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            color: var(--accent);
+            font-size: 0.75rem;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            background: rgba(255,205,0,0.2);
+            outline: none;
+            border-radius: 3px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .value-display {
+            color: var(--text);
+            font-size: 0.75rem;
+            margin-top: 3px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, rgba(255,205,0,0.2), rgba(255,205,0,0.1));
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        button:hover {
+            background: linear-gradient(135deg, rgba(255,205,0,0.3), rgba(255,205,0,0.2));
+            box-shadow: 0 0 15px rgba(255,205,0,0.2);
+        }
+        .main-area {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            gap: 15px;
+        }
+        .viewport-container {
+            background: var(--card);
+            border-radius: 10px;
+            border: 1px solid rgba(255,205,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        #viewport3D {
+            width: 100%;
+            height: 100%;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,205,0,0.1);
+        }
+        .stat-card {
+            background: rgba(255,205,0,0.05);
+            border: 1px solid rgba(255,205,0,0.1);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--dim);
+            margin-bottom: 3px;
+        }
+        .stat-value {
+            font-size: 1rem;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+        }
+        .view-mode {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            gap: 5px;
+        }
+        .view-mode button {
+            padding: 5px 10px;
+            font-size: 0.65rem;
+            width: auto;
+            margin: 0;
+        }
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.65rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to SOUPY LABS</a>
+
+    <div class="header">
+        <h1>👁️ SENSOR FUSION NAVIGATION</h1>
+        <p>3D Visual SLAM | Point Clouds | Camera Frustum | Multi-Sensor Fusion | GPU-Accelerated</p>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h3 style="color: var(--accent); margin-bottom: 12px; font-size: 0.9rem;">Control Panel</h3>
+
+            <div class="control-group">
+                <label>Camera Frame Rate (Hz)</label>
+                <input type="range" id="camRate" min="10" max="60" value="30" step="5">
+                <div class="value-display" id="camRateVal">30 Hz</div>
+            </div>
+
+            <div class="control-group">
+                <label>Feature Quality</label>
+                <input type="range" id="featureQuality" min="1" max="10" value="7" step="1">
+                <div class="value-display" id="featureQualityVal">7/10</div>
+            </div>
+
+            <div class="control-group">
+                <label>IMU Drift (m/s)</label>
+                <input type="range" id="imuDrift" min="0" max="5" value="1" step="0.1">
+                <div class="value-display" id="imuDriftVal">1.0 m/s</div>
+            </div>
+
+            <div class="control-group">
+                <label>Terrain Match Weight</label>
+                <input type="range" id="terrainWeight" min="0" max="1" value="0.5" step="0.1">
+                <div class="value-display" id="terrainWeightVal">0.5</div>
+            </div>
+
+            <div class="control-group">
+                <label>Kalman Q (Process)</label>
+                <input type="range" id="kalmanQ" min="0.01" max="1" value="0.1" step="0.01">
+                <div class="value-display" id="kalmanQVal">0.10</div>
+            </div>
+
+            <div class="control-group">
+                <label>Kalman R (Measurement)</label>
+                <input type="range" id="kalmanR" min="0.01" max="1" value="0.2" step="0.01">
+                <div class="value-display" id="kalmanRVal">0.20</div>
+            </div>
+
+            <div class="control-group">
+                <label>Point Cloud Density</label>
+                <input type="range" id="cloudDensity" min="100" max="2000" value="500" step="100">
+                <div class="value-display" id="cloudDensityVal">500</div>
+            </div>
+
+            <div class="control-group">
+                <label>Simulation Speed</label>
+                <input type="range" id="simSpeed" min="0.1" max="5" value="1" step="0.1">
+                <div class="value-display" id="simSpeedVal">1.0x</div>
+            </div>
+
+            <button id="resetBtn">🔄 Reset Simulation</button>
+            <button id="toggleSLAM">📷 SLAM: ON</button>
+            <button id="toggleTerrain">🗻 Terrain: ON</button>
+            <button id="toggleFrustum">🎥 Camera: ON</button>
+            <button id="addFeature">➕ Add Feature</button>
+        </div>
+
+        <div class="main-area">
+            <div class="viewport-container">
+                <div id="viewport3D"></div>
+                <div class="view-mode">
+                    <button id="viewFollow">Follow</button>
+                    <button id="viewTop">Top</button>
+                    <button id="viewSide">Side</button>
+                    <button id="viewFree">Free</button>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #00ff9d;"></div>
+                        <span>True Path</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #00aaff;"></div>
+                        <span>INS (Dead Reckoning)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ff6b35;"></div>
+                        <span>Fused Estimate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ffcd00;"></div>
+                        <span>SLAM Point Cloud</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #aa00ff;"></div>
+                        <span>Terrain Features</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Position Error</div>
+                    <div class="stat-value" id="posError">0.0 m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">INS Drift</div>
+                    <div class="stat-value" id="insDrift">0.0 m</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Landmarks</div>
+                    <div class="stat-value" id="landmarks">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Confidence</div>
+                    <div class="stat-value" id="confidence">100%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Cam Updates</div>
+                    <div class="stat-value" id="camUpdates">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== THREE.JS SCENE SETUP =====
+        let scene, camera, renderer;
+        let trueVehicle, insVehicle, fusedVehicle;
+        let cameraFrustum, pointCloud, terrainMesh;
+        let terrainFeatures = [];
+        let landmarks = [];
+        let viewMode = 'follow';
+
+        // Simulation state
+        let time = 0, camUpdateCount = 0;
+        let truePos = new THREE.Vector3(0, 10, 0);
+        let trueVel = new THREE.Vector3(40, 0, 0);
+        let insPos = new THREE.Vector3(0, 10, 0);
+        let insVel = new THREE.Vector3(40, 0, 0);
+        let fusedPos = new THREE.Vector3(0, 10, 0);
+        let P = 1; // Kalman covariance
+
+        // Parameters
+        let params = {
+            camRate: 30,
+            featureQuality: 7,
+            imuDrift: 1,
+            terrainWeight: 0.5,
+            kalmanQ: 0.1,
+            kalmanR: 0.2,
+            cloudDensity: 500,
+            simSpeed: 1,
+            slamEnabled: true,
+            terrainEnabled: true,
+            frustumVisible: true
+        };
+
+        function initThreeJS() {
+            const container = document.getElementById('viewport3D');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x080810);
+            scene.fog = new THREE.Fog(0x080810, 50, 600);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(-80, 60, 80);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 1);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(100, 150, 100);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.left = -200;
+            dirLight.shadow.camera.right = 200;
+            dirLight.shadow.camera.top = 200;
+            dirLight.shadow.camera.bottom = -200;
+            scene.add(dirLight);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(400, 40, 0xffcd00, 0x333333);
+            gridHelper.position.y = 0;
+            scene.add(gridHelper);
+
+            // Terrain
+            createTerrain();
+            initTerrainFeatures();
+
+            // Vehicles
+            createVehicles();
+
+            // Camera frustum
+            createCameraFrustum();
+
+            // Point cloud
+            createPointCloud();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createTerrain() {
+            const geometry = new THREE.PlaneGeometry(400, 400, 50, 50);
+            const vertices = geometry.attributes.position.array;
+
+            // Add height variation
+            for (let i = 0; i < vertices.length / 3; i++) {
+                const x = vertices[i * 3];
+                const y = vertices[i * 3 + 1];
+                const height = 5 * (Math.sin(x / 30) + Math.cos(y / 40)) +
+                              2 * Math.sin(x / 15) * Math.cos(y / 20);
+                vertices[i * 3 + 2] = height;
+            }
+
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({
+                color: 0x1a1a2e,
+                roughness: 0.9,
+                metalness: 0.1,
+                wireframe: false
+            });
+
+            terrainMesh = new THREE.Mesh(geometry, material);
+            terrainMesh.rotation.x = -Math.PI / 2;
+            terrainMesh.receiveShadow = true;
+            scene.add(terrainMesh);
+        }
+
+        function initTerrainFeatures() {
+            for (let i = 0; i < 20; i++) {
+                const x = (Math.random() - 0.5) * 300;
+                const z = (Math.random() - 0.5) * 300;
+                const height = 10 + Math.random() * 20;
+
+                const geometry = new THREE.ConeGeometry(3, height, 6);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0xaa00ff,
+                    emissive: 0xaa00ff,
+                    emissiveIntensity: 0.2,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const feature = new THREE.Mesh(geometry, material);
+                feature.position.set(x, height / 2, z);
+                feature.castShadow = true;
+                scene.add(feature);
+
+                terrainFeatures.push({
+                    mesh: feature,
+                    pos: new THREE.Vector3(x, height / 2, z),
+                    size: height
+                });
+            }
+        }
+
+        function createVehicles() {
+            // True vehicle (green)
+            const trueGeo = new THREE.ConeGeometry(2, 6, 4);
+            const trueMat = new THREE.MeshStandardMaterial({
+                color: 0x00ff9d,
+                emissive: 0x00ff9d,
+                emissiveIntensity: 0.4
+            });
+            trueVehicle = new THREE.Mesh(trueGeo, trueMat);
+            trueVehicle.castShadow = true;
+            scene.add(trueVehicle);
+
+            // INS vehicle (blue)
+            const insGeo = new THREE.ConeGeometry(1.8, 5.5, 4);
+            const insMat = new THREE.MeshStandardMaterial({
+                color: 0x00aaff,
+                emissive: 0x00aaff,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.7
+            });
+            insVehicle = new THREE.Mesh(insGeo, insMat);
+            insVehicle.castShadow = true;
+            scene.add(insVehicle);
+
+            // Fused vehicle (red)
+            const fusedGeo = new THREE.ConeGeometry(1.5, 5, 4);
+            const fusedMat = new THREE.MeshStandardMaterial({
+                color: 0xff6b35,
+                emissive: 0xff6b35,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            fusedVehicle = new THREE.Mesh(fusedGeo, fusedMat);
+            fusedVehicle.castShadow = true;
+            scene.add(fusedVehicle);
+        }
+
+        function createCameraFrustum() {
+            const geometry = new THREE.ConeGeometry(0, 20, 4, 1, true);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffcd00,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.DoubleSide,
+                wireframe: true
+            });
+            cameraFrustum = new THREE.Mesh(geometry, material);
+            scene.add(cameraFrustum);
+        }
+
+        function createPointCloud() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(params.cloudDensity * 3);
+            const colors = new Float32Array(params.cloudDensity * 3);
+            const sizes = new Float32Array(params.cloudDensity);
+
+            for (let i = 0; i < params.cloudDensity; i++) {
+                positions[i * 3] = 0;
+                positions[i * 3 + 1] = 0;
+                positions[i * 3 + 2] = 0;
+
+                colors[i * 3] = 1;
+                colors[i * 3 + 1] = 0.8;
+                colors[i * 3 + 2] = 0;
+
+                sizes[i] = 2 + Math.random() * 2;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 3,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                sizeAttenuation: true
+            });
+
+            pointCloud = new THREE.Points(geometry, material);
+            scene.add(pointCloud);
+        }
+
+        function updatePointCloud() {
+            if (!params.slamEnabled || landmarks.length === 0) {
+                pointCloud.visible = false;
+                return;
+            }
+            pointCloud.visible = true;
+
+            const positions = pointCloud.geometry.attributes.position.array;
+            const colors = pointCloud.geometry.attributes.color.array;
+
+            // Populate point cloud from detected landmarks
+            let idx = 0;
+            landmarks.forEach(lm => {
+                if (idx < params.cloudDensity) {
+                    positions[idx * 3] = lm.x;
+                    positions[idx * 3 + 1] = lm.y;
+                    positions[idx * 3 + 2] = lm.z;
+
+                    // Color based on distance
+                    const dist = Math.sqrt(lm.x**2 + lm.y**2 + lm.z**2);
+                    const hue = (dist / 100) % 1;
+                    const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                    colors[idx * 3] = color.r;
+                    colors[idx * 3 + 1] = color.g;
+                    colors[idx * 3 + 2] = color.b;
+
+                    idx++;
+                }
+            });
+
+            pointCloud.geometry.attributes.position.needsUpdate = true;
+            pointCloud.geometry.attributes.color.needsUpdate = true;
+        }
+
+        function gaussian(mean, stdDev) {
+            let u1 = Math.random();
+            let u2 = Math.random();
+            let z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            return mean + z0 * stdDev;
+        }
+
+        function detectLandmarks() {
+            const detectionRange = 80;
+            const detected = [];
+
+            terrainFeatures.forEach(feature => {
+                const dist = truePos.distanceTo(feature.pos);
+
+                if (dist < detectionRange) {
+                    const noise = (10 - params.featureQuality) * 2;
+                    detected.push({
+                        x: feature.pos.x + gaussian(0, noise),
+                        y: feature.pos.y + gaussian(0, noise),
+                        z: feature.pos.z + gaussian(0, noise),
+                        feature: feature
+                    });
+                }
+            });
+
+            return detected;
+        }
+
+        function terrainMatch() {
+            let minDist = Infinity;
+            let closest = null;
+
+            terrainFeatures.forEach(feature => {
+                const dist = fusedPos.distanceTo(feature.pos);
+                if (dist < minDist && dist < 100) {
+                    minDist = dist;
+                    closest = feature.pos;
+                }
+            });
+
+            return closest;
+        }
+
+        function kalmanUpdate(prediction, measurement, Q, R) {
+            P = P + Q;
+            const K = P / (P + R);
+            const estimate = prediction + K * (measurement - prediction);
+            P = (1 - K) * P;
+            return estimate;
+        }
+
+        function updateSimulation(dt) {
+            // True motion
+            const angle = time * 0.15;
+            const speed = 40;
+            trueVel.set(
+                speed * Math.cos(angle),
+                3 * Math.sin(time * 0.2),
+                speed * Math.sin(angle)
+            );
+
+            truePos.add(trueVel.clone().multiplyScalar(dt));
+
+            // Boundary constraints
+            const bound = 150;
+            if (Math.abs(truePos.x) > bound) trueVel.x *= -1;
+            if (Math.abs(truePos.z) > bound) trueVel.z *= -1;
+            if (truePos.y < 5) truePos.y = 5;
+            if (truePos.y > 50) trueVel.y *= -1;
+
+            // INS dead reckoning with drift
+            const driftNoise = params.imuDrift * dt;
+            insVel.set(
+                trueVel.x + gaussian(0, driftNoise),
+                trueVel.y + gaussian(0, driftNoise),
+                trueVel.z + gaussian(0, driftNoise)
+            );
+            insPos.add(insVel.clone().multiplyScalar(dt));
+
+            // Kalman prediction
+            let fusedX = fusedPos.x + insVel.x * dt;
+            let fusedY = fusedPos.y + insVel.y * dt;
+            let fusedZ = fusedPos.z + insVel.z * dt;
+
+            // Camera update
+            if (time % (1 / params.camRate) < dt && params.slamEnabled) {
+                landmarks = detectLandmarks();
+                camUpdateCount++;
+
+                if (landmarks.length > 0) {
+                    let avgX = 0, avgY = 0, avgZ = 0;
+                    landmarks.forEach(lm => {
+                        avgX += lm.x;
+                        avgY += lm.y;
+                        avgZ += lm.z;
+                    });
+                    avgX /= landmarks.length;
+                    avgY /= landmarks.length;
+                    avgZ /= landmarks.length;
+
+                    fusedX = kalmanUpdate(fusedX, avgX, params.kalmanQ, params.kalmanR);
+                    fusedY = kalmanUpdate(fusedY, avgY, params.kalmanQ, params.kalmanR);
+                    fusedZ = kalmanUpdate(fusedZ, avgZ, params.kalmanQ, params.kalmanR);
+                }
+            }
+
+            // Terrain matching
+            if (params.terrainEnabled) {
+                const match = terrainMatch();
+                if (match) {
+                    fusedX = (1 - params.terrainWeight) * fusedX + params.terrainWeight * match.x;
+                    fusedY = (1 - params.terrainWeight) * fusedY + params.terrainWeight * match.y;
+                    fusedZ = (1 - params.terrainWeight) * fusedZ + params.terrainWeight * match.z;
+                }
+            }
+
+            fusedPos.set(fusedX, fusedY, fusedZ);
+            time += dt;
+        }
+
+        function updateVehicles() {
+            // True vehicle
+            trueVehicle.position.copy(truePos);
+            const angle = Math.atan2(trueVel.z, trueVel.x);
+            trueVehicle.rotation.set(Math.PI / 2, 0, -angle);
+
+            // INS vehicle
+            insVehicle.position.copy(insPos);
+            insVehicle.rotation.set(Math.PI / 2, 0, -angle);
+
+            // Fused vehicle
+            fusedVehicle.position.copy(fusedPos);
+            fusedVehicle.rotation.set(Math.PI / 2, 0, -angle);
+
+            // Camera frustum
+            if (params.frustumVisible) {
+                cameraFrustum.visible = true;
+                cameraFrustum.position.copy(truePos);
+                cameraFrustum.rotation.set(Math.PI / 2, 0, -angle);
+            } else {
+                cameraFrustum.visible = false;
+            }
+
+            // Update point cloud
+            updatePointCloud();
+        }
+
+        function updateCamera() {
+            switch(viewMode) {
+                case 'follow':
+                    camera.position.set(
+                        truePos.x - 80,
+                        truePos.y + 40,
+                        truePos.z + 60
+                    );
+                    camera.lookAt(truePos);
+                    break;
+                case 'top':
+                    camera.position.set(truePos.x, 200, truePos.z);
+                    camera.lookAt(truePos);
+                    break;
+                case 'side':
+                    camera.position.set(truePos.x + 120, truePos.y + 20, truePos.z);
+                    camera.lookAt(truePos);
+                    break;
+                case 'free':
+                    // Free camera
+                    break;
+            }
+        }
+
+        function updateUI() {
+            const posError = truePos.distanceTo(fusedPos);
+            const insDrift = truePos.distanceTo(insPos);
+            const confidence = Math.max(0, Math.min(100, 100 * (1 - P)));
+
+            document.getElementById('posError').textContent = posError.toFixed(1) + ' m';
+            document.getElementById('insDrift').textContent = insDrift.toFixed(1) + ' m';
+            document.getElementById('landmarks').textContent = landmarks.length;
+            document.getElementById('confidence').textContent = confidence.toFixed(0) + '%';
+            document.getElementById('camUpdates').textContent = camUpdateCount;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = 0.02 * params.simSpeed;
+            updateSimulation(dt);
+            updateVehicles();
+            updateCamera();
+            updateUI();
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('viewport3D');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function reset() {
+            time = 0;
+            camUpdateCount = 0;
+            truePos.set(0, 10, 0);
+            trueVel.set(40, 0, 0);
+            insPos.set(0, 10, 0);
+            insVel.set(40, 0, 0);
+            fusedPos.set(0, 10, 0);
+            P = 1;
+            landmarks = [];
+        }
+
+        // Event listeners
+        document.getElementById('camRate').addEventListener('input', e => {
+            params.camRate = parseFloat(e.target.value);
+            document.getElementById('camRateVal').textContent = params.camRate + ' Hz';
+        });
+        document.getElementById('featureQuality').addEventListener('input', e => {
+            params.featureQuality = parseFloat(e.target.value);
+            document.getElementById('featureQualityVal').textContent = params.featureQuality + '/10';
+        });
+        document.getElementById('imuDrift').addEventListener('input', e => {
+            params.imuDrift = parseFloat(e.target.value);
+            document.getElementById('imuDriftVal').textContent = params.imuDrift.toFixed(1) + ' m/s';
+        });
+        document.getElementById('terrainWeight').addEventListener('input', e => {
+            params.terrainWeight = parseFloat(e.target.value);
+            document.getElementById('terrainWeightVal').textContent = params.terrainWeight.toFixed(1);
+        });
+        document.getElementById('kalmanQ').addEventListener('input', e => {
+            params.kalmanQ = parseFloat(e.target.value);
+            document.getElementById('kalmanQVal').textContent = params.kalmanQ.toFixed(2);
+        });
+        document.getElementById('kalmanR').addEventListener('input', e => {
+            params.kalmanR = parseFloat(e.target.value);
+            document.getElementById('kalmanRVal').textContent = params.kalmanR.toFixed(2);
+        });
+        document.getElementById('cloudDensity').addEventListener('input', e => {
+            params.cloudDensity = parseInt(e.target.value);
+            document.getElementById('cloudDensityVal').textContent = params.cloudDensity;
+            scene.remove(pointCloud);
+            createPointCloud();
+        });
+        document.getElementById('simSpeed').addEventListener('input', e => {
+            params.simSpeed = parseFloat(e.target.value);
+            document.getElementById('simSpeedVal').textContent = params.simSpeed.toFixed(1) + 'x';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        document.getElementById('toggleSLAM').addEventListener('click', () => {
+            params.slamEnabled = !params.slamEnabled;
+            document.getElementById('toggleSLAM').textContent =
+                params.slamEnabled ? '📷 SLAM: ON' : '📷 SLAM: OFF';
+        });
+        document.getElementById('toggleTerrain').addEventListener('click', () => {
+            params.terrainEnabled = !params.terrainEnabled;
+            document.getElementById('toggleTerrain').textContent =
+                params.terrainEnabled ? '🗻 Terrain: ON' : '🗻 Terrain: OFF';
+        });
+        document.getElementById('toggleFrustum').addEventListener('click', () => {
+            params.frustumVisible = !params.frustumVisible;
+            document.getElementById('toggleFrustum').textContent =
+                params.frustumVisible ? '🎥 Camera: ON' : '🎥 Camera: OFF';
+        });
+        document.getElementById('addFeature').addEventListener('click', () => {
+            const x = (Math.random() - 0.5) * 200;
+            const z = (Math.random() - 0.5) * 200;
+            const height = 10 + Math.random() * 20;
+
+            const geometry = new THREE.ConeGeometry(3, height, 6);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xaa00ff,
+                emissive: 0xaa00ff,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0.6
+            });
+            const feature = new THREE.Mesh(geometry, material);
+            feature.position.set(x, height / 2, z);
+            scene.add(feature);
+
+            terrainFeatures.push({
+                mesh: feature,
+                pos: new THREE.Vector3(x, height / 2, z),
+                size: height
+            });
+        });
+
+        document.getElementById('viewFollow').addEventListener('click', () => viewMode = 'follow');
+        document.getElementById('viewTop').addEventListener('click', () => viewMode = 'top');
+        document.getElementById('viewSide').addEventListener('click', () => viewMode = 'side');
+        document.getElementById('viewFree').addEventListener('click', () => viewMode = 'free');
+
+        // Initialize
+        initThreeJS();
+        animate();
+    </script>
+</body>
+</html>

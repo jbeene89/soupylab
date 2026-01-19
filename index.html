@@ -14,6 +14,7 @@
             --plasma: #ff6b35;
             --fusion: #ffcc33;
             --magnetic: #00aaff;
+            --navigation: #ffcd00;
             --text: #e0e0e0;
             --dim: #606080;
         }
@@ -52,6 +53,7 @@
         .section-title.fusion { color: var(--fusion); border-color: rgba(255,200,50,0.2); }
         .section-title.plasma { color: var(--plasma); border-color: rgba(255,107,53,0.2); }
         .section-title.magnetic { color: var(--magnetic); border-color: rgba(0,170,255,0.2); }
+        .section-title.navigation { color: var(--navigation); border-color: rgba(255,205,0,0.2); }
         
         .grid {
             display: grid;
@@ -80,6 +82,7 @@
         .card.fusion:hover { border-color: var(--fusion); box-shadow: 0 10px 40px rgba(255,200,50,0.1); }
         .card.plasma:hover { border-color: var(--plasma); box-shadow: 0 10px 40px rgba(255,107,53,0.1); }
         .card.magnetic:hover { border-color: var(--magnetic); box-shadow: 0 10px 40px rgba(0,170,255,0.1); }
+        .card.navigation:hover { border-color: var(--navigation); box-shadow: 0 10px 40px rgba(255,205,0,0.1); }
         
         .card-preview {
             height: 100px;
@@ -93,6 +96,7 @@
         .card.fusion .card-preview { background: linear-gradient(135deg, rgba(255,200,50,0.15) 0%, rgba(255,100,50,0.05) 100%); }
         .card.plasma .card-preview { background: linear-gradient(135deg, rgba(255,107,53,0.15) 0%, rgba(255,50,100,0.05) 100%); }
         .card.magnetic .card-preview { background: linear-gradient(135deg, rgba(0,170,255,0.15) 0%, rgba(100,50,255,0.05) 100%); }
+        .card.navigation .card-preview { background: linear-gradient(135deg, rgba(255,205,0,0.15) 0%, rgba(255,170,0,0.05) 100%); }
         
         .card-content { padding: 14px; }
         .card-title {
@@ -104,6 +108,7 @@
         .card.fusion .card-title { color: var(--fusion); }
         .card.plasma .card-title { color: var(--plasma); }
         .card.magnetic .card-title { color: var(--magnetic); }
+        .card.navigation .card-title { color: var(--navigation); }
         
         .card-desc { font-size: 0.7rem; color: var(--dim); line-height: 1.4; }
         .card-tags { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
@@ -117,6 +122,7 @@
         .card.fusion .tag { background: rgba(255,200,50,0.1); color: var(--fusion); }
         .card.plasma .tag { background: rgba(255,107,53,0.1); color: var(--plasma); }
         .card.magnetic .tag { background: rgba(0,170,255,0.1); color: var(--magnetic); }
+        .card.navigation .tag { background: rgba(255,205,0,0.1); color: var(--navigation); }
         
         .badge {
             position: absolute;
@@ -146,7 +152,7 @@
     <div class="header">
         <h1>SOUPY LABS</h1>
         <p>Technical Physics Simulation Modules</p>
-        <p class="subtitle">14 interactive simulations • Fusion reactors • Plasma physics • GPU visualization • Gemini AI assistant</p>
+        <p class="subtitle">18 interactive simulations • Fusion reactors • Plasma physics • Chemistry & materials • Navigation systems • GPU visualization • Gemini AI assistant</p>
     </div>
     
     <div class="section-title fusion">☢️ FUSION & REACTOR CONCEPTS</div>
@@ -272,10 +278,50 @@
             </div>
         </a>
     </div>
-    
+
+    <div class="section-title">🔬 CHEMISTRY & MATERIALS</div>
+    <div class="grid">
+        <a href="physics-chemistry-simulator.html" class="card">
+            <div class="card-preview">⚗️</div>
+            <div class="card-content">
+                <div class="card-title">Materials Simulator</div>
+                <div class="card-desc">Real physics & chemistry: viscosity (Arrhenius), solubility (Henry's Law), phase transitions</div>
+                <div class="card-tags"><span class="tag">Arrhenius</span><span class="tag">Henry</span><span class="tag">Phases</span></div>
+            </div>
+        </a>
+    </div>
+
+    <div class="section-title navigation">🧭 NAVIGATION SYSTEMS</div>
+    <div class="grid">
+        <a href="inertial-nav.html" class="card navigation">
+            <div class="card-preview">🧭</div>
+            <div class="card-content">
+                <div class="card-title">Inertial Navigation</div>
+                <div class="card-desc">IMU fusion with truth anchors to bound drift in GPS-denied environments</div>
+                <div class="card-tags"><span class="tag">INS</span><span class="tag">Drift</span><span class="tag">Fusion</span></div>
+            </div>
+        </a>
+        <a href="magnetic-nav.html" class="card navigation">
+            <div class="card-preview">🧲</div>
+            <div class="card-content">
+                <div class="card-title">Magnetic Anomaly Nav</div>
+                <div class="card-desc">Map-matching using Earth's magnetic field for GPS-denied positioning</div>
+                <div class="card-tags"><span class="tag">MagNav</span><span class="tag">Map</span><span class="tag">GPS-denied</span></div>
+            </div>
+        </a>
+        <a href="sensor-fusion-nav.html" class="card navigation">
+            <div class="card-preview">👁️</div>
+            <div class="card-content">
+                <div class="card-title">Sensor Fusion Navigation</div>
+                <div class="card-desc">Visual SLAM and terrain-matching fused with INS for resilient navigation</div>
+                <div class="card-tags"><span class="tag">SLAM</span><span class="tag">Vision</span><span class="tag">Terrain</span></div>
+            </div>
+        </a>
+    </div>
+
     <div class="footer">
         SOUPY LABS © 2024 | Glen St. Mary, FL | Created by John Beene<br>
-        <span style="color: #444; font-size: 0.65rem;">Physics simulation suite for fusion reactor concepts, plasma physics, and field visualization</span>
+        <span style="color: #444; font-size: 0.65rem;">Physics simulation suite for fusion reactor concepts, plasma physics, chemistry & materials, navigation systems, and field visualization</span>
     </div>
 </body>
 </html>
