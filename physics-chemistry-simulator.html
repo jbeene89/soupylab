@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics & Chemistry Material Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .controls-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+            position: relative;
+        }
+
+        .tooltip {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            background: #4facfe;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 18px;
+            font-size: 12px;
+            cursor: help;
+            margin-left: 5px;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 0;
+            top: 25px;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: normal;
+            white-space: normal;
+            width: 280px;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        select, input[type="range"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            padding: 0;
+        }
+
+        .slider-value {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .value-display {
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .visualization-area {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .canvas-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #mainCanvas {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: linear-gradient(to bottom, #e3f2fd 0%, #ffffff 100%);
+        }
+
+        .info-display {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .info-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .info-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .graphs-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .graph {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .graph h3 {
+            margin-bottom: 10px;
+            color: #555;
+            text-align: center;
+        }
+
+        canvas.graph-canvas {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .phase-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .phase-solid {
+            background: #8e44ad;
+            color: white;
+        }
+
+        .phase-liquid {
+            background: #3498db;
+            color: white;
+        }
+
+        .phase-gas {
+            background: #e74c3c;
+            color: white;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .graphs-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Physics & Chemistry Material Simulator</h1>
+            <p class="subtitle">Interactive simulation with real physics and chemistry models</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Controls Panel -->
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label>
+                        Material Selection
+                        <span class="tooltip" data-tooltip="Choose from preset materials with real physical properties or create custom materials">?</span>
+                    </label>
+                    <select id="materialSelect">
+                        <option value="water">Water (H₂O)</option>
+                        <option value="silica">Molten Silica (SiO₂)</option>
+                        <option value="aluminum">Aluminum (Al)</option>
+                        <option value="steel">Steel (Fe-C)</option>
+                        <option value="graphene">Graphene Oxide</option>
+                        <option value="boron">Boron Nitride (BN)</option>
+                        <option value="custom">Custom Material</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        Temperature
+                        <span class="tooltip" data-tooltip="Temperature affects viscosity (Arrhenius eq.), solubility (van't Hoff), and phase state">?</span>
+                    </label>
+                    <input type="range" id="tempSlider" min="100" max="3000" value="298" step="1">
+                    <div class="slider-value">
+                        <span>100 K</span>
+                        <span class="value-display" id="tempValue">298 K (25°C)</span>
+                        <span>3000 K</span>
+                    </div>
+                    <select id="tempUnit" style="margin-top: 8px;">
+                        <option value="K">Kelvin (K)</option>
+                        <option value="C">Celsius (°C)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        Pressure
+                        <span class="tooltip" data-tooltip="Affects gas density (ideal gas law), solubility (Henry's law: S = k_H × P), and gas viscosity">?</span>
+                    </label>
+                    <input type="range" id="pressureSlider" min="0.1" max="100" value="1" step="0.1">
+                    <div class="slider-value">
+                        <span>0.1 atm</span>
+                        <span class="value-display" id="pressureValue">1.0 atm</span>
+                        <span>100 atm</span>
+                    </div>
+                    <select id="pressureUnit" style="margin-top: 8px;">
+                        <option value="atm">Atmospheres (atm)</option>
+                        <option value="Pa">Pascals (Pa)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        Gas Type (for solubility)
+                        <span class="tooltip" data-tooltip="Select dissolved gas for Henry's Law calculations: S = k_H × P_gas">?</span>
+                    </label>
+                    <select id="gasSelect">
+                        <option value="co2">Carbon Dioxide (CO₂)</option>
+                        <option value="o2">Oxygen (O₂)</option>
+                        <option value="n2">Nitrogen (N₂)</option>
+                        <option value="h2">Hydrogen (H₂)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        Simulation Speed
+                        <span class="tooltip" data-tooltip="Control animation speed and particle movement rate">?</span>
+                    </label>
+                    <input type="range" id="speedSlider" min="0.1" max="5" value="1" step="0.1">
+                    <div class="slider-value">
+                        <span>0.1x</span>
+                        <span class="value-display" id="speedValue">1.0x</span>
+                        <span>5x</span>
+                    </div>
+                </div>
+
+                <button id="exportBtn">📊 Export Data to CSV</button>
+                <button id="resetBtn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🔄 Reset Simulation</button>
+            </div>
+
+            <!-- Visualization Area -->
+            <div class="visualization-area">
+                <!-- Canvas -->
+                <div class="canvas-container">
+                    <h2 style="margin-bottom: 10px;">Material State Visualization</h2>
+                    <div style="text-align: center;">
+                        <span class="phase-indicator" id="phaseIndicator">LIQUID</span>
+                    </div>
+                    <canvas id="mainCanvas" width="800" height="400"></canvas>
+                </div>
+
+                <!-- Info Display -->
+                <div class="info-display">
+                    <h2 style="margin-bottom: 15px;">Real-time Material Properties</h2>
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h3>Current Phase</h3>
+                            <div class="value" id="phaseValue">Liquid</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Viscosity (η)</h3>
+                            <div class="value" id="viscosityValue">0.891 mPa·s</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Density (ρ)</h3>
+                            <div class="value" id="densityValue">997 kg/m³</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Solubility (S)</h3>
+                            <div class="value" id="solubilityValue">0.034 M</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Melting Point</h3>
+                            <div class="value" id="meltingValue">273 K</div>
+                        </div>
+                        <div class="info-card">
+                            <h3>Boiling Point</h3>
+                            <div class="value" id="boilingValue">373 K</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphs -->
+                <div class="graphs-container">
+                    <div class="graph">
+                        <h3>Viscosity vs Temperature (Log Scale)</h3>
+                        <canvas class="graph-canvas" id="viscosityGraph" width="400" height="250"></canvas>
+                    </div>
+                    <div class="graph">
+                        <h3>Solubility vs Pressure (Henry's Law)</h3>
+                        <canvas class="graph-canvas" id="solubilityGraph" width="400" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== MATERIAL DATABASE =====
+        const MATERIALS = {
+            water: {
+                name: "Water",
+                formula: "H₂O",
+                meltingPoint: 273.15, // K
+                boilingPoint: 373.15, // K
+                viscosity: {
+                    A: 0.001792, // Pa·s at 20°C
+                    B: 1730, // K (Arrhenius parameter)
+                    T_ref: 293.15 // Reference temperature
+                },
+                density: {
+                    ref: 997, // kg/m³ at 25°C
+                    alpha: 0.000214 // thermal expansion coefficient
+                },
+                heatCapacity: 4186, // J/(kg·K)
+                thermalConductivity: 0.606, // W/(m·K)
+                henryConstants: {
+                    co2: { kH: 0.034, deltaH: -19400 }, // M/atm, J/mol
+                    o2: { kH: 0.0013, deltaH: -12600 },
+                    n2: { kH: 0.00065, deltaH: -13600 },
+                    h2: { kH: 0.00078, deltaH: -4200 }
+                },
+                color: { r: 100, g: 180, b: 255 }
+            },
+            silica: {
+                name: "Molten Silica",
+                formula: "SiO₂",
+                meltingPoint: 1983, // K (1710°C)
+                boilingPoint: 2503, // K
+                viscosity: {
+                    A: 0.0316, // Pa·s
+                    B: 48000, // K
+                    T_ref: 2273 // Reference temperature
+                },
+                density: {
+                    ref: 2200, // kg/m³
+                    alpha: 0.000015
+                },
+                heatCapacity: 1000, // J/(kg·K)
+                thermalConductivity: 1.4,
+                henryConstants: {
+                    co2: { kH: 0.0001, deltaH: -25000 },
+                    o2: { kH: 0.00005, deltaH: -20000 },
+                    n2: { kH: 0.00003, deltaH: -22000 },
+                    h2: { kH: 0.00008, deltaH: -15000 }
+                },
+                color: { r: 255, g: 200, b: 150 }
+            },
+            aluminum: {
+                name: "Aluminum",
+                formula: "Al",
+                meltingPoint: 933.5, // K
+                boilingPoint: 2743, // K
+                viscosity: {
+                    A: 0.00125, // Pa·s (liquid)
+                    B: 2500,
+                    T_ref: 1000
+                },
+                density: {
+                    ref: 2700, // kg/m³ (solid)
+                    alpha: 0.000023
+                },
+                heatCapacity: 900,
+                thermalConductivity: 237,
+                henryConstants: {
+                    co2: { kH: 0.00002, deltaH: -30000 },
+                    o2: { kH: 0.00001, deltaH: -28000 },
+                    n2: { kH: 0.000008, deltaH: -29000 },
+                    h2: { kH: 0.00003, deltaH: -20000 }
+                },
+                color: { r: 192, g: 192, b: 192 }
+            },
+            steel: {
+                name: "Steel",
+                formula: "Fe-C",
+                meltingPoint: 1811, // K
+                boilingPoint: 3134, // K
+                viscosity: {
+                    A: 0.006, // Pa·s
+                    B: 4000,
+                    T_ref: 1900
+                },
+                density: {
+                    ref: 7850, // kg/m³
+                    alpha: 0.000012
+                },
+                heatCapacity: 490,
+                thermalConductivity: 50,
+                henryConstants: {
+                    co2: { kH: 0.00001, deltaH: -35000 },
+                    o2: { kH: 0.000008, deltaH: -32000 },
+                    n2: { kH: 0.000005, deltaH: -33000 },
+                    h2: { kH: 0.00004, deltaH: -18000 }
+                },
+                color: { r: 120, g: 130, b: 140 }
+            },
+            graphene: {
+                name: "Graphene Oxide",
+                formula: "C-O-H",
+                meltingPoint: 3800, // K (decomposes rather than melts)
+                boilingPoint: 4500, // K
+                viscosity: {
+                    A: 0.05, // Pa·s (suspension)
+                    B: 3000,
+                    T_ref: 300
+                },
+                density: {
+                    ref: 1800, // kg/m³
+                    alpha: 0.000008
+                },
+                heatCapacity: 710,
+                thermalConductivity: 5000,
+                henryConstants: {
+                    co2: { kH: 0.001, deltaH: -15000 },
+                    o2: { kH: 0.0008, deltaH: -12000 },
+                    n2: { kH: 0.0005, deltaH: -13000 },
+                    h2: { kH: 0.002, deltaH: -8000 }
+                },
+                color: { r: 80, g: 80, b: 80 }
+            },
+            boron: {
+                name: "Boron Nitride",
+                formula: "BN",
+                meltingPoint: 3246, // K
+                boilingPoint: 4200, // K
+                viscosity: {
+                    A: 0.008, // Pa·s
+                    B: 5000,
+                    T_ref: 3300
+                },
+                density: {
+                    ref: 2100, // kg/m³
+                    alpha: 0.000007
+                },
+                heatCapacity: 800,
+                thermalConductivity: 300,
+                henryConstants: {
+                    co2: { kH: 0.0002, deltaH: -20000 },
+                    o2: { kH: 0.0001, deltaH: -18000 },
+                    n2: { kH: 0.00008, deltaH: -19000 },
+                    h2: { kH: 0.0005, deltaH: -10000 }
+                },
+                color: { r: 240, g: 240, b: 240 }
+            },
+            custom: {
+                name: "Custom Material",
+                formula: "Custom",
+                meltingPoint: 273,
+                boilingPoint: 373,
+                viscosity: { A: 0.001, B: 1500, T_ref: 298 },
+                density: { ref: 1000, alpha: 0.0002 },
+                heatCapacity: 1000,
+                thermalConductivity: 1,
+                henryConstants: {
+                    co2: { kH: 0.03, deltaH: -20000 },
+                    o2: { kH: 0.001, deltaH: -15000 },
+                    n2: { kH: 0.0006, deltaH: -14000 },
+                    h2: { kH: 0.0008, deltaH: -5000 }
+                },
+                color: { r: 150, g: 150, b: 150 }
+            }
+        };
+
+        // ===== CONSTANTS =====
+        const R = 8.314; // Gas constant J/(mol·K)
+        const ATM_TO_PA = 101325; // Conversion factor
+
+        // ===== STATE VARIABLES =====
+        let currentMaterial = MATERIALS.water;
+        let temperature = 298; // K
+        let pressure = 1; // atm
+        let gasType = 'co2';
+        let simulationSpeed = 1;
+        let particles = [];
+        let animationId = null;
+
+        // ===== CANVAS SETUP =====
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ===== PHYSICS CALCULATIONS =====
+
+        // Calculate viscosity using Arrhenius equation: η = A * exp(B / T)
+        function calculateViscosity(material, temp, press) {
+            const { A, B, T_ref } = material.viscosity;
+            const eta = A * Math.exp(B / temp);
+
+            // Pressure effect on gases (minimal for liquids/solids)
+            const phase = determinePhase(material, temp);
+            if (phase === 'gas') {
+                const C = 0.00001; // Pressure coefficient for gases
+                return eta * (1 + C * press * ATM_TO_PA);
+            }
+            return eta;
+        }
+
+        // Calculate density (temperature and pressure dependent)
+        function calculateDensity(material, temp, press) {
+            const { ref, alpha } = material.density;
+            const phase = determinePhase(material, temp);
+
+            if (phase === 'gas') {
+                // Ideal gas law: ρ = (P * M) / (R * T)
+                // Assuming average molar mass of 30 g/mol
+                const M = 0.030; // kg/mol
+                return (press * ATM_TO_PA * M) / (R * temp);
+            } else {
+                // Thermal expansion: ρ = ρ_ref * (1 - α * ΔT)
+                const deltaT = temp - 298; // Reference at 25°C
+                return ref * (1 - alpha * deltaT);
+            }
+        }
+
+        // Calculate solubility using Henry's Law: S = k_H * P
+        // with temperature-dependent k_H via van't Hoff equation
+        function calculateSolubility(material, temp, press, gas) {
+            const henryData = material.henryConstants[gas];
+            if (!henryData) return 0;
+
+            const { kH, deltaH } = henryData;
+            const T_ref = 298.15; // 25°C reference
+
+            // van't Hoff equation: ln(k_H(T)) = ln(k_H(T_ref)) - (ΔH_sol/R) * (1/T - 1/T_ref)
+            const lnKH = Math.log(kH) - (deltaH / R) * (1/temp - 1/T_ref);
+            const kH_T = Math.exp(lnKH);
+
+            // Henry's Law
+            return kH_T * press;
+        }
+
+        // Determine phase based on temperature
+        function determinePhase(material, temp) {
+            if (temp < material.meltingPoint) return 'solid';
+            if (temp < material.boilingPoint) return 'liquid';
+            return 'gas';
+        }
+
+        // ===== PARTICLE SYSTEM =====
+        class Particle {
+            constructor(x, y, phase) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.phase = phase;
+                this.radius = phase === 'gas' ? 3 : (phase === 'liquid' ? 5 : 6);
+                this.angle = Math.random() * Math.PI * 2;
+            }
+
+            update(phase, viscosity, speed) {
+                this.phase = phase;
+
+                if (phase === 'solid') {
+                    // Vibration around fixed position
+                    this.vx = (Math.random() - 0.5) * 0.5 * speed;
+                    this.vy = (Math.random() - 0.5) * 0.5 * speed;
+                } else if (phase === 'liquid') {
+                    // Flow with viscosity damping
+                    const damping = 1 / (1 + viscosity * 100);
+                    this.vx += (Math.random() - 0.5) * 0.3 * speed * damping;
+                    this.vy += (Math.random() - 0.5) * 0.3 * speed * damping;
+                    this.vx *= 0.98;
+                    this.vy *= 0.98;
+                } else {
+                    // Gas diffusion - high speed
+                    this.vx += (Math.random() - 0.5) * 0.8 * speed;
+                    this.vy += (Math.random() - 0.5) * 0.8 * speed;
+                    this.vx *= 0.95;
+                    this.vy *= 0.95;
+                }
+
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Boundary conditions
+                if (this.x < this.radius) {
+                    this.x = this.radius;
+                    this.vx *= -0.8;
+                }
+                if (this.x > canvas.width - this.radius) {
+                    this.x = canvas.width - this.radius;
+                    this.vx *= -0.8;
+                }
+                if (this.y < this.radius) {
+                    this.y = this.radius;
+                    this.vy *= -0.8;
+                }
+                if (this.y > canvas.height - this.radius) {
+                    this.y = canvas.height - this.radius;
+                    this.vy *= -0.8;
+                }
+
+                this.angle += 0.02 * speed;
+            }
+
+            draw(ctx, color, phase, temp) {
+                // Color gradient based on temperature
+                const tempFactor = Math.min(Math.max((temp - 200) / 2800, 0), 1);
+                const r = Math.floor(color.r + (255 - color.r) * tempFactor);
+                const g = Math.floor(color.g * (1 - tempFactor * 0.5));
+                const b = Math.floor(color.b * (1 - tempFactor * 0.8));
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+
+                if (phase === 'solid') {
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.fill();
+                    ctx.strokeStyle = `rgba(0, 0, 0, 0.3)`;
+                    ctx.stroke();
+                    // Draw crystal lattice lines
+                    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - 8, this.y);
+                    ctx.lineTo(this.x + 8, this.y);
+                    ctx.moveTo(this.x, this.y - 8);
+                    ctx.lineTo(this.x, this.y + 8);
+                    ctx.stroke();
+                } else if (phase === 'liquid') {
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.8)`);
+                    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.4)`);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                } else {
+                    // Gas - very transparent
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.3)`;
+                    ctx.fill();
+                }
+            }
+        }
+
+        function initializeParticles(phase) {
+            particles = [];
+            const numParticles = phase === 'solid' ? 80 : (phase === 'liquid' ? 100 : 150);
+            const spacing = phase === 'solid' ? 40 : 30;
+
+            if (phase === 'solid') {
+                // Ordered lattice
+                const cols = Math.floor(canvas.width / spacing);
+                const rows = Math.floor(canvas.height / spacing);
+                const offsetX = (canvas.width - (cols - 1) * spacing) / 2;
+                const offsetY = (canvas.height - (rows - 1) * spacing) / 2;
+
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        particles.push(new Particle(
+                            offsetX + j * spacing,
+                            offsetY + i * spacing,
+                            phase
+                        ));
+                    }
+                }
+            } else {
+                // Random positions
+                for (let i = 0; i < numParticles; i++) {
+                    particles.push(new Particle(
+                        Math.random() * canvas.width,
+                        Math.random() * canvas.height,
+                        phase
+                    ));
+                }
+            }
+        }
+
+        // ===== RENDERING =====
+        function drawBackground(phase, temp, pressure) {
+            // Dynamic background based on phase and temperature
+            const tempFactor = Math.min(Math.max((temp - 200) / 2800, 0), 1);
+
+            let gradientColor1, gradientColor2;
+
+            if (phase === 'solid') {
+                gradientColor1 = `rgba(${100 + tempFactor * 100}, ${100 + tempFactor * 50}, ${200}, 0.3)`;
+                gradientColor2 = `rgba(${200 + tempFactor * 55}, ${200 + tempFactor * 55}, ${255}, 0.1)`;
+            } else if (phase === 'liquid') {
+                gradientColor1 = `rgba(${100 + tempFactor * 155}, ${150 + tempFactor * 80}, ${255 - tempFactor * 100}, 0.4)`;
+                gradientColor2 = `rgba(${150 + tempFactor * 105}, ${200 - tempFactor * 50}, ${255 - tempFactor * 155}, 0.2)`;
+            } else {
+                gradientColor1 = `rgba(${200 + tempFactor * 55}, ${100 + tempFactor * 100}, ${100}, 0.5)`;
+                gradientColor2 = `rgba(${255}, ${150 + tempFactor * 50}, ${150 - tempFactor * 50}, 0.2)`;
+            }
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, gradientColor1);
+            gradient.addColorStop(1, gradientColor2);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw pressure indicator (size of overlay)
+            const pressureFactor = Math.min(pressure / 10, 1);
+            ctx.fillStyle = `rgba(100, 100, 150, ${pressureFactor * 0.1})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawViscosityLines(viscosity, phase) {
+            if (phase !== 'liquid') return;
+
+            ctx.strokeStyle = `rgba(100, 100, 150, ${Math.min(viscosity * 50, 0.3)})`;
+            ctx.lineWidth = 2;
+
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                const y = canvas.height * (i / 5) + Math.sin(Date.now() / 1000 + i) * 20;
+                ctx.moveTo(0, y);
+
+                for (let x = 0; x < canvas.width; x += 10) {
+                    const wave = Math.sin(x / 50 + Date.now() / 1000 + i) * 10 / (1 + viscosity * 10);
+                    ctx.lineTo(x, y + wave);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function drawBubbles(solubility, pressure) {
+            // Show bubbles when pressure drops and solution is supersaturated
+            const supersaturation = calculateSolubility(currentMaterial, temperature, 10, gasType) - solubility;
+
+            if (supersaturation > 0.01 && pressure < 5) {
+                const numBubbles = Math.floor(supersaturation * 50);
+                for (let i = 0; i < Math.min(numBubbles, 20); i++) {
+                    const x = Math.random() * canvas.width;
+                    const y = canvas.height - (Date.now() / 10 + i * 50) % canvas.height;
+                    const radius = 3 + Math.random() * 5;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(200, 200, 255, 0.8)';
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function animate() {
+            const phase = determinePhase(currentMaterial, temperature);
+            const viscosity = calculateViscosity(currentMaterial, temperature, pressure);
+            const solubility = calculateSolubility(currentMaterial, temperature, pressure, gasType);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background
+            drawBackground(phase, temperature, pressure);
+
+            // Draw viscosity flow lines for liquids
+            drawViscosityLines(viscosity, phase);
+
+            // Draw bubbles for gas evolution
+            drawBubbles(solubility, pressure);
+
+            // Update and draw particles
+            particles.forEach(particle => {
+                particle.update(phase, viscosity, simulationSpeed);
+                particle.draw(ctx, currentMaterial.color, phase, temperature);
+            });
+
+            // Draw temperature/pressure info on canvas
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(10, 10, 200, 60);
+            ctx.fillStyle = 'white';
+            ctx.font = '14px monospace';
+            ctx.fillText(`T: ${temperature.toFixed(1)} K`, 20, 30);
+            ctx.fillText(`P: ${pressure.toFixed(2)} atm`, 20, 50);
+            ctx.fillText(`Phase: ${phase.toUpperCase()}`, 20, 70);
+
+            updateUI();
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // ===== UI UPDATES =====
+        function updateUI() {
+            const phase = determinePhase(currentMaterial, temperature);
+            const viscosity = calculateViscosity(currentMaterial, temperature, pressure);
+            const density = calculateDensity(currentMaterial, temperature, pressure);
+            const solubility = calculateSolubility(currentMaterial, temperature, pressure, gasType);
+
+            // Update phase indicator
+            const phaseIndicator = document.getElementById('phaseIndicator');
+            const phaseValue = document.getElementById('phaseValue');
+            phaseIndicator.textContent = phase.toUpperCase();
+            phaseValue.textContent = phase.charAt(0).toUpperCase() + phase.slice(1);
+
+            phaseIndicator.className = 'phase-indicator';
+            if (phase === 'solid') phaseIndicator.classList.add('phase-solid');
+            else if (phase === 'liquid') phaseIndicator.classList.add('phase-liquid');
+            else phaseIndicator.classList.add('phase-gas');
+
+            // Update property values
+            document.getElementById('viscosityValue').textContent =
+                viscosity < 0.001 ? `${(viscosity * 1e6).toFixed(2)} µPa·s` :
+                viscosity < 1 ? `${(viscosity * 1000).toFixed(2)} mPa·s` :
+                `${viscosity.toFixed(3)} Pa·s`;
+
+            document.getElementById('densityValue').textContent = `${density.toFixed(2)} kg/m³`;
+            document.getElementById('solubilityValue').textContent = `${solubility.toFixed(4)} M`;
+            document.getElementById('meltingValue').textContent = `${currentMaterial.meltingPoint.toFixed(1)} K`;
+            document.getElementById('boilingValue').textContent = `${currentMaterial.boilingPoint.toFixed(1)} K`;
+        }
+
+        // ===== GRAPH PLOTTING =====
+        function plotViscosityGraph() {
+            const canvas = document.getElementById('viscosityGraph');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Setup
+            const padding = 50;
+            const graphWidth = width - 2 * padding;
+            const graphHeight = height - 2 * padding;
+
+            // Temperature range
+            const tempMin = 200;
+            const tempMax = Math.min(currentMaterial.boilingPoint * 1.2, 3000);
+            const tempRange = tempMax - tempMin;
+
+            // Calculate viscosity range (log scale)
+            const viscosities = [];
+            for (let t = tempMin; t <= tempMax; t += tempRange / 100) {
+                viscosities.push(calculateViscosity(currentMaterial, t, pressure));
+            }
+            const viscMin = Math.min(...viscosities);
+            const viscMax = Math.max(...viscosities);
+            const logViscMin = Math.log10(viscMin);
+            const logViscMax = Math.log10(viscMax);
+
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            // Draw grid
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (graphHeight * i / 5);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+
+            // Plot curve
+            ctx.strokeStyle = '#4facfe';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            for (let i = 0; i <= 100; i++) {
+                const t = tempMin + (tempRange * i / 100);
+                const visc = calculateViscosity(currentMaterial, t, pressure);
+                const logVisc = Math.log10(visc);
+
+                const x = padding + (graphWidth * i / 100);
+                const y = height - padding - ((logVisc - logViscMin) / (logViscMax - logViscMin) * graphHeight);
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Current point
+            const currentLogVisc = Math.log10(calculateViscosity(currentMaterial, temperature, pressure));
+            const currentX = padding + ((temperature - tempMin) / tempRange * graphWidth);
+            const currentY = height - padding - ((currentLogVisc - logViscMin) / (logViscMax - logViscMin) * graphHeight);
+
+            ctx.fillStyle = '#f5576c';
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText(`${tempMin.toFixed(0)} K`, padding, height - padding + 20);
+            ctx.fillText(`${tempMax.toFixed(0)} K`, width - padding - 30, height - padding + 20);
+            ctx.fillText(`η (Pa·s, log)`, 5, padding);
+        }
+
+        function plotSolubilityGraph() {
+            const canvas = document.getElementById('solubilityGraph');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Setup
+            const padding = 50;
+            const graphWidth = width - 2 * padding;
+            const graphHeight = height - 2 * padding;
+
+            // Pressure range
+            const pressMin = 0;
+            const pressMax = 10; // atm
+            const pressRange = pressMax - pressMin;
+
+            // Calculate solubility range
+            const solubilities = [];
+            for (let p = pressMin; p <= pressMax; p += pressRange / 100) {
+                solubilities.push(calculateSolubility(currentMaterial, temperature, p, gasType));
+            }
+            const solMin = 0;
+            const solMax = Math.max(...solubilities) * 1.1;
+
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            // Draw grid
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + (graphHeight * i / 5);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+
+            // Plot curve (linear - Henry's Law)
+            ctx.strokeStyle = '#764ba2';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            for (let i = 0; i <= 100; i++) {
+                const p = pressMin + (pressRange * i / 100);
+                const sol = calculateSolubility(currentMaterial, temperature, p, gasType);
+
+                const x = padding + (graphWidth * i / 100);
+                const y = height - padding - ((sol - solMin) / (solMax - solMin) * graphHeight);
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Current point
+            const currentSol = calculateSolubility(currentMaterial, temperature, pressure, gasType);
+            const currentX = padding + (pressure / pressMax * graphWidth);
+            const currentY = height - padding - ((currentSol - solMin) / (solMax - solMin) * graphHeight);
+
+            ctx.fillStyle = '#f5576c';
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('0 atm', padding, height - padding + 20);
+            ctx.fillText(`${pressMax} atm`, width - padding - 30, height - padding + 20);
+            ctx.fillText('S (M)', 5, padding);
+        }
+
+        // ===== EVENT HANDLERS =====
+        document.getElementById('materialSelect').addEventListener('change', (e) => {
+            currentMaterial = MATERIALS[e.target.value];
+            const phase = determinePhase(currentMaterial, temperature);
+            initializeParticles(phase);
+            plotViscosityGraph();
+            plotSolubilityGraph();
+        });
+
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            temperature = parseFloat(e.target.value);
+            const unit = document.getElementById('tempUnit').value;
+            const displayValue = unit === 'K' ?
+                `${temperature.toFixed(1)} K` :
+                `${(temperature - 273.15).toFixed(1)}°C (${temperature.toFixed(1)} K)`;
+            document.getElementById('tempValue').textContent = displayValue;
+
+            const newPhase = determinePhase(currentMaterial, temperature);
+            if (newPhase !== particles[0]?.phase) {
+                initializeParticles(newPhase);
+            }
+
+            plotViscosityGraph();
+            plotSolubilityGraph();
+        });
+
+        document.getElementById('pressureSlider').addEventListener('input', (e) => {
+            pressure = parseFloat(e.target.value);
+            const unit = document.getElementById('pressureUnit').value;
+            const displayValue = unit === 'atm' ?
+                `${pressure.toFixed(2)} atm` :
+                `${(pressure * ATM_TO_PA).toFixed(0)} Pa`;
+            document.getElementById('pressureValue').textContent = displayValue;
+            plotViscosityGraph();
+            plotSolubilityGraph();
+        });
+
+        document.getElementById('gasSelect').addEventListener('change', (e) => {
+            gasType = e.target.value;
+            plotSolubilityGraph();
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            simulationSpeed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = `${simulationSpeed.toFixed(1)}x`;
+        });
+
+        document.getElementById('tempUnit').addEventListener('change', (e) => {
+            const unit = e.target.value;
+            const displayValue = unit === 'K' ?
+                `${temperature.toFixed(1)} K` :
+                `${(temperature - 273.15).toFixed(1)}°C (${temperature.toFixed(1)} K)`;
+            document.getElementById('tempValue').textContent = displayValue;
+        });
+
+        document.getElementById('pressureUnit').addEventListener('change', (e) => {
+            const unit = e.target.value;
+            const displayValue = unit === 'atm' ?
+                `${pressure.toFixed(2)} atm` :
+                `${(pressure * ATM_TO_PA).toFixed(0)} Pa`;
+            document.getElementById('pressureValue').textContent = displayValue;
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            // Generate CSV data
+            let csv = 'Temperature (K),Pressure (atm),Phase,Viscosity (Pa·s),Density (kg/m³),Solubility (M)\n';
+
+            for (let t = 200; t <= 1000; t += 50) {
+                for (let p = 0.5; p <= 5; p += 0.5) {
+                    const phase = determinePhase(currentMaterial, t);
+                    const visc = calculateViscosity(currentMaterial, t, p);
+                    const dens = calculateDensity(currentMaterial, t, p);
+                    const sol = calculateSolubility(currentMaterial, t, p, gasType);
+                    csv += `${t},${p},${phase},${visc},${dens},${sol}\n`;
+                }
+            }
+
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentMaterial.name}_simulation_data.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            temperature = 298;
+            pressure = 1;
+            simulationSpeed = 1;
+            document.getElementById('tempSlider').value = 298;
+            document.getElementById('pressureSlider').value = 1;
+            document.getElementById('speedSlider').value = 1;
+            document.getElementById('tempValue').textContent = '298 K (25°C)';
+            document.getElementById('pressureValue').textContent = '1.0 atm';
+            document.getElementById('speedValue').textContent = '1.0x';
+
+            const phase = determinePhase(currentMaterial, temperature);
+            initializeParticles(phase);
+            plotViscosityGraph();
+            plotSolubilityGraph();
+        });
+
+        // ===== INITIALIZATION =====
+        function init() {
+            initializeParticles('liquid');
+            plotViscosityGraph();
+            plotSolubilityGraph();
+            animate();
+        }
+
+        // Start simulation when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
