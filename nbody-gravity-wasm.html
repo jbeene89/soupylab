@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-Body Gravitational Simulator - Barnes-Hut - WebAssembly</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&display=swap');
+
+        :root {
+            --bg: #000208;
+            --panel: #0a0515;
+            --star: #ffdd00;
+            --galaxy1: #00ccff;
+            --galaxy2: #ff0099;
+            --text: #e0e0e0;
+            --dim: #6688aa;
+            --accent: #ffaa00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #000;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            text-align: center;
+            padding: 1rem;
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--galaxy1) 0%, var(--star) 50%, var(--galaxy2) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.1em;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+
+        .controls-panel {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            width: 280px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            background: rgba(10,5,21,0.95);
+            border: 1px solid rgba(255,170,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .stats-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 280px;
+            background: rgba(10,5,21,0.95);
+            border: 1px solid rgba(255,170,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1rem 0 0.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,170,0,0.3);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255,170,0,0.2), rgba(255,170,0,0.5));
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.7rem;
+            background: linear-gradient(135deg, var(--accent), var(--star));
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255,170,0,0.6);
+        }
+
+        .stat-box {
+            background: rgba(255,170,0,0.05);
+            border: 1px solid rgba(255,170,0,0.2);
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+
+        .back-link {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(10,5,21,0.9);
+            border: 1px solid rgba(255,170,0,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-link:hover {
+            background: rgba(255,170,0,0.2);
+            transform: translateX(-3px);
+            box-shadow: 0 0 20px rgba(255,170,0,0.4);
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            animation: pulse 1.5s ease-in-out infinite;
+            z-index: 100;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>⭐ N-BODY GRAVITATIONAL SIMULATOR ⭐</h1>
+        <p style="font-size: 0.85rem; color: var(--dim); margin-top: 0.5rem;">
+            Barnes-Hut Algorithm • 10,000+ Particles • Real Newtonian Gravity
+        </p>
+    </div>
+
+    <div class="controls-panel">
+        <div class="section-title">Scenarios</div>
+        
+        <button id="galaxyBtn" style="background: linear-gradient(135deg, var(--galaxy1), var(--galaxy2));">
+            🌌 Galaxy Collision
+        </button>
+        <button id="solarBtn" style="background: linear-gradient(135deg, var(--star), #ff8800);">
+            ☀️ Solar System
+        </button>
+        <button id="clusterBtn" style="background: linear-gradient(135deg, #00ff88, #00ccff);">
+            💫 Random Cluster
+        </button>
+
+        <div class="section-title">Particle Count</div>
+        
+        <div class="control-group">
+            <label>
+                Particles per Galaxy
+                <span class="value-display" id="particleValue">2000</span>
+            </label>
+            <input type="range" id="particleSlider" min="100" max="5000" step="100" value="2000">
+        </div>
+
+        <div class="section-title">Simulation</div>
+
+        <div class="control-group">
+            <label>
+                Time Step
+                <span class="value-display" id="timeStepValue">0.01</span>
+            </label>
+            <input type="range" id="timeStepSlider" min="0.001" max="0.05" step="0.001" value="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Steps per Frame
+                <span class="value-display" id="stepsValue">1</span>
+            </label>
+            <input type="range" id="stepsSlider" min="1" max="10" step="1" value="1">
+        </div>
+
+        <div class="section-title">Visualization</div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="trailsCheck" checked>
+            <label for="trailsCheck">Show Trails</label>
+        </div>
+
+        <div class="control-group">
+            <label>
+                Trail Length
+                <span class="value-display" id="trailValue">50</span>
+            </label>
+            <input type="range" id="trailSlider" min="10" max="200" step="10" value="50">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Particle Size
+                <span class="value-display" id="sizeValue">2</span>
+            </label>
+            <input type="range" id="sizeSlider" min="1" max="5" step="0.5" value="2">
+        </div>
+    </div>
+
+    <div class="stats-panel">
+        <div class="section-title">Performance</div>
+
+        <div class="stat-box">
+            <div class="stat-label">FPS</div>
+            <div class="stat-value">
+                <span id="fpsValue">60</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Active Particles</div>
+            <div class="stat-value">
+                <span id="countValue">0</span>
+            </div>
+        </div>
+
+        <div class="section-title">Physics</div>
+
+        <div class="stat-box">
+            <div class="stat-label">Simulation Time</div>
+            <div class="stat-value" style="font-size: 1rem;">
+                <span id="timeValue">0.0</span> <span style="font-size: 0.7rem;">units</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Total Energy</div>
+            <div class="stat-value" style="font-size: 0.9rem;">
+                <span id="energyValue">0</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Kinetic Energy</div>
+            <div class="stat-value" style="font-size: 0.9rem;">
+                <span id="kineticValue">0</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Potential Energy</div>
+            <div class="stat-value" style="font-size: 0.9rem;">
+                <span id="potentialValue">0</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Iteration</div>
+            <div class="stat-value" style="font-size: 0.9rem;">
+                <span id="iterValue">0</span>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="nbodyCanvas"></canvas>
+
+    <div id="loadingMsg" class="loading">
+        🌌 Loading N-Body Engine...<br>
+        <span style="font-size: 0.8rem;">Compiling Barnes-Hut algorithm...</span>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // WASM MODULE LOADER
+        // ====================================================================
+
+        let nbodyEngine = null;
+        let isWASMReady = false;
+
+        const canvas = document.getElementById('nbodyCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Trail history
+        let trails = new Map();
+        let showTrails = true;
+        let trailLength = 50;
+        let particleSize = 2;
+        let stepsPerFrame = 1;
+
+        // Camera
+        let camX = 0, camY = 0;
+        let camZoom = 1.0;
+
+        // Performance
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // Load WASM module
+        async function loadWASM() {
+            try {
+                const createModule = (await import('./nbody_engine.js')).default;
+                const Module = await createModule();
+                
+                nbodyEngine = new Module.NBodyEngine(1000);
+                isWASMReady = true;
+                
+                document.getElementById('loadingMsg').style.display = 'none';
+                
+                // Start with galaxy collision
+                createGalaxyCollision();
+                
+                console.log('✅ N-Body WASM module loaded!');
+                animate();
+            } catch (error) {
+                console.error('❌ Failed to load WASM:', error);
+                document.getElementById('loadingMsg').innerHTML = 
+                    '⚠️ Failed to load WebAssembly<br><span style="font-size:0.8rem;">Check console</span>';
+            }
+        }
+
+        // ====================================================================
+        // SCENARIOS
+        // ====================================================================
+
+        function createGalaxyCollision() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value);
+            nbodyEngine.createGalaxyCollision(count);
+            trails.clear();
+            updateStats();
+        }
+
+        function createSolarSystem() {
+            if (!nbodyEngine) return;
+            nbodyEngine.createSolarSystem();
+            trails.clear();
+            camZoom = 2.0;
+            updateStats();
+        }
+
+        function createRandomCluster() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value) * 2;
+            nbodyEngine.createRandomCluster(count);
+            trails.clear();
+            updateStats();
+        }
+
+        // ====================================================================
+        // RENDERING
+        // ====================================================================
+
+        function worldToScreen(x, y) {
+            return {
+                x: (x - camX) * camZoom + canvas.width / 2,
+                y: (y - camY) * camZoom + canvas.height / 2
+            };
+        }
+
+        function render() {
+            if (!isWASMReady || !nbodyEngine) return;
+
+            // Clear with fade for trails
+            if (showTrails) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            } else {
+                ctx.fillStyle = '#000';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw stars background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 137.5) % canvas.width;
+                const y = (i * 197.3) % canvas.height;
+                ctx.fillRect(x, y, 1, 1);
+            }
+
+            // Get particle data
+            const data = nbodyEngine.getParticleData();
+
+            // Draw trails
+            if (showTrails) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const x = data[i];
+                    const y = data[i + 1];
+                    const mass = data[i + 2];
+
+                    const id = Math.floor(i / 4);
+                    if (!trails.has(id)) {
+                        trails.set(id, []);
+                    }
+
+                    const trail = trails.get(id);
+                    trail.push({ x, y });
+
+                    if (trail.length > trailLength) {
+                        trail.shift();
+                    }
+
+                    // Draw trail
+                    if (trail.length > 1) {
+                        ctx.beginPath();
+                        let first = worldToScreen(trail[0].x, trail[0].y);
+                        ctx.moveTo(first.x, first.y);
+
+                        for (let j = 1; j < trail.length; j++) {
+                            let pos = worldToScreen(trail[j].x, trail[j].y);
+                            ctx.lineTo(pos.x, pos.y);
+                        }
+
+                        const alpha = 0.3 + mass * 0.01;
+                        const hue = (id * 137.5) % 360;
+                        ctx.strokeStyle = `hsla(${hue}, 70%, 60%, ${alpha})`;
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw particles
+            for (let i = 0; i < data.length; i += 4) {
+                const x = data[i];
+                const y = data[i + 1];
+                const mass = data[i + 2];
+                const radius = data[i + 3];
+
+                const pos = worldToScreen(x, y);
+                const size = Math.max(particleSize, radius * camZoom * 0.5);
+
+                // Glow
+                const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size * 2);
+                const hue = (i * 137.5 / 4) % 360;
+                gradient.addColorStop(0, `hsla(${hue}, 100%, 70%, 0.8)`);
+                gradient.addColorStop(0.5, `hsla(${hue}, 100%, 50%, 0.3)`);
+                gradient.addColorStop(1, `hsla(${hue}, 100%, 50%, 0)`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = `hsla(${hue}, 100%, 90%, 1)`;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ====================================================================
+        // UPDATE STATS
+        // ====================================================================
+
+        function updateStats() {
+            if (!isWASMReady || !nbodyEngine) return;
+
+            document.getElementById('countValue').textContent = nbodyEngine.getParticleCount();
+            document.getElementById('timeValue').textContent = nbodyEngine.getTime().toFixed(2);
+            document.getElementById('energyValue').textContent = nbodyEngine.getTotalEnergy().toExponential(2);
+            document.getElementById('kineticValue').textContent = nbodyEngine.getKineticEnergy().toExponential(2);
+            document.getElementById('potentialValue').textContent = nbodyEngine.getPotentialEnergy().toExponential(2);
+            document.getElementById('iterValue').textContent = nbodyEngine.getIteration();
+        }
+
+        // ====================================================================
+        // ANIMATION LOOP
+        // ====================================================================
+
+        function animate() {
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            fps = Math.round(1 / deltaTime);
+            document.getElementById('fpsValue').textContent = fps;
+
+            if (isWASMReady && nbodyEngine) {
+                nbodyEngine.update(stepsPerFrame);
+                render();
+
+                if (nbodyEngine.getIteration() % 30 === 0) {
+                    updateStats();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ====================================================================
+        // EVENT LISTENERS
+        // ====================================================================
+
+        document.getElementById('galaxyBtn').addEventListener('click', createGalaxyCollision);
+        document.getElementById('solarBtn').addEventListener('click', createSolarSystem);
+        document.getElementById('clusterBtn').addEventListener('click', createRandomCluster);
+
+        document.getElementById('particleSlider').addEventListener('input', (e) => {
+            document.getElementById('particleValue').textContent = e.target.value;
+        });
+
+        document.getElementById('timeStepSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('timeStepValue').textContent = val.toFixed(3);
+            if (nbodyEngine) nbodyEngine.setTimeStep(val);
+        });
+
+        document.getElementById('stepsSlider').addEventListener('input', (e) => {
+            stepsPerFrame = parseInt(e.target.value);
+            document.getElementById('stepsValue').textContent = stepsPerFrame;
+        });
+
+        document.getElementById('trailsCheck').addEventListener('change', (e) => {
+            showTrails = e.target.checked;
+            if (!showTrails) trails.clear();
+        });
+
+        document.getElementById('trailSlider').addEventListener('input', (e) => {
+            trailLength = parseInt(e.target.value);
+            document.getElementById('trailValue').textContent = trailLength;
+        });
+
+        document.getElementById('sizeSlider').addEventListener('input', (e) => {
+            particleSize = parseFloat(e.target.value);
+            document.getElementById('sizeValue').textContent = particleSize;
+        });
+
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            camZoom *= zoomFactor;
+            camZoom = Math.max(0.1, Math.min(5, camZoom));
+        });
+
+        // ====================================================================
+        // INITIALIZATION
+        // ====================================================================
+
+        loadWASM();
+    </script>
+</body>
+</html>
