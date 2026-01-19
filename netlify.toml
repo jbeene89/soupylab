@@ -1,7 +1,6 @@
 [build]
   # Static HTML site - no build needed
   command = "true"
-  publish = "."
 
 # Headers for CDN caching
 [[headers]]
