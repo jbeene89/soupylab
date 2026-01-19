@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultra Magnetic Sun Reactor v0.1 + PsiPhi Face</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --plasma-core: #ff6b35;
+      --plasma-hot: #ffdd00;
+      --plasma-cool: #00d4ff;
+      --field-line: #00ff9d;
+      --coil-active: #ff00ff;
+      --coil-idle: #6600aa;
+      --bg-deep: #030308;
+      --bg-mid: #0a0a18;
+      --panel-bg: rgba(10, 15, 30, 0.85);
+      --text-glow: #00ffcc;
+      --warning: #ff3366;
+      --success: #00ff88;
+    }
+    
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background: var(--bg-deep);
+      color: #c0d0e0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    .reactor-container {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 157, 0.2);
+      border-radius: 8px;
+    }
+    
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--plasma-hot), var(--plasma-core), var(--coil-active));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
+    }
+    
+    .status-badge {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    
+    .status-badge.nominal {
+      background: rgba(0, 255, 136, 0.15);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+    
+    .status-badge.warning {
+      background: rgba(255, 51, 102, 0.15);
+      border: 1px solid var(--warning);
+      color: var(--warning);
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 10px currentColor; }
+      50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+    }
+    
+    .main-view {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .reactor-canvas-wrap {
+      flex: 1;
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 157, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      min-height: 500px;
+    }
+    
+    #reactorCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+    }
+    
+    .controls-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    .control-panel {
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 157, 0.15);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    
+    .control-panel h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--text-glow);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .slider-group {
+      margin-bottom: 12px;
+    }
+    
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+      color: #8090a0;
+    }
+    
+    .slider-group label span {
+      color: var(--plasma-hot);
+      font-weight: bold;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: linear-gradient(90deg, var(--plasma-cool), var(--plasma-core), var(--plasma-hot));
+      border-radius: 3px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--plasma-hot);
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--coil-active), var(--plasma-core));
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      box-shadow: 0 0 20px var(--coil-active);
+      transform: translateY(-2px);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ff3366, #cc0033);
+      color: white;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #00cc66, #009944);
+      color: white;
+    }
+    
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .psi-phi-panel {
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 157, 0.2);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    
+    .psi-phi-panel h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--coil-active);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+    
+    #psiphiCanvas {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      background: radial-gradient(circle at center, #141429 0%, #050510 70%);
+    }
+    
+    .metrics-panel {
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 157, 0.15);
+      border-radius: 8px;
+      padding: 16px;
+      flex: 1;
+    }
+    
+    .metrics-panel h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--text-glow);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.8rem;
+    }
+    
+    .metric-label { color: #6080a0; }
+    .metric-value { 
+      font-weight: bold;
+      font-family: 'Orbitron', sans-serif;
+    }
+    
+    .metric-value.hot { color: var(--plasma-hot); }
+    .metric-value.cool { color: var(--plasma-cool); }
+    .metric-value.good { color: var(--success); }
+    .metric-value.warn { color: var(--warning); }
+    
+    .event-log {
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 157, 0.15);
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .event-log h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      color: var(--text-glow);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .log-entry {
+      font-size: 0.7rem;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    
+    .log-entry.cme { color: var(--plasma-hot); }
+    .log-entry.coil { color: var(--coil-active); }
+    .log-entry.capture { color: var(--success); }
+    .log-entry.warning { color: var(--warning); }
+    
+    footer {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 12px;
+      font-size: 0.7rem;
+      color: #405060;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-mid); }
+    ::-webkit-scrollbar-thumb { background: var(--coil-idle); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="reactor-container">
+    <header>
+      <h1>⚛ ULTRA MAGNETIC SUN REACTOR v0.1</h1>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <a href="index.html" style="color: var(--text-glow); text-decoration: none; font-size: 0.8rem; padding: 6px 12px; border: 1px solid rgba(0,255,157,0.3); border-radius: 4px;">← BACK</a>
+        <button onclick="document.getElementById('docsModal').style.display='block'" style="color: var(--plasma-hot); background: none; border: 1px solid var(--plasma-hot); font-size: 0.8rem; padding: 6px 12px; border-radius: 4px; cursor: pointer;">📄 PHYSICS DOCS</button>
+        <div class="status-badge nominal" id="statusBadge">NOMINAL</div>
+      </div>
+    </header>
+    
+    <div class="main-view">
+      <div class="reactor-canvas-wrap">
+        <canvas id="reactorCanvas"></canvas>
+      </div>
+      
+      <div class="controls-row">
+        <div class="control-panel">
+          <h3>Core Parameters</h3>
+          <div class="slider-group">
+            <label>Plasma Density <span id="densityVal">1.0</span>×10²⁰/m³</label>
+            <input type="range" id="plasmaDensity" min="0.1" max="3" step="0.1" value="1.0">
+          </div>
+          <div class="slider-group">
+            <label>Core Temperature <span id="tempVal">150</span> MK</label>
+            <input type="range" id="coreTemp" min="50" max="300" step="10" value="150">
+          </div>
+          <div class="slider-group">
+            <label>Heating Power <span id="heatVal">50</span> MW</label>
+            <input type="range" id="heatingPower" min="10" max="150" step="5" value="50">
+          </div>
+        </div>
+        
+        <div class="control-panel">
+          <h3>Magnetic Systems</h3>
+          <div class="slider-group">
+            <label>Coil Field Strength <span id="fieldVal">5.0</span> T</label>
+            <input type="range" id="fieldStrength" min="1" max="12" step="0.5" value="5">
+          </div>
+          <div class="slider-group">
+            <label>Spring Damping <span id="dampVal">0.7</span></label>
+            <input type="range" id="springDamping" min="0.1" max="1" step="0.05" value="0.7">
+          </div>
+          <div class="slider-group">
+            <label>Rail Path Count <span id="railVal">6</span></label>
+            <input type="range" id="railPaths" min="3" max="12" step="1" value="6">
+          </div>
+        </div>
+        
+        <div class="control-panel">
+          <h3>Actions</h3>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="btnInjectCME">Inject CME</button>
+            <button class="btn btn-success" id="btnStabilize">Auto-Stabilize</button>
+            <button class="btn btn-danger" id="btnScram">SCRAM</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="side-panel">
+      <div class="psi-phi-panel">
+        <h3>ΨΦ Reactor Face</h3>
+        <canvas id="psiphiCanvas" width="280" height="280"></canvas>
+      </div>
+      
+      <div class="metrics-panel">
+        <h3>Live Metrics</h3>
+        <div class="metric">
+          <span class="metric-label">Confinement Q</span>
+          <span class="metric-value good" id="metricQ">1.2</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Lawson (nτT)</span>
+          <span class="metric-value cool" id="metricLawson">2.1×10²¹</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Plasma β</span>
+          <span class="metric-value" id="metricBeta">4.2%</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">CME Captured</span>
+          <span class="metric-value hot" id="metricCME">0 MJ</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Coil Displacement</span>
+          <span class="metric-value" id="metricCoilDisp">0.0 cm</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Instability Index</span>
+          <span class="metric-value good" id="metricInstab">0.12</span>
+        </div>
+      </div>
+      
+      <div class="event-log">
+        <h3>Event Log</h3>
+        <div id="logEntries"></div>
+      </div>
+    </div>
+    
+    <footer>
+      SOUPY LAB MAXX · Ultra Magnetic Sun Concept · John Beene · Glen St. Mary, FL
+    </footer>
+    
+    <!-- Physics Documentation Modal -->
+    <div id="docsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; overflow-y:auto; padding:40px;">
+      <div style="max-width:800px; margin:0 auto; background:var(--panel-bg); border:1px solid rgba(0,255,157,0.3); border-radius:12px; padding:32px;">
+        <button onclick="document.getElementById('docsModal').style.display='none'" style="float:right; background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">×</button>
+        <h2 style="font-family:'Orbitron',sans-serif; color:var(--plasma-hot); margin-bottom:20px;">Ultra Magnetic Sun Reactor - Technical Overview</h2>
+        
+        <h3 style="color:var(--text-glow); margin-top:20px;">Core Concept</h3>
+        <p style="color:#a0b0c0; line-height:1.7;">
+          Unlike conventional tokamaks that force plasma into a toroidal geometry, or stellarators that use complex twisted coils for rotational transform, the Ultra Magnetic Sun maintains a <strong>spherical plasma core</strong> with external magnetic structures providing guidance rather than primary confinement.
+        </p>
+        
+        <h3 style="color:var(--text-glow); margin-top:20px;">Key Innovations</h3>
+        <ul style="color:#a0b0c0; line-height:1.8; padding-left:20px;">
+          <li><strong>Spring-Mounted Coils:</strong> Superconducting magnets on mechanical dampers that move WITH plasma instabilities rather than fighting them electromagnetically. This converts MHD instability energy into mechanical motion.</li>
+          <li><strong>Multi-Path Rail Network:</strong> Redundant magnetic pathways allow plasma to find lowest-energy configurations naturally, reducing disruption risk.</li>
+          <li><strong>CME Capture Loops:</strong> Outer magnetic rings designed to intercept plasma ejections (analogous to solar CMEs) and convert them to induced current - turning instabilities into harvested energy.</li>
+          <li><strong>Dynamic Coil Positioning:</strong> Real-time centroid tracking adjusts coil positions to maintain confinement without requiring massive field strength increases.</li>
+        </ul>
+        
+        <h3 style="color:var(--text-glow); margin-top:20px;">Physics Parameters</h3>
+        <ul style="color:#a0b0c0; line-height:1.8; padding-left:20px;">
+          <li><strong>Lawson Criterion (nτT):</strong> Target >3×10²¹ keV·s/m³ for D-T ignition</li>
+          <li><strong>Plasma β:</strong> Ratio of plasma pressure to magnetic pressure - higher β = more efficient confinement</li>
+          <li><strong>Q Factor:</strong> Fusion power output / heating power input - Q>1 indicates net energy gain</li>
+          <li><strong>Confinement Time (τ):</strong> Enhanced by spring-damped response to instabilities</li>
+        </ul>
+        
+        <h3 style="color:var(--text-glow); margin-top:20px;">Simulation Notes</h3>
+        <p style="color:#a0b0c0; line-height:1.7;">
+          This simulation uses simplified MHD models for visualization. Spring dynamics use Hooke's law with configurable damping. CME events are stochastically generated based on instability index. The ΨΦ (PsiPhi) face provides intuitive reactor state feedback through emotional expression mapping.
+        </p>
+        
+        <h3 style="color:var(--text-glow); margin-top:20px;">Contact</h3>
+        <p style="color:#a0b0c0;">
+          Concept by John Beene, Glen St. Mary, FL<br>
+          For collaboration inquiries or technical discussion, connect via LinkedIn.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // ULTRA MAGNETIC SUN REACTOR SIMULATION
+    // ============================================
+    
+    const reactorCanvas = document.getElementById('reactorCanvas');
+    const rctx = reactorCanvas.getContext('2d');
+    const psiphiCanvas = document.getElementById('psiphiCanvas');
+    const pctx = psiphiCanvas.getContext('2d');
+    
+    // Resize handler
+    function resizeCanvases() {
+      const wrap = reactorCanvas.parentElement;
+      reactorCanvas.width = wrap.clientWidth - 32;
+      reactorCanvas.height = wrap.clientHeight - 32;
+    }
+    resizeCanvases();
+    window.addEventListener('resize', resizeCanvases);
+    
+    // ============================================
+    // REACTOR STATE
+    // ============================================
+    
+    const state = {
+      // Core plasma
+      plasmaDensity: 1.0,
+      coreTemp: 150,
+      heatingPower: 50,
+      
+      // Magnetics
+      fieldStrength: 5.0,
+      springDamping: 0.7,
+      railPaths: 6,
+      
+      // Dynamics
+      plasmaRadius: 80,
+      plasmaOffset: { x: 0, y: 0 },
+      plasmaVelocity: { x: 0, y: 0 },
+      instability: 0.1,
+      
+      // Coils (spring-mounted)
+      coils: [],
+      numCoils: 8,
+      
+      // CME / Flares
+      cmes: [],
+      cmesCaptured: 0,
+      
+      // Field lines
+      fieldParticles: [],
+      
+      // Rail network paths
+      railNodes: [],
+      
+      // Running
+      running: true,
+      time: 0
+    };
+    
+    // Initialize coils around plasma
+    function initCoils() {
+      state.coils = [];
+      for (let i = 0; i < state.numCoils; i++) {
+        const angle = (i / state.numCoils) * Math.PI * 2;
+        const baseR = 180;
+        state.coils.push({
+          angle: angle,
+          baseRadius: baseR,
+          currentRadius: baseR,
+          targetRadius: baseR,
+          velocity: 0,
+          springK: 0.15,
+          active: true
+        });
+      }
+    }
+    
+    // Initialize rail network
+    function initRails() {
+      state.railNodes = [];
+      const paths = state.railPaths;
+      for (let p = 0; p < paths; p++) {
+        const angle = (p / paths) * Math.PI * 2;
+        // Inner node
+        state.railNodes.push({
+          x: Math.cos(angle) * 120,
+          y: Math.sin(angle) * 120,
+          path: p,
+          ring: 0
+        });
+        // Outer node
+        state.railNodes.push({
+          x: Math.cos(angle) * 220,
+          y: Math.sin(angle) * 220,
+          path: p,
+          ring: 1
+        });
+      }
+    }
+    
+    // Initialize field particles
+    function initFieldParticles() {
+      state.fieldParticles = [];
+      for (let i = 0; i < 150; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = 30 + Math.random() * 200;
+        state.fieldParticles.push({
+          angle: angle,
+          radius: r,
+          speed: 0.005 + Math.random() * 0.015,
+          drift: (Math.random() - 0.5) * 0.001
+        });
+      }
+    }
+    
+    initCoils();
+    initRails();
+    initFieldParticles();
+    
+    // ============================================
+    // EVENT LOG
+    // ============================================
+    
+    const logEntries = document.getElementById('logEntries');
+    function log(msg, type = '') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${(state.time).toFixed(1)}s] ${msg}`;
+      logEntries.insertBefore(entry, logEntries.firstChild);
+      if (logEntries.children.length > 50) {
+        logEntries.removeChild(logEntries.lastChild);
+      }
+    }
+    
+    // ============================================
+    // PHYSICS UPDATE
+    // ============================================
+    
+    function updatePhysics(dt) {
+      state.time += dt;
+      
+      // Plasma drift (random walk + instability)
+      const driftForce = state.instability * 0.5;
+      state.plasmaVelocity.x += (Math.random() - 0.5) * driftForce;
+      state.plasmaVelocity.y += (Math.random() - 0.5) * driftForce;
+      
+      // Confinement force from coils
+      state.coils.forEach(coil => {
+        if (!coil.active) return;
+        const cx = Math.cos(coil.angle) * coil.currentRadius;
+        const cy = Math.sin(coil.angle) * coil.currentRadius;
+        const dx = state.plasmaOffset.x - cx;
+        const dy = state.plasmaOffset.y - cy;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 10) {
+          const force = state.fieldStrength * 0.001 / (dist * dist);
+          state.plasmaVelocity.x -= (dx / dist) * force;
+          state.plasmaVelocity.y -= (dy / dist) * force;
+        }
+      });
+      
+      // Apply damping
+      state.plasmaVelocity.x *= 0.98;
+      state.plasmaVelocity.y *= 0.98;
+      
+      // Update plasma position
+      state.plasmaOffset.x += state.plasmaVelocity.x;
+      state.plasmaOffset.y += state.plasmaVelocity.y;
+      
+      // Update coils (spring dynamics - move WITH plasma)
+      state.coils.forEach(coil => {
+        // Target radius adjusts based on plasma offset in coil direction
+        const px = state.plasmaOffset.x;
+        const py = state.plasmaOffset.y;
+        const coilDirX = Math.cos(coil.angle);
+        const coilDirY = Math.sin(coil.angle);
+        const projection = px * coilDirX + py * coilDirY;
+        
+        coil.targetRadius = coil.baseRadius + projection * 0.3;
+        
+        // Spring physics
+        const springForce = (coil.targetRadius - coil.currentRadius) * coil.springK;
+        coil.velocity += springForce;
+        coil.velocity *= state.springDamping;
+        coil.currentRadius += coil.velocity;
+      });
+      
+      // Calculate instability from plasma motion
+      const speed = Math.sqrt(state.plasmaVelocity.x**2 + state.plasmaVelocity.y**2);
+      const offset = Math.sqrt(state.plasmaOffset.x**2 + state.plasmaOffset.y**2);
+      state.instability = Math.min(1, (speed * 10 + offset * 0.01) * (1 / state.fieldStrength));
+      
+      // Update field particles
+      state.fieldParticles.forEach(p => {
+        p.angle += p.speed * (1 + state.instability);
+        p.drift += (Math.random() - 0.5) * 0.0005;
+        p.radius += p.drift;
+        p.radius = Math.max(30, Math.min(230, p.radius));
+      });
+      
+      // Update CMEs
+      state.cmes.forEach((cme, i) => {
+        cme.radius += cme.speed;
+        cme.alpha -= 0.008;
+        cme.particles.forEach(p => {
+          p.angle += p.spin;
+          p.r += cme.speed * 0.8;
+        });
+        
+        // CME capture at outer ring
+        if (cme.radius > 200 && !cme.captured) {
+          cme.captured = true;
+          const energy = cme.energy * (1 - cme.radius / 300);
+          state.cmesCaptured += energy;
+          log(`CME captured: +${energy.toFixed(1)} MJ`, 'capture');
+        }
+      });
+      
+      // Remove dead CMEs
+      state.cmes = state.cmes.filter(c => c.alpha > 0);
+      
+      // Temperature affects plasma radius
+      state.plasmaRadius = 60 + (state.coreTemp / 300) * 40;
+    }
+    
+    // ============================================
+    // INJECT CME
+    // ============================================
+    
+    function injectCME() {
+      const angle = Math.random() * Math.PI * 2;
+      const energy = 5 + Math.random() * 15;
+      
+      const particles = [];
+      for (let i = 0; i < 20; i++) {
+        particles.push({
+          angle: angle + (Math.random() - 0.5) * 0.8,
+          r: 20 + Math.random() * 30,
+          spin: (Math.random() - 0.5) * 0.02
+        });
+      }
+      
+      state.cmes.push({
+        angle: angle,
+        radius: state.plasmaRadius,
+        speed: 2 + Math.random() * 2,
+        energy: energy,
+        alpha: 1,
+        captured: false,
+        particles: particles
+      });
+      
+      // CME destabilizes plasma
+      state.plasmaVelocity.x += Math.cos(angle) * 3;
+      state.plasmaVelocity.y += Math.sin(angle) * 3;
+      state.instability = Math.min(1, state.instability + 0.3);
+      
+      log(`CME ejected! Energy: ${energy.toFixed(1)} MJ`, 'cme');
+    }
+    
+    // ============================================
+    // RENDER REACTOR
+    // ============================================
+    
+    function renderReactor() {
+      const W = reactorCanvas.width;
+      const H = reactorCanvas.height;
+      const cx = W / 2;
+      const cy = H / 2;
+      
+      // Clear
+      rctx.fillStyle = '#030308';
+      rctx.fillRect(0, 0, W, H);
+      
+      // Background grid
+      rctx.strokeStyle = 'rgba(0, 255, 157, 0.05)';
+      rctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 40) {
+        rctx.beginPath();
+        rctx.moveTo(x, 0);
+        rctx.lineTo(x, H);
+        rctx.stroke();
+      }
+      for (let y = 0; y < H; y += 40) {
+        rctx.beginPath();
+        rctx.moveTo(0, y);
+        rctx.lineTo(W, y);
+        rctx.stroke();
+      }
+      
+      // Outer flexible shell
+      rctx.strokeStyle = 'rgba(102, 0, 170, 0.3)';
+      rctx.lineWidth = 3;
+      rctx.beginPath();
+      for (let i = 0; i <= state.numCoils; i++) {
+        const coil = state.coils[i % state.numCoils];
+        const x = cx + Math.cos(coil.angle) * (coil.currentRadius + 30);
+        const y = cy + Math.sin(coil.angle) * (coil.currentRadius + 30);
+        if (i === 0) rctx.moveTo(x, y);
+        else rctx.lineTo(x, y);
+      }
+      rctx.closePath();
+      rctx.stroke();
+      
+      // Rail network
+      rctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
+      rctx.lineWidth = 2;
+      for (let p = 0; p < state.railPaths; p++) {
+        const angle = (p / state.railPaths) * Math.PI * 2;
+        const nextAngle = ((p + 1) / state.railPaths) * Math.PI * 2;
+        
+        // Radial rail
+        rctx.beginPath();
+        rctx.moveTo(cx + Math.cos(angle) * 100, cy + Math.sin(angle) * 100);
+        rctx.lineTo(cx + Math.cos(angle) * 220, cy + Math.sin(angle) * 220);
+        rctx.stroke();
+        
+        // Inner ring connection
+        rctx.beginPath();
+        rctx.arc(cx, cy, 120, angle, nextAngle);
+        rctx.stroke();
+        
+        // Outer ring connection
+        rctx.beginPath();
+        rctx.arc(cx, cy, 200, angle, nextAngle);
+        rctx.stroke();
+      }
+      
+      // Field particles
+      state.fieldParticles.forEach(p => {
+        const x = cx + state.plasmaOffset.x + Math.cos(p.angle) * p.radius;
+        const y = cy + state.plasmaOffset.y + Math.sin(p.angle) * p.radius;
+        const alpha = 0.3 + 0.4 * (1 - p.radius / 230);
+        rctx.fillStyle = `rgba(0, 255, 200, ${alpha})`;
+        rctx.beginPath();
+        rctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        rctx.fill();
+      });
+      
+      // CME flare catcher rings
+      rctx.strokeStyle = 'rgba(255, 100, 50, 0.2)';
+      rctx.lineWidth = 4;
+      rctx.setLineDash([10, 10]);
+      rctx.beginPath();
+      rctx.arc(cx, cy, 200, 0, Math.PI * 2);
+      rctx.stroke();
+      rctx.setLineDash([]);
+      
+      // CMEs
+      state.cmes.forEach(cme => {
+        // CME trail
+        const grad = rctx.createRadialGradient(
+          cx + state.plasmaOffset.x, cy + state.plasmaOffset.y, state.plasmaRadius,
+          cx + Math.cos(cme.angle) * cme.radius, cy + Math.sin(cme.angle) * cme.radius, 40
+        );
+        grad.addColorStop(0, `rgba(255, 200, 50, ${cme.alpha * 0.5})`);
+        grad.addColorStop(1, `rgba(255, 50, 50, 0)`);
+        
+        rctx.fillStyle = grad;
+        rctx.beginPath();
+        rctx.arc(cx + Math.cos(cme.angle) * cme.radius, cy + Math.sin(cme.angle) * cme.radius, 30, 0, Math.PI * 2);
+        rctx.fill();
+        
+        // CME particles
+        cme.particles.forEach(p => {
+          const px = cx + Math.cos(p.angle) * p.r;
+          const py = cy + Math.sin(p.angle) * p.r;
+          rctx.fillStyle = `rgba(255, 150, 50, ${cme.alpha * 0.8})`;
+          rctx.beginPath();
+          rctx.arc(px, py, 3, 0, Math.PI * 2);
+          rctx.fill();
+        });
+      });
+      
+      // Spring-mounted coils
+      state.coils.forEach((coil, i) => {
+        const x = cx + Math.cos(coil.angle) * coil.currentRadius;
+        const y = cy + Math.sin(coil.angle) * coil.currentRadius;
+        
+        // Spring line to base position
+        const bx = cx + Math.cos(coil.angle) * coil.baseRadius;
+        const by = cy + Math.sin(coil.angle) * coil.baseRadius;
+        
+        rctx.strokeStyle = 'rgba(100, 100, 150, 0.3)';
+        rctx.lineWidth = 2;
+        rctx.beginPath();
+        rctx.moveTo(bx, by);
+        // Zigzag spring
+        const steps = 6;
+        for (let s = 1; s <= steps; s++) {
+          const t = s / steps;
+          const mx = bx + (x - bx) * t;
+          const my = by + (y - by) * t;
+          const perpX = -(y - by) / coil.currentRadius * 8 * ((s % 2) * 2 - 1);
+          const perpY = (x - bx) / coil.currentRadius * 8 * ((s % 2) * 2 - 1);
+          rctx.lineTo(mx + perpX, my + perpY);
+        }
+        rctx.stroke();
+        
+        // Coil body
+        const activity = Math.abs(coil.velocity) * 10;
+        const hue = 280 + activity * 50;
+        rctx.fillStyle = `hsl(${hue}, 80%, ${40 + activity * 20}%)`;
+        rctx.beginPath();
+        rctx.arc(x, y, 12, 0, Math.PI * 2);
+        rctx.fill();
+        
+        // Coil glow
+        rctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        rctx.shadowBlur = 10 + activity * 20;
+        rctx.fill();
+        rctx.shadowBlur = 0;
+        
+        // Field lines from coil
+        rctx.strokeStyle = `rgba(0, 255, 200, ${0.1 + activity * 0.2})`;
+        rctx.lineWidth = 1;
+        for (let f = 0; f < 3; f++) {
+          const fAngle = coil.angle + (f - 1) * 0.3;
+          rctx.beginPath();
+          rctx.moveTo(x, y);
+          rctx.lineTo(
+            cx + state.plasmaOffset.x + Math.cos(fAngle) * (state.plasmaRadius + 20),
+            cy + state.plasmaOffset.y + Math.sin(fAngle) * (state.plasmaRadius + 20)
+          );
+          rctx.stroke();
+        }
+      });
+      
+      // Plasma core glow
+      const plasmaGrad = rctx.createRadialGradient(
+        cx + state.plasmaOffset.x, cy + state.plasmaOffset.y, 0,
+        cx + state.plasmaOffset.x, cy + state.plasmaOffset.y, state.plasmaRadius * 1.5
+      );
+      
+      const tempNorm = state.coreTemp / 300;
+      const coreHue = 40 - tempNorm * 30; // Yellow to orange-white
+      
+      plasmaGrad.addColorStop(0, `hsla(${coreHue}, 100%, 95%, 1)`);
+      plasmaGrad.addColorStop(0.3, `hsla(${coreHue}, 100%, 70%, 0.9)`);
+      plasmaGrad.addColorStop(0.6, `hsla(${coreHue + 20}, 90%, 50%, 0.5)`);
+      plasmaGrad.addColorStop(1, `hsla(${coreHue + 40}, 80%, 30%, 0)`);
+      
+      rctx.fillStyle = plasmaGrad;
+      rctx.beginPath();
+      rctx.arc(cx + state.plasmaOffset.x, cy + state.plasmaOffset.y, state.plasmaRadius * 1.5, 0, Math.PI * 2);
+      rctx.fill();
+      
+      // Core plasma ball
+      const coreGrad = rctx.createRadialGradient(
+        cx + state.plasmaOffset.x - 10, cy + state.plasmaOffset.y - 10, 0,
+        cx + state.plasmaOffset.x, cy + state.plasmaOffset.y, state.plasmaRadius
+      );
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.2, `hsl(${coreHue}, 100%, 80%)`);
+      coreGrad.addColorStop(0.7, `hsl(${coreHue + 15}, 90%, 55%)`);
+      coreGrad.addColorStop(1, `hsl(${coreHue + 30}, 80%, 40%)`);
+      
+      rctx.fillStyle = coreGrad;
+      rctx.beginPath();
+      rctx.arc(cx + state.plasmaOffset.x, cy + state.plasmaOffset.y, state.plasmaRadius, 0, Math.PI * 2);
+      rctx.fill();
+      
+      // Surface turbulence
+      for (let i = 0; i < 8; i++) {
+        const tAngle = state.time * 0.5 + i * 0.8;
+        const tR = state.plasmaRadius * (0.85 + state.instability * 0.15 * Math.sin(tAngle * 3));
+        const tx = cx + state.plasmaOffset.x + Math.cos(tAngle) * tR;
+        const ty = cy + state.plasmaOffset.y + Math.sin(tAngle) * tR;
+        
+        rctx.fillStyle = `rgba(255, 255, 200, ${0.3 + state.instability * 0.4})`;
+        rctx.beginPath();
+        rctx.arc(tx, ty, 5 + state.instability * 10, 0, Math.PI * 2);
+        rctx.fill();
+      }
+      
+      // Labels
+      rctx.font = '10px "Share Tech Mono"';
+      rctx.fillStyle = 'rgba(0, 255, 200, 0.6)';
+      rctx.fillText('PLASMA CORE', cx + state.plasmaOffset.x - 35, cy + state.plasmaOffset.y + state.plasmaRadius + 20);
+      rctx.fillText('CME CAPTURE RING', cx + 80, cy - 195);
+      rctx.fillText('SPRING COILS', cx + 140, cy + 60);
+    }
+    
+    // ============================================
+    // PSIPHI FACE RENDER
+    // ============================================
+    
+    function renderPsiPhiFace() {
+      const W = psiphiCanvas.width;
+      const H = psiphiCanvas.height;
+      const cx = W / 2;
+      const cy = H / 2;
+      const R = 100;
+      
+      // Map reactor state to face parameters
+      const coreTempNorm = state.coreTemp / 300;
+      const confinementQuality = Math.max(0, 1 - state.instability);
+      const flareActivity = state.cmes.length / 5;
+      const instability = state.instability;
+      const coordination = state.springDamping;
+      
+      const valence = confinementQuality * 2 - 1;
+      const arousal = flareActivity * 2 - 1;
+      const tension = instability * 2 - 1;
+      
+      const baseHue = 220 - coreTempNorm * 180; // Blue (cold) to orange (hot)
+      
+      // Expression
+      const mouthCurve = valence;
+      const mouthOpen = Math.max(0, arousal);
+      const eyeOpenness = 1.0 - tension * 0.5;
+      const browRaise = -tension;
+      
+      // Clear
+      pctx.clearRect(0, 0, W, H);
+      
+      // Background glow
+      const fieldNoise = 0.05 + instability * 0.35;
+      const glowRadius = R * (1.1 + 0.06 * Math.sin(state.time * 3 * 0.2));
+      const grad = pctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, glowRadius);
+      const sat = 70 + 15 * arousal;
+      const light = 40 + 10 * valence;
+      
+      grad.addColorStop(0, `hsla(${baseHue}, ${sat}%, ${light + 15}%, 0.9)`);
+      grad.addColorStop(1, `hsla(${baseHue}, ${sat * 0.4}%, ${light - 10}%, 0.0)`);
+      pctx.fillStyle = grad;
+      pctx.beginPath();
+      pctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+      pctx.fill();
+      
+      // Face circle
+      pctx.fillStyle = `hsl(${baseHue}, ${sat}%, ${light + 5}%)`;
+      pctx.beginPath();
+      pctx.arc(cx, cy, R, 0, Math.PI * 2);
+      pctx.fill();
+      
+      // Outer aura ring
+      pctx.strokeStyle = `hsla(${baseHue}, ${sat}%, ${light + 30}%, 0.7)`;
+      pctx.lineWidth = 3;
+      pctx.beginPath();
+      pctx.arc(cx, cy, R + 8 + 8 * fieldNoise, 0, Math.PI * 2);
+      pctx.stroke();
+      
+      // Eyes
+      const eyeOffsetX = 35;
+      const eyeY = cy - 20;
+      const eyeRadiusX = 14;
+      const eyeRadiusY = 10 * eyeOpenness;
+      
+      function drawEye(ex, ey) {
+        pctx.fillStyle = `hsla(${baseHue + 10}, 20%, 90%, 0.9)`;
+        pctx.beginPath();
+        pctx.ellipse(ex, ey, eyeRadiusX, Math.max(3, eyeRadiusY), 0, 0, Math.PI * 2);
+        pctx.fill();
+        
+        const pupilR = 4 + 2 * Math.max(0, arousal);
+        pctx.fillStyle = `hsl(${baseHue - 40}, 80%, 15%)`;
+        pctx.beginPath();
+        pctx.arc(ex, ey, pupilR, 0, Math.PI * 2);
+        pctx.fill();
+      }
+      
+      drawEye(cx - eyeOffsetX, eyeY);
+      drawEye(cx + eyeOffsetX, eyeY);
+      
+      // Brows
+      const browY = eyeY - 22 - browRaise * 6;
+      function drawBrow(sign) {
+        const startX = cx + sign * (eyeOffsetX - 16);
+        const endX = cx + sign * (eyeOffsetX + 16);
+        const tilt = browRaise * 8 * sign;
+        pctx.strokeStyle = `hsl(${baseHue - 20}, 70%, 30%)`;
+        pctx.lineWidth = 3;
+        pctx.beginPath();
+        pctx.moveTo(startX, browY + tilt);
+        pctx.lineTo(endX, browY - tilt);
+        pctx.stroke();
+      }
+      drawBrow(-1);
+      drawBrow(1);
+      
+      // Mouth
+      const mouthY = cy + 35;
+      const mouthWidth = 50;
+      const curve = mouthCurve * 20;
+      const open = mouthOpen * 15;
+      
+      pctx.strokeStyle = `hsl(${baseHue - 10}, 80%, 25%)`;
+      pctx.lineWidth = 4;
+      pctx.beginPath();
+      pctx.moveTo(cx - mouthWidth, mouthY);
+      pctx.quadraticCurveTo(cx, mouthY + curve - open, cx + mouthWidth, mouthY);
+      pctx.stroke();
+      
+      if (mouthOpen > 0.1) {
+        pctx.fillStyle = `hsl(${baseHue - 20}, 80%, 15%)`;
+        pctx.beginPath();
+        pctx.moveTo(cx - mouthWidth, mouthY);
+        pctx.quadraticCurveTo(cx, mouthY + curve - open, cx + mouthWidth, mouthY);
+        pctx.lineTo(cx + mouthWidth, mouthY + 4 + open);
+        pctx.lineTo(cx - mouthWidth, mouthY + 4 + open);
+        pctx.closePath();
+        pctx.fill();
+      }
+      
+      // Noise overlay
+      const noiseAlpha = 0.08 + fieldNoise * 0.3;
+      for (let i = 0; i < 50 * fieldNoise * 10; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const rad = R * Math.sqrt(Math.random());
+        const px = cx + Math.cos(ang) * rad;
+        const py = cy + Math.sin(ang) * rad;
+        pctx.fillStyle = `hsla(${baseHue + 30}, ${sat}%, ${light + 20}%, ${noiseAlpha})`;
+        pctx.beginPath();
+        pctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        pctx.fill();
+      }
+    }
+    
+    // ============================================
+    // UPDATE METRICS DISPLAY
+    // ============================================
+    
+    function updateMetrics() {
+      // Calculate physics metrics
+      const n = state.plasmaDensity * 1e20;
+      const T = state.coreTemp * 1e6; // Convert to Kelvin
+      const tau = state.fieldStrength * 0.5 * (1 - state.instability); // Confinement time estimate
+      const nTauT = n * tau * T;
+      
+      const Q = (state.heatingPower > 0) ? 
+        (state.coreTemp * state.plasmaDensity * (1 - state.instability)) / (state.heatingPower * 0.5) : 0;
+      
+      const beta = (state.plasmaDensity * state.coreTemp) / (state.fieldStrength * state.fieldStrength) * 2;
+      
+      const maxCoilDisp = Math.max(...state.coils.map(c => Math.abs(c.currentRadius - c.baseRadius)));
+      
+      // Update DOM
+      document.getElementById('metricQ').textContent = Q.toFixed(2);
+      document.getElementById('metricQ').className = 'metric-value ' + (Q > 1 ? 'good' : Q > 0.5 ? '' : 'warn');
+      
+      document.getElementById('metricLawson').textContent = (nTauT / 1e21).toFixed(1) + '×10²¹';
+      document.getElementById('metricBeta').textContent = beta.toFixed(1) + '%';
+      document.getElementById('metricCME').textContent = state.cmesCaptured.toFixed(1) + ' MJ';
+      document.getElementById('metricCoilDisp').textContent = maxCoilDisp.toFixed(1) + ' cm';
+      
+      document.getElementById('metricInstab').textContent = state.instability.toFixed(2);
+      document.getElementById('metricInstab').className = 'metric-value ' + 
+        (state.instability < 0.3 ? 'good' : state.instability < 0.6 ? '' : 'warn');
+      
+      // Update status badge
+      const badge = document.getElementById('statusBadge');
+      if (state.instability > 0.7) {
+        badge.textContent = 'UNSTABLE';
+        badge.className = 'status-badge warning';
+      } else if (Q > 1) {
+        badge.textContent = 'IGNITION';
+        badge.className = 'status-badge nominal';
+      } else {
+        badge.textContent = 'NOMINAL';
+        badge.className = 'status-badge nominal';
+      }
+    }
+    
+    // ============================================
+    // CONTROLS
+    // ============================================
+    
+    // Sliders
+    document.getElementById('plasmaDensity').addEventListener('input', e => {
+      state.plasmaDensity = parseFloat(e.target.value);
+      document.getElementById('densityVal').textContent = state.plasmaDensity.toFixed(1);
+    });
+    
+    document.getElementById('coreTemp').addEventListener('input', e => {
+      state.coreTemp = parseFloat(e.target.value);
+      document.getElementById('tempVal').textContent = state.coreTemp;
+    });
+    
+    document.getElementById('heatingPower').addEventListener('input', e => {
+      state.heatingPower = parseFloat(e.target.value);
+      document.getElementById('heatVal').textContent = state.heatingPower;
+    });
+    
+    document.getElementById('fieldStrength').addEventListener('input', e => {
+      state.fieldStrength = parseFloat(e.target.value);
+      document.getElementById('fieldVal').textContent = state.fieldStrength.toFixed(1);
+    });
+    
+    document.getElementById('springDamping').addEventListener('input', e => {
+      state.springDamping = parseFloat(e.target.value);
+      document.getElementById('dampVal').textContent = state.springDamping.toFixed(2);
+      state.coils.forEach(c => c.springK = 0.1 + (1 - state.springDamping) * 0.2);
+    });
+    
+    document.getElementById('railPaths').addEventListener('input', e => {
+      state.railPaths = parseInt(e.target.value);
+      document.getElementById('railVal').textContent = state.railPaths;
+      initRails();
+    });
+    
+    // Buttons
+    document.getElementById('btnInjectCME').addEventListener('click', injectCME);
+    
+    document.getElementById('btnStabilize').addEventListener('click', () => {
+      log('Auto-stabilization engaged', 'coil');
+      state.plasmaVelocity.x *= 0.1;
+      state.plasmaVelocity.y *= 0.1;
+      state.plasmaOffset.x *= 0.5;
+      state.plasmaOffset.y *= 0.5;
+      state.coils.forEach(c => {
+        c.velocity = 0;
+        c.currentRadius = c.baseRadius;
+      });
+    });
+    
+    document.getElementById('btnScram').addEventListener('click', () => {
+      log('SCRAM initiated - emergency shutdown', 'warning');
+      state.running = false;
+      state.coreTemp = 50;
+      state.heatingPower = 0;
+      state.instability = 0;
+      document.getElementById('coreTemp').value = 50;
+      document.getElementById('tempVal').textContent = '50';
+      document.getElementById('heatingPower').value = 0;
+      document.getElementById('heatVal').textContent = '0';
+      
+      setTimeout(() => {
+        state.running = true;
+        log('Reactor restart available', 'coil');
+      }, 2000);
+    });
+    
+    // Random CME events
+    setInterval(() => {
+      if (state.running && state.coreTemp > 100 && Math.random() < 0.15 * (state.instability + 0.1)) {
+        injectCME();
+      }
+    }, 3000);
+    
+    // ============================================
+    // MAIN LOOP
+    // ============================================
+    
+    let lastTime = performance.now();
+    
+    function mainLoop() {
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      
+      if (state.running) {
+        updatePhysics(dt);
+      }
+      
+      renderReactor();
+      renderPsiPhiFace();
+      updateMetrics();
+      
+      requestAnimationFrame(mainLoop);
+    }
+    
+    log('Ultra Magnetic Sun Reactor initialized', 'coil');
+    log('Spring-mounted coils online', 'coil');
+    log('CME capture loops armed', 'capture');
+    
+    mainLoop();
+  </script>
+</body>
+</html>

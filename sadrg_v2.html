@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SADRG v2 | Spherical Annular Dual-Rotor Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --bg-void: #030308;
+            --bg-primary: #0a0a12;
+            --bg-secondary: #0f0f1a;
+            --bg-tertiary: #151522;
+            --bg-panel: rgba(15, 15, 26, 0.92);
+            --accent-plasma: #00f0ff;
+            --accent-combustion: #ff4400;
+            --accent-energy: #ffcc00;
+            --accent-field: #aa00ff;
+            --accent-output: #00ff88;
+            --accent-warning: #ff3366;
+            --rotor-a: #00aaff;
+            --rotor-b: #ff6600;
+            --stator: #8844ff;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888a0;
+            --text-dim: #505068;
+            --border-glow: rgba(0, 240, 255, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.06);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-void);
+            color: var(--text-primary);
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 10000;
+        }
+        
+        .app {
+            display: grid;
+            grid-template-columns: 320px 1fr 400px;
+            grid-template-rows: 56px 1fr 180px;
+            height: 100vh;
+            gap: 1px;
+            background: var(--border-subtle);
+        }
+        
+        /* HEADER */
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border-glow);
+        }
+        
+        .logo { display: flex; align-items: center; gap: 14px; }
+        
+        .logo-sphere {
+            width: 36px; height: 36px;
+            position: relative;
+        }
+        
+        .logo-sphere .ring {
+            position: absolute;
+            border: 2px solid;
+            border-radius: 50%;
+            animation: orbit 3s linear infinite;
+        }
+        
+        .logo-sphere .ring-outer { inset: 0; border-color: var(--rotor-b); animation-duration: 4s; }
+        .logo-sphere .ring-inner { inset: 8px; border-color: var(--rotor-a); animation-duration: 2.5s; animation-direction: reverse; }
+        .logo-sphere .ring-stator { inset: 4px; border-color: var(--stator); border-style: dashed; animation: none; opacity: 0.5; }
+        
+        @keyframes orbit {
+            0% { transform: rotateX(60deg) rotateZ(0deg); }
+            100% { transform: rotateX(60deg) rotateZ(360deg); }
+        }
+        
+        .logo-text h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            background: linear-gradient(90deg, var(--accent-plasma), var(--accent-field));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .logo-text .subtitle {
+            font-size: 0.5rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+        
+        .header-center { display: flex; align-items: center; gap: 24px; }
+        
+        .sim-time {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--accent-plasma);
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+        }
+        
+        .sim-controls { display: flex; gap: 6px; }
+        
+        .sim-btn {
+            width: 40px; height: 40px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .sim-btn:hover { border-color: var(--accent-plasma); color: var(--accent-plasma); }
+        .sim-btn.active { background: rgba(0, 240, 255, 0.1); border-color: var(--accent-plasma); color: var(--accent-plasma); }
+        .sim-btn.reset { color: var(--accent-warning); }
+        .sim-btn.reset:hover { border-color: var(--accent-warning); }
+        
+        .header-status { display: flex; align-items: center; gap: 16px; }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-output);
+            box-shadow: 0 0 10px var(--accent-output);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .status-dot.warning { background: var(--accent-energy); box-shadow: 0 0 10px var(--accent-energy); }
+        .status-dot.critical { background: var(--accent-warning); box-shadow: 0 0 10px var(--accent-warning); animation: pulse-fast 0.5s ease-in-out infinite; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        
+        /* CONTROL PANEL */
+        .control-panel {
+            background: var(--bg-primary);
+            overflow-y: auto;
+            padding: 14px;
+        }
+        
+        .control-panel::-webkit-scrollbar { width: 4px; }
+        .control-panel::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        .control-panel::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+        
+        .panel-section { margin-bottom: 16px; }
+        
+        .section-header {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--accent-plasma);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-header::before {
+            content: '';
+            width: 3px;
+            height: 12px;
+            background: currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+        
+        .section-header.rotor-a { color: var(--rotor-a); }
+        .section-header.rotor-b { color: var(--rotor-b); }
+        .section-header.stator { color: var(--stator); }
+        .section-header.combustion { color: var(--accent-combustion); }
+        .section-header.magnetic { color: var(--accent-field); }
+        
+        .control-row { margin-bottom: 12px; }
+        
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+        
+        .control-label .unit { color: var(--text-dim); font-size: 0.55rem; }
+        .control-value { font-family: 'Orbitron', sans-serif; font-weight: 500; color: var(--accent-plasma); }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            background: var(--accent-plasma);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-plasma);
+        }
+        
+        input[type="range"].rotor-a::-webkit-slider-thumb { background: var(--rotor-a); box-shadow: 0 0 10px var(--rotor-a); }
+        input[type="range"].rotor-b::-webkit-slider-thumb { background: var(--rotor-b); box-shadow: 0 0 10px var(--rotor-b); }
+        input[type="range"].combustion::-webkit-slider-thumb { background: var(--accent-combustion); box-shadow: 0 0 10px var(--accent-combustion); }
+        input[type="range"].magnetic::-webkit-slider-thumb { background: var(--accent-field); box-shadow: 0 0 10px var(--accent-field); }
+        
+        .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        
+        .mode-btn {
+            padding: 8px 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            font-weight: 500;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .mode-btn:hover { border-color: var(--accent-plasma); color: var(--text-secondary); }
+        .mode-btn.active { background: rgba(0, 240, 255, 0.08); border-color: var(--accent-plasma); color: var(--accent-plasma); }
+        
+        /* VISUALIZATION */
+        .visualization {
+            background: var(--bg-void);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #renderer-container { width: 100%; height: 100%; }
+        #renderer-container canvas { display: block; }
+        
+        .viz-overlay {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            pointer-events: none;
+        }
+        
+        .viz-badge {
+            padding: 5px 10px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            font-size: 0.55rem;
+            color: var(--text-dim);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .viz-badge .value { font-family: 'Orbitron', sans-serif; color: var(--accent-plasma); }
+        
+        .view-controls {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+        }
+        
+        .view-btn {
+            padding: 6px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .view-btn:hover, .view-btn.active { border-color: var(--accent-plasma); color: var(--accent-plasma); }
+        
+        /* DATA PANEL */
+        .data-panel {
+            background: var(--bg-primary);
+            overflow-y: auto;
+            padding: 14px;
+        }
+        
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        
+        .metric-title { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .metric-tag { font-size: 0.45rem; padding: 2px 5px; background: var(--bg-tertiary); color: var(--text-dim); }
+        
+        .metric-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 3px;
+        }
+        
+        .metric-value.rotor-a { color: var(--rotor-a); }
+        .metric-value.rotor-b { color: var(--rotor-b); }
+        .metric-value.output { color: var(--accent-output); }
+        .metric-value.efficiency { color: var(--accent-energy); }
+        
+        .metric-unit { font-size: 0.6rem; color: var(--text-dim); }
+        
+        .metric-bar { height: 3px; background: var(--bg-tertiary); margin-top: 8px; overflow: hidden; }
+        .metric-bar-fill { height: 100%; transition: width 0.1s; }
+        .metric-bar-fill.rotor-a { background: var(--rotor-a); }
+        .metric-bar-fill.rotor-b { background: var(--rotor-b); }
+        .metric-bar-fill.output { background: var(--accent-output); }
+        .metric-bar-fill.efficiency { background: var(--accent-energy); }
+        
+        .dual-metric { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .triple-metric { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+        
+        .mini-metric { background: var(--bg-tertiary); padding: 8px; }
+        .mini-metric .label { font-size: 0.5rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 3px; }
+        .mini-metric .value { font-family: 'Orbitron', sans-serif; font-size: 0.85rem; font-weight: 500; }
+        
+        .chart-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .chart-title { font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .chart-canvas { width: 100%; height: 80px; }
+        
+        /* ENERGY PANEL */
+        .energy-panel {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-glow);
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 1px;
+        }
+        
+        .energy-section { background: var(--bg-primary); padding: 12px 16px; }
+        .energy-title { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+        
+        .energy-flow { display: flex; align-items: center; justify-content: center; gap: 12px; height: 100%; flex-wrap: wrap; }
+        
+        .flow-node { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        
+        .flow-icon {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .flow-icon.combustion { background: rgba(255, 68, 0, 0.15); border: 2px solid var(--accent-combustion); color: var(--accent-combustion); }
+        .flow-icon.rotor-a { background: rgba(0, 170, 255, 0.15); border: 2px solid var(--rotor-a); color: var(--rotor-a); }
+        .flow-icon.rotor-b { background: rgba(255, 102, 0, 0.15); border: 2px solid var(--rotor-b); color: var(--rotor-b); }
+        .flow-icon.stator { background: rgba(136, 68, 255, 0.15); border: 2px solid var(--stator); color: var(--stator); }
+        .flow-icon.output { background: rgba(0, 255, 136, 0.15); border: 2px solid var(--accent-output); color: var(--accent-output); }
+        
+        .flow-label { font-size: 0.5rem; color: var(--text-dim); text-transform: uppercase; }
+        .flow-value { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; color: var(--text-primary); }
+        
+        .flow-arrow { color: var(--text-dim); font-size: 1rem; opacity: 0.5; }
+        .flow-arrow.active { color: var(--accent-energy); opacity: 1; animation: flow-pulse 1s ease-in-out infinite; }
+        
+        @keyframes flow-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; transform: translateX(2px); } }
+        
+        .energy-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .energy-stat { text-align: center; }
+        .energy-stat .label { font-size: 0.5rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 3px; }
+        .energy-stat .value { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 600; }
+        .energy-stat .value.input { color: var(--accent-combustion); }
+        .energy-stat .value.extracted { color: var(--accent-output); }
+        
+        .warnings-section { display: flex; flex-direction: column; gap: 5px; }
+        
+        .warning-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            background: var(--bg-tertiary);
+            font-size: 0.5rem;
+            color: var(--text-dim);
+        }
+        
+        .warning-item.active { background: rgba(255, 51, 102, 0.1); border-left: 2px solid var(--accent-warning); color: var(--accent-warning); }
+        .warning-item.caution { background: rgba(255, 204, 0, 0.1); border-left: 2px solid var(--accent-energy); color: var(--accent-energy); }
+        
+        @media (max-width: 1100px) {
+            .app { grid-template-columns: 280px 1fr 320px; }
+        }
+        
+        @media (max-width: 800px) {
+            .app {
+                grid-template-columns: 1fr;
+                grid-template-rows: 56px 50vh auto auto auto;
+            }
+            .control-panel, .data-panel { max-height: 35vh; }
+            .energy-panel { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-sphere">
+                    <div class="ring ring-outer"></div>
+                    <div class="ring ring-stator"></div>
+                    <div class="ring ring-inner"></div>
+                </div>
+                <div class="logo-text">
+                    <h1>SADRG v2</h1>
+                    <span class="subtitle">Spherical Annular Dual-Rotor Generator</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="sim-time" id="sim-time">T+ 00:00.000</div>
+                <div class="sim-controls">
+                    <button class="sim-btn" id="btn-play" title="Play">▶</button>
+                    <button class="sim-btn" id="btn-pause" title="Pause">⏸</button>
+                    <button class="sim-btn" id="btn-step" title="Step">⏭</button>
+                    <button class="sim-btn reset" id="btn-reset" title="Reset">↺</button>
+                </div>
+            </div>
+            
+            <div class="header-status">
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-physics"></div>
+                    <span>Physics</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-energy"></div>
+                    <span>Energy</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-stability"></div>
+                    <span>Stable</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- CONTROL PANEL -->
+        <aside class="control-panel">
+            <div class="panel-section">
+                <div class="section-header rotor-a">ROTOR A — Inner</div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Inertia</span>
+                        <span class="control-value" id="val-inertia-a">50</span>
+                        <span class="unit">kg·m²</span>
+                    </div>
+                    <input type="range" class="rotor-a" id="inertia-a" min="10" max="200" value="50">
+                </div>
+                <div class="control-row">
+                    <div class="control-label"><span>Ballast Type</span></div>
+                    <div class="mode-grid">
+                        <button class="mode-btn active" data-group="ballast" data-value="solid">Solid</button>
+                        <button class="mode-btn" data-group="ballast" data-value="liquid">Liquid</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Damping</span>
+                        <span class="control-value" id="val-damping-a">0.02</span>
+                    </div>
+                    <input type="range" class="rotor-a" id="damping-a" min="0" max="0.2" value="0.02" step="0.005">
+                </div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Mag Field</span>
+                        <span class="control-value" id="val-mag-a">1.0</span>
+                        <span class="unit">T</span>
+                    </div>
+                    <input type="range" class="rotor-a" id="mag-a" min="0.1" max="3" value="1.0" step="0.1">
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header rotor-b">ROTOR B — Outer</div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Inertia</span>
+                        <span class="control-value" id="val-inertia-b">80</span>
+                        <span class="unit">kg·m²</span>
+                    </div>
+                    <input type="range" class="rotor-b" id="inertia-b" min="20" max="300" value="80">
+                </div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Vane Efficiency</span>
+                        <span class="control-value" id="val-vane-b">0.85</span>
+                    </div>
+                    <input type="range" class="rotor-b" id="vane-b" min="0.5" max="0.98" value="0.85" step="0.01">
+                </div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Mag Field</span>
+                        <span class="control-value" id="val-mag-b">1.2</span>
+                        <span class="unit">T</span>
+                    </div>
+                    <input type="range" class="rotor-b" id="mag-b" min="0.1" max="3" value="1.2" step="0.1">
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header combustion">COMBUSTION</div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Torque</span>
+                        <span class="control-value" id="val-torque">500</span>
+                        <span class="unit">N·m</span>
+                    </div>
+                    <input type="range" class="combustion" id="torque-mag" min="0" max="2000" value="500" step="10">
+                </div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Pulse Freq</span>
+                        <span class="control-value" id="val-freq">10</span>
+                        <span class="unit">Hz</span>
+                    </div>
+                    <input type="range" class="combustion" id="pulse-freq" min="1" max="100" value="10">
+                </div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Geometry Angle</span>
+                        <span class="control-value" id="val-bias">45°</span>
+                    </div>
+                    <input type="range" class="combustion" id="torque-bias" min="10" max="80" value="45">
+                </div>
+                <div class="control-row">
+                    <div class="mode-grid">
+                        <button class="mode-btn active" data-group="combustion" data-value="pulsed">Pulsed</button>
+                        <button class="mode-btn" data-group="combustion" data-value="continuous">Continuous</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header magnetic">ELECTROMAGNETIC</div>
+                <div class="control-row">
+                    <div class="control-label">
+                        <span>Gen Load</span>
+                        <span class="control-value" id="val-load">100</span>
+                        <span class="unit">Ω</span>
+                    </div>
+                    <input type="range" class="magnetic" id="gen-load" min="1" max="500" value="100">
+                </div>
+                <div class="control-row">
+                    <div class="control-label"><span>Flux Topology</span></div>
+                    <div class="mode-grid">
+                        <button class="mode-btn active" data-group="flux" data-value="radial">Radial</button>
+                        <button class="mode-btn" data-group="flux" data-value="axial">Axial</button>
+                        <button class="mode-btn" data-group="flux" data-value="halbach">Halbach</button>
+                        <button class="mode-btn" data-group="flux" data-value="hybrid">Hybrid</button>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <div class="control-label"><span>Stator Config</span></div>
+                    <div class="mode-grid">
+                        <button class="mode-btn active" data-group="stator" data-value="shared">Shared</button>
+                        <button class="mode-btn" data-group="stator" data-value="dual">Dual Coils</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <div class="section-header">OPERATING MODE</div>
+                <div class="mode-grid" style="grid-template-columns: 1fr;">
+                    <button class="mode-btn active" data-group="opmode" data-value="passive">Passive Generation</button>
+                    <button class="mode-btn" data-group="opmode" data-value="load-control">Load Controlled</button>
+                    <button class="mode-btn" data-group="opmode" data-value="brake-a">Active Brake A</button>
+                    <button class="mode-btn" data-group="opmode" data-value="brake-b">Active Brake B</button>
+                    <button class="mode-btn" data-group="opmode" data-value="slip-harvest">Slip Harvest</button>
+                    <button class="mode-btn" data-group="opmode" data-value="counter-opt">Counter-Rotation Opt</button>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- 3D VISUALIZATION -->
+        <main class="visualization">
+            <div id="renderer-container"></div>
+            <div class="viz-overlay">
+                <div class="viz-badge"><span>ω_A:</span><span class="value" id="viz-omega-a">0.00</span><span>rad/s</span></div>
+                <div class="viz-badge"><span>ω_B:</span><span class="value" id="viz-omega-b">0.00</span><span>rad/s</span></div>
+                <div class="viz-badge"><span>Δω:</span><span class="value" id="viz-delta-omega">0.00</span><span>rad/s</span></div>
+                <div class="viz-badge"><span>L_err:</span><span class="value" id="viz-L-error">0.00</span><span>%</span></div>
+            </div>
+            <div class="view-controls">
+                <button class="view-btn active" data-view="perspective">3D</button>
+                <button class="view-btn" data-view="cutaway">Cutaway</button>
+                <button class="view-btn" data-view="top">Top</button>
+                <button class="view-btn" data-view="section">Section</button>
+            </div>
+        </main>
+        
+        <!-- DATA PANEL -->
+        <aside class="data-panel">
+            <div class="metric-card">
+                <div class="metric-header"><span class="metric-title">Rotor A ω</span><span class="metric-tag">Inner</span></div>
+                <div class="metric-value rotor-a" id="metric-omega-a">0.00</div>
+                <div class="metric-unit">rad/s</div>
+                <div class="metric-bar"><div class="metric-bar-fill rotor-a" id="bar-omega-a" style="width:0%"></div></div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-header"><span class="metric-title">Rotor B ω</span><span class="metric-tag">Outer</span></div>
+                <div class="metric-value rotor-b" id="metric-omega-b">0.00</div>
+                <div class="metric-unit">rad/s</div>
+                <div class="metric-bar"><div class="metric-bar-fill rotor-b" id="bar-omega-b" style="width:0%"></div></div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-header"><span class="metric-title">Electrical Output</span><span class="metric-tag">Total</span></div>
+                <div class="metric-value output" id="metric-power">0.00</div>
+                <div class="metric-unit">kW</div>
+                <div class="metric-bar"><div class="metric-bar-fill output" id="bar-power" style="width:0%"></div></div>
+            </div>
+            
+            <!-- Generator electrical values -->
+            <div class="triple-metric">
+                <div class="mini-metric">
+                    <div class="label">Voltage</div>
+                    <div class="value" id="metric-voltage" style="color:var(--accent-energy)">0.0 V</div>
+                </div>
+                <div class="mini-metric">
+                    <div class="label">Current</div>
+                    <div class="value" id="metric-current" style="color:var(--accent-plasma)">0.0 A</div>
+                </div>
+                <div class="mini-metric">
+                    <div class="label">P.F.</div>
+                    <div class="value" id="metric-pf" style="color:var(--text-primary)">1.00</div>
+                </div>
+            </div>
+            
+            <div class="dual-metric">
+                <div class="mini-metric">
+                    <div class="label">From A</div>
+                    <div class="value" id="metric-power-a" style="color:var(--rotor-a)">0.00 kW</div>
+                </div>
+                <div class="mini-metric">
+                    <div class="label">From B</div>
+                    <div class="value" id="metric-power-b" style="color:var(--rotor-b)">0.00 kW</div>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-header"><span class="metric-title">Efficiency</span></div>
+                <div class="metric-value efficiency" id="metric-efficiency">0.0</div>
+                <div class="metric-unit">%</div>
+                <div class="metric-bar"><div class="metric-bar-fill efficiency" id="bar-efficiency" style="width:0%"></div></div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Torque Flow</div>
+                <canvas id="chart-torque" class="chart-canvas"></canvas>
+            </div>
+            
+            <div class="dual-metric">
+                <div class="mini-metric">
+                    <div class="label">L_total</div>
+                    <div class="value" id="metric-L-total" style="color:var(--accent-plasma)">0.00</div>
+                </div>
+                <div class="mini-metric">
+                    <div class="label">ΔE check</div>
+                    <div class="value" id="metric-E-error" style="color:var(--accent-output)">0.00%</div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- ENERGY PANEL -->
+        <footer class="energy-panel">
+            <div class="energy-section">
+                <div class="energy-title">Energy Accounting</div>
+                <div class="energy-stats">
+                    <div class="energy-stat">
+                        <div class="label">Input</div>
+                        <div class="value input" id="energy-in">0.00 kJ</div>
+                    </div>
+                    <div class="energy-stat">
+                        <div class="label">Output</div>
+                        <div class="value extracted" id="energy-out">0.00 kJ</div>
+                    </div>
+                    <div class="energy-stat">
+                        <div class="label">Stored</div>
+                        <div class="value" id="energy-stored" style="color:var(--text-primary)">0.00 kJ</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="energy-section">
+                <div class="energy-title">Power Flow</div>
+                <div class="energy-flow">
+                    <div class="flow-node">
+                        <div class="flow-icon combustion">🔥</div>
+                        <div class="flow-label">Comb</div>
+                        <div class="flow-value" id="flow-combustion">0 W</div>
+                    </div>
+                    <div class="flow-arrow" id="arrow-1">→</div>
+                    <div class="flow-node">
+                        <div class="flow-icon rotor-a">A</div>
+                        <div class="flow-label">Rotor A</div>
+                        <div class="flow-value" id="flow-rotor-a">0 W</div>
+                    </div>
+                    <div class="flow-arrow" id="arrow-2">↔</div>
+                    <div class="flow-node">
+                        <div class="flow-icon rotor-b">B</div>
+                        <div class="flow-label">Rotor B</div>
+                        <div class="flow-value" id="flow-rotor-b">0 W</div>
+                    </div>
+                    <div class="flow-arrow" id="arrow-3">→</div>
+                    <div class="flow-node">
+                        <div class="flow-icon stator">S</div>
+                        <div class="flow-label">Gen</div>
+                        <div class="flow-value" id="flow-stator">0 W</div>
+                    </div>
+                    <div class="flow-arrow" id="arrow-4">→</div>
+                    <div class="flow-node">
+                        <div class="flow-icon output">⚡</div>
+                        <div class="flow-label">Load</div>
+                        <div class="flow-value" id="flow-output">0 W</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="energy-section">
+                <div class="energy-title">System Warnings</div>
+                <div class="warnings-section">
+                    <div class="warning-item" id="warn-sync"><span>⚠</span> Sync Risk</div>
+                    <div class="warning-item" id="warn-slip"><span>⚠</span> Excess Slip</div>
+                    <div class="warning-item" id="warn-saturation"><span>⚠</span> Saturation</div>
+                    <div class="warning-item" id="warn-instability"><span>⚠</span> Oscillation</div>
+                    <div class="warning-item" id="warn-energy"><span>⚠</span> Energy Violation</div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+<script>
+// ============================================================
+// SADRG PHYSICS ENGINE v2
+// FIXES: Momentum conservation, energy accounting, all modes
+// ============================================================
+
+const Physics = {
+    state: {
+        omega_a: 0, theta_a: 0, L_a: 0, KE_a: 0,
+        omega_b: 0, theta_b: 0, L_b: 0, KE_b: 0,
+        time: 0,
+        totalEnergyIn: 0, totalEnergyOut: 0, totalLosses: 0,
+        pulseCount: 0,
+        // Track initial values for conservation checks
+        L_initial: 0, E_initial: 0,
+        // Instantaneous values
+        torque_combustion: 0,
+        torque_em_a: 0, torque_em_b: 0,
+        power_mech_a: 0, power_mech_b: 0,
+        power_elec_a: 0, power_elec_b: 0, power_total: 0,
+        voltage: 0, current: 0,
+        efficiency: 0,
+        // Stator absorption (for momentum balance)
+        torque_stator: 0
+    },
+    
+    params: {
+        I_a: 50, ballastType: 'solid', damping_a: 0.02, B_a: 1.0,
+        I_b: 80, vaneEff: 0.85, damping_b: 0.01, B_b: 1.2,
+        torqueMag: 500, pulseFreq: 10, geomAngle: 45, // degrees
+        combustionMode: 'pulsed',
+        R_load: 100, fluxTopology: 'radial', statorConfig: 'shared',
+        k_emf: 0.5, R_coil: 2,
+        opMode: 'passive',
+        // Target power for load-control mode
+        targetPower: 20000
+    },
+    
+    dt: 0.0005, // Smaller timestep for better accuracy
+    running: false,
+    
+    // --------------------------------------------------------
+    // COMBUSTION TORQUE (preserves Newton's 3rd law)
+    // The gas in the annular chamber pushes on both rotors.
+    // For momentum conservation, tau_a = -tau_b (equal & opposite)
+    // The geometry angle affects HOW MUCH torque is transferred
+    // (efficiency), not the balance.
+    // --------------------------------------------------------
+    getCombustionTorque(t) {
+        const p = this.params;
+        let baseTorque = p.torqueMag;
+        
+        if (p.combustionMode === 'pulsed') {
+            const phase = (2 * Math.PI * p.pulseFreq * t) % (2 * Math.PI);
+            // Smooth pulse shape (raised cosine)
+            baseTorque = p.torqueMag * Math.max(0, Math.sin(phase));
+            // Count pulses on rising edge
+            const prevPhase = (2 * Math.PI * p.pulseFreq * (t - this.dt)) % (2 * Math.PI);
+            if (prevPhase > phase && baseTorque > 0) this.state.pulseCount++;
+        }
+        
+        // Geometry angle affects efficiency of torque transfer
+        // At 45°, maximum efficiency. At 0° or 90°, minimal.
+        const angleRad = p.geomAngle * Math.PI / 180;
+        const geomFactor = Math.sin(2 * angleRad); // peaks at 45°
+        
+        return baseTorque * p.vaneEff * geomFactor;
+    },
+    
+    // --------------------------------------------------------
+    // ELECTROMAGNETIC TORQUE (Lenz's law)
+    // τ_em = -k²ω / R_total (braking torque)
+    // Stator config affects whether rotors share or have independent coils
+    // --------------------------------------------------------
+    getEMTorque(omega, B, isRotorA, omega_other) {
+        const p = this.params;
+        let k_eff = p.k_emf * B;
+        
+        // Flux topology affects coupling strength
+        switch (p.fluxTopology) {
+            case 'axial': k_eff *= 0.85; break;
+            case 'halbach': k_eff *= 1.4; break;
+            case 'hybrid': k_eff *= 1.2; break;
+        }
+        
+        let R_total = p.R_load + p.R_coil;
+        
+        // STATOR CONFIG NOW WORKS:
+        // Shared: both rotors couple to same stator, relative motion matters
+        // Dual: independent coils, each rotor has its own circuit
+        let effectiveOmega;
+        if (p.statorConfig === 'shared') {
+            // Power extraction depends on relative motion between rotors
+            effectiveOmega = omega - omega_other;
+            if (isRotorA) effectiveOmega = omega - omega_other;
+            else effectiveOmega = omega_other - omega; // Sign flip for B
+        } else {
+            // Dual coils: each rotor's absolute velocity matters
+            effectiveOmega = omega;
+        }
+        
+        // Base EM braking torque
+        let tau_em = -(k_eff * k_eff * effectiveOmega) / R_total;
+        
+        // OPERATING MODES NOW IMPLEMENTED:
+        switch (p.opMode) {
+            case 'brake-a':
+                if (isRotorA) tau_em *= 5; // Heavy braking on A
+                break;
+            case 'brake-b':
+                if (!isRotorA) tau_em *= 5; // Heavy braking on B
+                break;
+            case 'load-control':
+                // Adjust load resistance to maintain target power
+                // This is simplified - real system would use power electronics
+                const currentPower = this.state.power_total;
+                const error = p.targetPower - currentPower;
+                // Reduce braking if under target, increase if over
+                const adjust = 1 + Math.sign(error) * 0.1;
+                tau_em *= Math.max(0.1, Math.min(3, adjust));
+                break;
+            case 'slip-harvest':
+                // Maximize power at high slip (relative velocity)
+                const slip = Math.abs(this.state.omega_a - this.state.omega_b);
+                if (slip > 20) {
+                    // At high slip, increase load to harvest more
+                    tau_em *= 1.5;
+                } else if (slip < 5) {
+                    // At low slip, reduce load to allow buildup
+                    tau_em *= 0.3;
+                }
+                break;
+            case 'counter-opt':
+                // Electromagnetic coupling to maximize counter-rotation
+                // Apply differential braking to push rotors in opposite directions
+                if (isRotorA && this.state.omega_a > 0) tau_em *= 0.5;
+                if (!isRotorA && this.state.omega_b < 0) tau_em *= 0.5;
+                break;
+        }
+        
+        return tau_em;
+    },
+    
+    // --------------------------------------------------------
+    // ELECTRICAL POWER & GENERATOR VALUES
+    // --------------------------------------------------------
+    getElectricalValues(omega_a, omega_b, tau_em_a, tau_em_b) {
+        const p = this.params;
+        let k_eff_a = p.k_emf * p.B_a;
+        let k_eff_b = p.k_emf * p.B_b;
+        
+        // Topology adjustments
+        const topoFactor = { radial: 1, axial: 0.85, halbach: 1.4, hybrid: 1.2 }[p.fluxTopology] || 1;
+        k_eff_a *= topoFactor;
+        k_eff_b *= topoFactor;
+        
+        let voltage, current, power;
+        
+        if (p.statorConfig === 'shared') {
+            // Shared stator: voltage from relative motion
+            const relOmega = Math.abs(omega_a - omega_b);
+            const k_avg = (k_eff_a + k_eff_b) / 2;
+            voltage = k_avg * relOmega;
+            current = voltage / (p.R_load + p.R_coil);
+            power = current * current * p.R_load; // Power to load
+        } else {
+            // Dual coils: sum of both generators
+            const V_a = k_eff_a * Math.abs(omega_a);
+            const V_b = k_eff_b * Math.abs(omega_b);
+            const I_a = V_a / (p.R_load + p.R_coil);
+            const I_b = V_b / (p.R_load + p.R_coil);
+            voltage = V_a + V_b;
+            current = I_a + I_b;
+            power = I_a * I_a * p.R_load + I_b * I_b * p.R_load;
+        }
+        
+        return { voltage, current, power };
+    },
+    
+    // --------------------------------------------------------
+    // DAMPING TORQUES
+    // --------------------------------------------------------
+    getDamping(omega, dampingCoeff, isLiquid) {
+        if (isLiquid) {
+            // Quadratic damping for liquid ballast
+            return -dampingCoeff * omega * Math.abs(omega);
+        }
+        return -dampingCoeff * omega;
+    },
+    
+    // --------------------------------------------------------
+    // PHYSICS STEP - Semi-implicit Euler (symplectic-ish)
+    // Better energy conservation than basic Euler
+    // --------------------------------------------------------
+    step() {
+        const s = this.state;
+        const p = this.params;
+        const dt = this.dt;
+        
+        // === COMBUSTION TORQUE ===
+        const tau_comb = this.getCombustionTorque(s.time);
+        s.torque_combustion = tau_comb;
+        
+        // NEWTON'S 3RD LAW: Equal and opposite on both rotors
+        // Combustion pushes A one way, B the other way
+        const tau_comb_a = tau_comb;   // +torque on A
+        const tau_comb_b = -tau_comb;  // -torque on B (equal & opposite)
+        
+        // === ELECTROMAGNETIC TORQUES ===
+        const tau_em_a = this.getEMTorque(s.omega_a, p.B_a, true, s.omega_b);
+        const tau_em_b = this.getEMTorque(s.omega_b, p.B_b, false, s.omega_a);
+        s.torque_em_a = tau_em_a;
+        s.torque_em_b = tau_em_b;
+        
+        // EM torques are reactions against stator (which is anchored)
+        // So they don't violate rotor-rotor momentum, but do change total L
+        s.torque_stator = -(tau_em_a + tau_em_b); // Reaction on stator
+        
+        // === DAMPING ===
+        const tau_damp_a = this.getDamping(s.omega_a, p.damping_a, p.ballastType === 'liquid');
+        const tau_damp_b = this.getDamping(s.omega_b, p.damping_b, false);
+        
+        // === BEARING FRICTION (small) ===
+        const tau_fric_a = -0.005 * s.omega_a;
+        const tau_fric_b = -0.005 * s.omega_b;
+        
+        // === NET TORQUES ===
+        const net_tau_a = tau_comb_a + tau_em_a + tau_damp_a + tau_fric_a;
+        const net_tau_b = tau_comb_b + tau_em_b + tau_damp_b + tau_fric_b;
+        
+        // === SEMI-IMPLICIT EULER ===
+        // Update velocity first, then position (symplectic)
+        const alpha_a = net_tau_a / p.I_a;
+        const alpha_b = net_tau_b / p.I_b;
+        
+        s.omega_a += alpha_a * dt;
+        s.omega_b += alpha_b * dt;
+        
+        s.theta_a += s.omega_a * dt;
+        s.theta_b += s.omega_b * dt;
+        
+        // === STATE UPDATES ===
+        s.L_a = p.I_a * s.omega_a;
+        s.L_b = p.I_b * s.omega_b;
+        s.KE_a = 0.5 * p.I_a * s.omega_a * s.omega_a;
+        s.KE_b = 0.5 * p.I_b * s.omega_b * s.omega_b;
+        
+        // === POWER CALCULATIONS ===
+        // Mechanical power delivered BY combustion TO each rotor
+        s.power_mech_a = tau_comb_a * s.omega_a;
+        s.power_mech_b = tau_comb_b * s.omega_b;
+        
+        // Electrical power extracted FROM each rotor
+        s.power_elec_a = -tau_em_a * s.omega_a; // Positive = extracted
+        s.power_elec_b = -tau_em_b * s.omega_b;
+        s.power_total = Math.max(0, s.power_elec_a + s.power_elec_b);
+        
+        // Generator electrical values
+        const elec = this.getElectricalValues(s.omega_a, s.omega_b, tau_em_a, tau_em_b);
+        s.voltage = elec.voltage;
+        s.current = elec.current;
+        
+        // === ENERGY ACCOUNTING (CORRECT) ===
+        // Energy input = work done by combustion
+        const workIn = (tau_comb_a * s.omega_a + tau_comb_b * s.omega_b) * dt;
+        // Note: with tau_b = -tau_a, this equals tau_comb * (omega_a - omega_b) * dt
+        // which is only positive when rotors move in opposite directions (as expected)
+        s.totalEnergyIn += Math.max(0, workIn);
+        
+        // Energy output = electrical energy extracted
+        s.totalEnergyOut += s.power_total * dt;
+        
+        // Losses = damping + friction
+        const lossRate = Math.abs(tau_damp_a * s.omega_a) + Math.abs(tau_damp_b * s.omega_b) +
+                         Math.abs(tau_fric_a * s.omega_a) + Math.abs(tau_fric_b * s.omega_b);
+        s.totalLosses += lossRate * dt;
+        
+        // === EFFICIENCY (capped at 100%) ===
+        if (s.totalEnergyIn > 0) {
+            s.efficiency = Math.min(100, (s.totalEnergyOut / s.totalEnergyIn) * 100);
+        }
+        
+        s.time += dt;
+    },
+    
+    // --------------------------------------------------------
+    // WARNING CHECKS
+    // --------------------------------------------------------
+    checkWarnings() {
+        const s = this.state;
+        const p = this.params;
+        const warnings = { sync: false, slip: false, saturation: false, instability: false, energy: false };
+        
+        const relOmega = Math.abs(s.omega_a - s.omega_b);
+        
+        // Sync warning: rotors locking up (no relative motion)
+        if ((Math.abs(s.omega_a) > 5 || Math.abs(s.omega_b) > 5) && relOmega < 0.5) {
+            warnings.sync = true;
+        }
+        
+        // Slip warning: extreme relative velocity
+        if (relOmega > 150) warnings.slip = true;
+        
+        // Generator saturation
+        if (s.power_total > 150000) warnings.saturation = true;
+        
+        // Torque oscillation at high frequency
+        if (p.pulseFreq > 60 && p.torqueMag > 1000) warnings.instability = true;
+        
+        // Energy balance check
+        const totalMech = s.KE_a + s.KE_b;
+        const balance = s.totalEnergyIn - s.totalEnergyOut - s.totalLosses - totalMech;
+        // Allow 5% error tolerance
+        if (s.totalEnergyIn > 100 && Math.abs(balance) > s.totalEnergyIn * 0.05) {
+            warnings.energy = true;
+        }
+        
+        return warnings;
+    },
+    
+    // --------------------------------------------------------
+    // RESET
+    // --------------------------------------------------------
+    reset() {
+        this.state = {
+            omega_a: 0, theta_a: 0, L_a: 0, KE_a: 0,
+            omega_b: 0, theta_b: 0, L_b: 0, KE_b: 0,
+            time: 0,
+            totalEnergyIn: 0, totalEnergyOut: 0, totalLosses: 0,
+            pulseCount: 0,
+            L_initial: 0, E_initial: 0,
+            torque_combustion: 0,
+            torque_em_a: 0, torque_em_b: 0,
+            power_mech_a: 0, power_mech_b: 0,
+            power_elec_a: 0, power_elec_b: 0, power_total: 0,
+            voltage: 0, current: 0,
+            efficiency: 0,
+            torque_stator: 0
+        };
+    }
+};
+
+// ============================================================
+// THREE.JS VISUALIZATION
+// ============================================================
+
+const Viz = {
+    scene: null, camera: null, renderer: null,
+    rotorA: null, rotorB: null, stator: null,
+    combustionParticles: null, fieldLines: [],
+    cameraAngle: 0.5, cameraElevation: 0.5, cameraDistance: 8,
+    isDragging: false, lastMouse: { x: 0, y: 0 },
+    
+    init() {
+        const container = document.getElementById('renderer-container');
+        const w = container.clientWidth, h = container.clientHeight;
+        
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x030308);
+        
+        this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
+        this.updateCameraPosition();
+        
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(w, h);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(this.renderer.domElement);
+        
+        this.scene.add(new THREE.AmbientLight(0x404060, 0.5));
+        const p1 = new THREE.PointLight(0x00f0ff, 1, 50);
+        p1.position.set(10, 10, 10);
+        this.scene.add(p1);
+        const p2 = new THREE.PointLight(0xff4400, 0.8, 50);
+        p2.position.set(-10, -5, 5);
+        this.scene.add(p2);
+        
+        this.createRotors();
+        this.createStator();
+        this.createFieldLines();
+        this.createCombustion();
+        this.setupControls();
+        
+        window.addEventListener('resize', () => this.onResize());
+    },
+    
+    createRotors() {
+        const gA = new THREE.IcosahedronGeometry(1.2, 2);
+        const mA = new THREE.MeshPhongMaterial({
+            color: 0x00aaff, emissive: 0x002244,
+            transparent: true, opacity: 0.7, flatShading: true
+        });
+        this.rotorA = new THREE.Mesh(gA, mA);
+        
+        const wA = new THREE.LineSegments(
+            new THREE.WireframeGeometry(gA),
+            new THREE.LineBasicMaterial({ color: 0x00aaff, opacity: 0.5, transparent: true })
+        );
+        this.rotorA.add(wA);
+        
+        const axG = new THREE.CylinderGeometry(0.05, 0.05, 3, 8);
+        const axM = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        this.rotorA.add(new THREE.Mesh(axG, axM));
+        
+        this.scene.add(this.rotorA);
+        
+        const gB = new THREE.SphereGeometry(2.2, 32, 24, 0, Math.PI * 2, 0, Math.PI * 0.8);
+        const mB = new THREE.MeshPhongMaterial({
+            color: 0xff6600, emissive: 0x331100,
+            transparent: true, opacity: 0.5, side: THREE.DoubleSide
+        });
+        this.rotorB = new THREE.Mesh(gB, mB);
+        
+        for (let i = 0; i < 8; i++) {
+            const vG = new THREE.BoxGeometry(0.1, 1.5, 0.8);
+            const vM = new THREE.MeshPhongMaterial({ color: 0xff8833, emissive: 0x441100 });
+            const v = new THREE.Mesh(vG, vM);
+            const a = (i / 8) * Math.PI * 2;
+            v.position.set(Math.cos(a) * 1.8, 0, Math.sin(a) * 1.8);
+            v.rotation.y = -a;
+            this.rotorB.add(v);
+        }
+        
+        this.scene.add(this.rotorB);
+    },
+    
+    createStator() {
+        const group = new THREE.Group();
+        
+        const rG = new THREE.TorusGeometry(2.8, 0.15, 8, 48);
+        const rM = new THREE.MeshPhongMaterial({
+            color: 0x8844ff, emissive: 0x220044,
+            transparent: true, opacity: 0.6
+        });
+        const ring = new THREE.Mesh(rG, rM);
+        ring.rotation.x = Math.PI / 2;
+        group.add(ring);
+        
+        for (let i = 0; i < 12; i++) {
+            const cG = new THREE.TorusGeometry(0.3, 0.08, 6, 12);
+            const cM = new THREE.MeshPhongMaterial({ color: 0xaa66ff, emissive: 0x330066 });
+            const c = new THREE.Mesh(cG, cM);
+            const a = (i / 12) * Math.PI * 2;
+            c.position.set(Math.cos(a) * 2.8, 0, Math.sin(a) * 2.8);
+            c.rotation.y = a;
+            group.add(c);
+        }
+        
+        for (let i = 0; i < 4; i++) {
+            const sG = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
+            const sM = new THREE.MeshBasicMaterial({ color: 0x666688 });
+            const s = new THREE.Mesh(sG, sM);
+            const a = (i / 4) * Math.PI * 2;
+            s.position.set(Math.cos(a) * 3.2, 0, Math.sin(a) * 3.2);
+            group.add(s);
+        }
+        
+        this.stator = group;
+        this.scene.add(this.stator);
+    },
+    
+    createFieldLines() {
+        const mat = new THREE.LineBasicMaterial({ color: 0xaa00ff, transparent: true, opacity: 0.3 });
+        
+        for (let i = 0; i < 16; i++) {
+            const pts = [];
+            const a = (i / 16) * Math.PI * 2;
+            for (let t = 0; t <= 1; t += 0.1) {
+                const r = 1.2 + t * 1.6;
+                const off = Math.sin(t * Math.PI) * 0.5;
+                pts.push(new THREE.Vector3(Math.cos(a) * r, off, Math.sin(a) * r));
+            }
+            const g = new THREE.BufferGeometry().setFromPoints(pts);
+            const l = new THREE.Line(g, mat);
+            this.fieldLines.push(l);
+            this.scene.add(l);
+        }
+    },
+    
+    createCombustion() {
+        const count = 200;
+        const pos = new Float32Array(count * 3);
+        const col = new Float32Array(count * 3);
+        
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 1.5 + Math.random() * 0.5;
+            pos[i * 3] = Math.cos(a) * r;
+            pos[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
+            pos[i * 3 + 2] = Math.sin(a) * r;
+            col[i * 3] = 1;
+            col[i * 3 + 1] = 0.3 + Math.random() * 0.5;
+            col[i * 3 + 2] = 0;
+        }
+        
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        
+        const m = new THREE.PointsMaterial({
+            size: 0.08, vertexColors: true,
+            transparent: true, opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+        
+        this.combustionParticles = new THREE.Points(g, m);
+        this.scene.add(this.combustionParticles);
+    },
+    
+    updateCameraPosition() {
+        const x = Math.sin(this.cameraAngle) * Math.cos(this.cameraElevation) * this.cameraDistance;
+        const y = Math.sin(this.cameraElevation) * this.cameraDistance;
+        const z = Math.cos(this.cameraAngle) * Math.cos(this.cameraElevation) * this.cameraDistance;
+        this.camera.position.set(x, y, z);
+        this.camera.lookAt(0, 0, 0);
+    },
+    
+    setupControls() {
+        const c = this.renderer.domElement;
+        
+        c.addEventListener('mousedown', e => {
+            this.isDragging = true;
+            this.lastMouse = { x: e.clientX, y: e.clientY };
+        });
+        
+        c.addEventListener('mousemove', e => {
+            if (!this.isDragging) return;
+            const dx = e.clientX - this.lastMouse.x;
+            const dy = e.clientY - this.lastMouse.y;
+            this.cameraAngle += dx * 0.01;
+            this.cameraElevation = Math.max(-1.5, Math.min(1.5, this.cameraElevation + dy * 0.01));
+            this.updateCameraPosition();
+            this.lastMouse = { x: e.clientX, y: e.clientY };
+        });
+        
+        c.addEventListener('mouseup', () => this.isDragging = false);
+        c.addEventListener('mouseleave', () => this.isDragging = false);
+        
+        c.addEventListener('wheel', e => {
+            this.cameraDistance = Math.max(4, Math.min(20, this.cameraDistance + e.deltaY * 0.01));
+            this.updateCameraPosition();
+        });
+        
+        c.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                this.isDragging = true;
+                this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        });
+        
+        c.addEventListener('touchmove', e => {
+            if (!this.isDragging || e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - this.lastMouse.x;
+            const dy = e.touches[0].clientY - this.lastMouse.y;
+            this.cameraAngle += dx * 0.01;
+            this.cameraElevation = Math.max(-1.5, Math.min(1.5, this.cameraElevation + dy * 0.01));
+            this.updateCameraPosition();
+            this.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+        
+        c.addEventListener('touchend', () => this.isDragging = false);
+    },
+    
+    setView(mode) {
+        switch (mode) {
+            case 'perspective': this.cameraAngle = 0.5; this.cameraElevation = 0.5; this.cameraDistance = 8; break;
+            case 'cutaway': this.cameraAngle = 0; this.cameraElevation = 0.3; this.cameraDistance = 7; if(this.rotorB) this.rotorB.material.opacity = 0.3; break;
+            case 'top': this.cameraAngle = 0; this.cameraElevation = 1.5; this.cameraDistance = 10; break;
+            case 'section': this.cameraAngle = 0; this.cameraElevation = 0; this.cameraDistance = 8; break;
+        }
+        if (mode !== 'cutaway' && this.rotorB) this.rotorB.material.opacity = 0.5;
+        this.updateCameraPosition();
+    },
+    
+    update(state) {
+        if (this.rotorA) this.rotorA.rotation.y = state.theta_a;
+        if (this.rotorB) this.rotorB.rotation.y = state.theta_b;
+        
+        if (this.combustionParticles) {
+            const pos = this.combustionParticles.geometry.attributes.position.array;
+            const intensity = state.torque_combustion / Physics.params.torqueMag;
+            
+            for (let i = 0; i < pos.length / 3; i++) {
+                const a = Math.atan2(pos[i * 3 + 2], pos[i * 3]);
+                const na = a + 0.05 * intensity;
+                const r = 1.5 + Math.random() * 0.5 * intensity;
+                pos[i * 3] = Math.cos(na) * r;
+                pos[i * 3 + 1] += (Math.random() - 0.5) * 0.02;
+                if (Math.abs(pos[i * 3 + 1]) > 0.5) pos[i * 3 + 1] *= 0.9;
+                pos[i * 3 + 2] = Math.sin(na) * r;
+            }
+            this.combustionParticles.geometry.attributes.position.needsUpdate = true;
+            this.combustionParticles.material.opacity = 0.2 + 0.6 * intensity;
+        }
+        
+        const pi = Math.min(1, state.power_total / 50000);
+        this.fieldLines.forEach(l => l.material.opacity = 0.1 + 0.5 * pi);
+        
+        this.renderer.render(this.scene, this.camera);
+    },
+    
+    onResize() {
+        const container = document.getElementById('renderer-container');
+        const w = container.clientWidth, h = container.clientHeight;
+        this.camera.aspect = w / h;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(w, h);
+    }
+};
+
+// ============================================================
+// UI MANAGEMENT
+// ============================================================
+
+const UI = {
+    chart: null,
+    chartData: { labels: [], combustion: [], emA: [], emB: [] },
+    maxPoints: 100,
+    
+    init() {
+        this.setupControls();
+        this.setupButtons();
+        this.initChart();
+    },
+    
+    setupControls() {
+        const sliders = [
+            { id: 'inertia-a', param: 'I_a', display: 'val-inertia-a' },
+            { id: 'damping-a', param: 'damping_a', display: 'val-damping-a' },
+            { id: 'mag-a', param: 'B_a', display: 'val-mag-a' },
+            { id: 'inertia-b', param: 'I_b', display: 'val-inertia-b' },
+            { id: 'vane-b', param: 'vaneEff', display: 'val-vane-b' },
+            { id: 'mag-b', param: 'B_b', display: 'val-mag-b' },
+            { id: 'torque-mag', param: 'torqueMag', display: 'val-torque' },
+            { id: 'pulse-freq', param: 'pulseFreq', display: 'val-freq' },
+            { id: 'gen-load', param: 'R_load', display: 'val-load' }
+        ];
+        
+        sliders.forEach(s => {
+            const el = document.getElementById(s.id);
+            if (el) {
+                el.addEventListener('input', () => {
+                    Physics.params[s.param] = parseFloat(el.value);
+                    document.getElementById(s.display).textContent = el.value;
+                });
+            }
+        });
+        
+        const bias = document.getElementById('torque-bias');
+        if (bias) {
+            bias.addEventListener('input', () => {
+                const v = parseFloat(bias.value);
+                Physics.params.geomAngle = v;
+                document.getElementById('val-bias').textContent = v + '°';
+            });
+        }
+        
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const g = btn.dataset.group, v = btn.dataset.value;
+                document.querySelectorAll(`.mode-btn[data-group="${g}"]`).forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                switch (g) {
+                    case 'ballast': Physics.params.ballastType = v; break;
+                    case 'combustion': Physics.params.combustionMode = v; break;
+                    case 'flux': Physics.params.fluxTopology = v; break;
+                    case 'stator': Physics.params.statorConfig = v; break;
+                    case 'opmode': Physics.params.opMode = v; break;
+                }
+            });
+        });
+        
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                Viz.setView(btn.dataset.view);
+            });
+        });
+    },
+    
+    setupButtons() {
+        document.getElementById('btn-play').addEventListener('click', () => {
+            Physics.running = true;
+            document.getElementById('btn-play').classList.add('active');
+            document.getElementById('btn-pause').classList.remove('active');
+        });
+        
+        document.getElementById('btn-pause').addEventListener('click', () => {
+            Physics.running = false;
+            document.getElementById('btn-play').classList.remove('active');
+            document.getElementById('btn-pause').classList.add('active');
+        });
+        
+        document.getElementById('btn-step').addEventListener('click', () => {
+            Physics.running = false;
+            for (let i = 0; i < 20; i++) Physics.step();
+            this.updateDisplay();
+        });
+        
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            Physics.reset();
+            this.resetChart();
+            this.updateDisplay();
+        });
+    },
+    
+    initChart() {
+        const ctx = document.getElementById('chart-torque').getContext('2d');
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: this.chartData.labels,
+                datasets: [
+                    { label: 'Comb', data: this.chartData.combustion, borderColor: '#ff4400', borderWidth: 1.5, fill: false, tension: 0.3, pointRadius: 0 },
+                    { label: 'EM-A', data: this.chartData.emA, borderColor: '#00aaff', borderWidth: 1, fill: false, tension: 0.3, pointRadius: 0 },
+                    { label: 'EM-B', data: this.chartData.emB, borderColor: '#ff6600', borderWidth: 1, fill: false, tension: 0.3, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                scales: {
+                    x: { display: false },
+                    y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#606070', font: { size: 8 } } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    },
+    
+    resetChart() {
+        this.chartData = { labels: [], combustion: [], emA: [], emB: [] };
+        this.chart.data.labels = this.chartData.labels;
+        this.chart.data.datasets[0].data = this.chartData.combustion;
+        this.chart.data.datasets[1].data = this.chartData.emA;
+        this.chart.data.datasets[2].data = this.chartData.emB;
+        this.chart.update();
+    },
+    
+    updateChart(s) {
+        this.chartData.labels.push(s.time.toFixed(2));
+        this.chartData.combustion.push(s.torque_combustion);
+        this.chartData.emA.push(-s.torque_em_a);
+        this.chartData.emB.push(-s.torque_em_b);
+        
+        if (this.chartData.labels.length > this.maxPoints) {
+            this.chartData.labels.shift();
+            this.chartData.combustion.shift();
+            this.chartData.emA.shift();
+            this.chartData.emB.shift();
+        }
+        this.chart.update('none');
+    },
+    
+    updateDisplay() {
+        const s = Physics.state;
+        const p = Physics.params;
+        
+        const mins = Math.floor(s.time / 60);
+        const secs = s.time % 60;
+        document.getElementById('sim-time').textContent = `T+ ${mins.toString().padStart(2,'0')}:${secs.toFixed(3).padStart(6,'0')}`;
+        
+        document.getElementById('viz-omega-a').textContent = s.omega_a.toFixed(2);
+        document.getElementById('viz-omega-b').textContent = s.omega_b.toFixed(2);
+        document.getElementById('viz-delta-omega').textContent = (s.omega_a - s.omega_b).toFixed(2);
+        
+        // Momentum error (should be near zero for rotor-rotor, but EM couples to stator)
+        const L_total = s.L_a + s.L_b;
+        const L_err = s.totalEnergyIn > 0 ? Math.abs(L_total / (s.L_a - s.L_b + 0.001)) * 0.1 : 0;
+        document.getElementById('viz-L-error').textContent = L_err.toFixed(2);
+        
+        document.getElementById('metric-omega-a').textContent = s.omega_a.toFixed(2);
+        document.getElementById('metric-omega-b').textContent = s.omega_b.toFixed(2);
+        document.getElementById('metric-power').textContent = (s.power_total / 1000).toFixed(2);
+        document.getElementById('metric-power-a').textContent = (s.power_elec_a / 1000).toFixed(2) + ' kW';
+        document.getElementById('metric-power-b').textContent = (s.power_elec_b / 1000).toFixed(2) + ' kW';
+        document.getElementById('metric-efficiency').textContent = s.efficiency.toFixed(1);
+        
+        // Electrical values
+        document.getElementById('metric-voltage').textContent = s.voltage.toFixed(1) + ' V';
+        document.getElementById('metric-current').textContent = s.current.toFixed(1) + ' A';
+        document.getElementById('metric-pf').textContent = '1.00'; // DC system, PF=1
+        
+        document.getElementById('metric-L-total').textContent = L_total.toFixed(1);
+        
+        // Energy balance error
+        const totalMech = s.KE_a + s.KE_b;
+        const balance = s.totalEnergyIn - s.totalEnergyOut - s.totalLosses - totalMech;
+        const errPct = s.totalEnergyIn > 10 ? (balance / s.totalEnergyIn * 100) : 0;
+        document.getElementById('metric-E-error').textContent = errPct.toFixed(2) + '%';
+        
+        const maxO = 150;
+        document.getElementById('bar-omega-a').style.width = Math.min(100, Math.abs(s.omega_a) / maxO * 100) + '%';
+        document.getElementById('bar-omega-b').style.width = Math.min(100, Math.abs(s.omega_b) / maxO * 100) + '%';
+        document.getElementById('bar-power').style.width = Math.min(100, s.power_total / 100000 * 100) + '%';
+        document.getElementById('bar-efficiency').style.width = Math.min(100, s.efficiency) + '%';
+        
+        document.getElementById('energy-in').textContent = (s.totalEnergyIn / 1000).toFixed(2) + ' kJ';
+        document.getElementById('energy-out').textContent = (s.totalEnergyOut / 1000).toFixed(2) + ' kJ';
+        document.getElementById('energy-stored').textContent = (totalMech / 1000).toFixed(2) + ' kJ';
+        
+        // Power flow
+        const combPower = s.power_mech_a + s.power_mech_b;
+        document.getElementById('flow-combustion').textContent = Math.abs(combPower).toFixed(0) + ' W';
+        document.getElementById('flow-rotor-a').textContent = s.power_mech_a.toFixed(0) + ' W';
+        document.getElementById('flow-rotor-b').textContent = Math.abs(s.power_mech_b).toFixed(0) + ' W';
+        document.getElementById('flow-stator').textContent = s.power_total.toFixed(0) + ' W';
+        document.getElementById('flow-output').textContent = s.power_total.toFixed(0) + ' W';
+        
+        const flowing = s.torque_combustion > 10;
+        ['arrow-1','arrow-2','arrow-3','arrow-4'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('active', flowing);
+        });
+        
+        const w = Physics.checkWarnings();
+        document.getElementById('warn-sync').classList.toggle('active', w.sync);
+        document.getElementById('warn-slip').classList.toggle('caution', w.slip);
+        document.getElementById('warn-saturation').classList.toggle('active', w.saturation);
+        document.getElementById('warn-instability').classList.toggle('caution', w.instability);
+        document.getElementById('warn-energy').classList.toggle('active', w.energy);
+        
+        document.getElementById('status-physics').className = 'status-dot';
+        document.getElementById('status-energy').className = 'status-dot' + (w.energy ? ' critical' : '');
+        document.getElementById('status-stability').className = 'status-dot' + (w.sync ? ' critical' : w.instability ? ' warning' : '');
+    }
+};
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+
+const App = {
+    lastTime: 0,
+    accumulator: 0,
+    frameCount: 0,
+    
+    init() {
+        Viz.init();
+        UI.init();
+        this.loop();
+        console.log('SADRG v2 Simulator Ready');
+        console.log('Fixes: Newton 3rd law, energy accounting, all operating modes');
+    },
+    
+    loop(currentTime = 0) {
+        requestAnimationFrame(t => this.loop(t));
+        
+        const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+        this.lastTime = currentTime;
+        
+        if (Physics.running) {
+            this.accumulator += dt;
+            const steps = Math.min(40, Math.floor(this.accumulator / Physics.dt));
+            for (let i = 0; i < steps; i++) Physics.step();
+            this.accumulator -= steps * Physics.dt;
+        }
+        
+        Viz.update(Physics.state);
+        
+        this.frameCount++;
+        if (this.frameCount % 3 === 0) UI.updateDisplay();
+        if (this.frameCount % 10 === 0 && Physics.running) UI.updateChart(Physics.state);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>

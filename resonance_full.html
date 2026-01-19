@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ΨΦ RESONANCE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Crimson+Pro:wght@300;400;500&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --void: #030308;
+            --deep: #0a0a12;
+            --panel: rgba(15, 15, 25, 0.85);
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #c8c8d0;
+            --dim: #555560;
+            --accent: #00ffd4;
+            --warm: #ff6b4a;
+            --cold: #4a9eff;
+            --danger: #ff3355;
+        }
+        
+        body {
+            background: var(--void);
+            overflow: hidden;
+            font-family: 'Crimson Pro', Georgia, serif;
+            color: var(--text);
+            cursor: default;
+        }
+        
+        #glCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           OVERLAY SYSTEM
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.9);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* Title Screen */
+        .title-screen {
+            text-align: center;
+        }
+        
+        .title-logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 4em;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            margin-bottom: 0.2em;
+            background: linear-gradient(135deg, var(--accent), var(--cold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 60px rgba(0, 255, 212, 0.3);
+        }
+        
+        .title-sub {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9em;
+            letter-spacing: 0.5em;
+            color: var(--dim);
+            margin-bottom: 3em;
+        }
+        
+        .title-start {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8em;
+            letter-spacing: 0.3em;
+            color: var(--accent);
+            animation: pulse 2s infinite;
+            cursor: pointer;
+            padding: 1em 2em;
+            border: 1px solid var(--accent);
+            background: transparent;
+            transition: all 0.3s;
+        }
+        
+        .title-start:hover {
+            background: var(--accent);
+            color: var(--void);
+        }
+        
+        .title-continue {
+            display: block;
+            margin-top: 1em;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7em;
+            letter-spacing: 0.2em;
+            color: var(--dim);
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0.5em;
+        }
+        
+        .title-continue:hover {
+            color: var(--text);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           HUD
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .hud {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .hud.active {
+            opacity: 1;
+        }
+        
+        .hud > * {
+            pointer-events: auto;
+        }
+        
+        /* Top bar */
+        .top-bar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+        }
+        
+        .session-info {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65em;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        
+        .session-info .label { color: var(--dim); }
+        .session-info .value { color: var(--accent); margin-left: 8px; }
+        
+        .subject-info {
+            text-align: right;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65em;
+            line-height: 1.8;
+        }
+        
+        .subject-info .label { color: var(--dim); }
+        .subject-info .value { color: var(--text); }
+        .subject-info .warning { 
+            color: var(--danger); 
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        /* Trust meter */
+        .trust-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            right: 30px;
+        }
+        
+        .trust-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.55em;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--dim);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .trust-bar {
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 1px;
+            overflow: hidden;
+        }
+        
+        .trust-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger), var(--warm), var(--accent));
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1px;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           DIALOGUE PANEL
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .dialogue-panel {
+            position: absolute;
+            top: 80px;
+            right: 30px;
+            bottom: 90px;
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .dialogue-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.6em;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .dialogue-header .rec {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .dialogue-header .rec-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+        
+        .dialogue-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .dialogue-history::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .dialogue-history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .dialogue-history::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+        
+        .dialogue-entry {
+            max-width: 90%;
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(15px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+        
+        .dialogue-entry.ai {
+            align-self: flex-start;
+        }
+        
+        .dialogue-entry.player {
+            align-self: flex-end;
+        }
+        
+        .dialogue-entry.system {
+            align-self: center;
+            text-align: center;
+            font-style: italic;
+            color: var(--dim);
+            font-size: 0.85em;
+        }
+        
+        .dialogue-entry .speaker {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.6em;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        
+        .dialogue-entry.ai .speaker { color: var(--accent); }
+        .dialogue-entry.player .speaker { color: var(--cold); }
+        
+        .dialogue-entry .content {
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .dialogue-entry.ai .content {
+            background: rgba(0, 255, 212, 0.08);
+            border: 1px solid rgba(0, 255, 212, 0.15);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .dialogue-entry.player .content {
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-bottom-right-radius: 4px;
+        }
+        
+        .dialogue-entry .subtext {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.6em;
+            color: var(--dim);
+            margin-top: 6px;
+            letter-spacing: 0.05em;
+        }
+        
+        .dialogue-entry .emotion-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+        
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 14px 18px;
+            background: rgba(0, 255, 212, 0.05);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+        }
+        
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+        
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+        
+        /* Choices */
+        .dialogue-choices {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .choice-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 14px 18px;
+            border-radius: 10px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        
+        .choice-btn:hover {
+            background: rgba(0, 255, 212, 0.08);
+            border-color: rgba(0, 255, 212, 0.3);
+            transform: translateX(6px);
+        }
+        
+        .choice-btn .tone {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65em;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--dim);
+            margin-top: 6px;
+        }
+        
+        /* Free input */
+        .input-area {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-area input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: 'Crimson Pro', serif;
+            font-size: 0.95em;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .input-area input:focus {
+            border-color: rgba(0, 255, 212, 0.4);
+        }
+        
+        .input-area input::placeholder {
+            color: var(--dim);
+        }
+        
+        .input-area button {
+            background: linear-gradient(135deg, var(--accent), var(--cold));
+            border: none;
+            color: var(--void);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.15s;
+        }
+        
+        .input-area button:hover {
+            transform: scale(1.05);
+        }
+        
+        .input-area button:active {
+            transform: scale(0.98);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           MENU
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .menu-btn {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--dim);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.6em;
+            letter-spacing: 0.15em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .menu-btn:hover {
+            color: var(--text);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .pause-menu {
+            background: var(--panel);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 50px;
+            text-align: center;
+        }
+        
+        .pause-menu h2 {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8em;
+            letter-spacing: 0.3em;
+            color: var(--dim);
+            margin-bottom: 30px;
+        }
+        
+        .pause-menu button {
+            display: block;
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 14px 30px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            font-family: 'Crimson Pro', serif;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pause-menu button:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent);
+        }
+        
+        .pause-menu button.danger:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           ENDINGS
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .ending-screen {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+        }
+        
+        .ending-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7em;
+            letter-spacing: 0.4em;
+            color: var(--dim);
+            margin-bottom: 20px;
+        }
+        
+        .ending-name {
+            font-family: 'Space Mono', monospace;
+            font-size: 2em;
+            letter-spacing: 0.2em;
+            margin-bottom: 40px;
+        }
+        
+        .ending-text {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: var(--text);
+            margin-bottom: 40px;
+        }
+        
+        .ending-stats {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7em;
+            color: var(--dim);
+            margin-bottom: 40px;
+            line-height: 2;
+        }
+        
+        .ending-btn {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8em;
+            letter-spacing: 0.2em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .ending-btn:hover {
+            background: var(--accent);
+            color: var(--void);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           SCANLINES & EFFECTS
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.015) 2px,
+                rgba(0, 0, 0, 0.015) 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .vignette {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4) 100%);
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        @media (max-width: 900px) {
+            .dialogue-panel {
+                left: 20px;
+                right: 20px;
+                width: auto;
+                top: auto;
+                bottom: 20px;
+                max-height: 60vh;
+            }
+            
+            .top-bar {
+                padding: 15px 20px;
+            }
+            
+            .title-logo {
+                font-size: 2.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    
+    <!-- Title Screen -->
+    <div class="overlay active" id="titleOverlay">
+        <div class="title-screen">
+            <div class="title-logo">RESONANCE</div>
+            <div class="title-sub">A conversation with consequence</div>
+            <button class="title-start" onclick="Game.newGame()">BEGIN SESSION</button>
+            <button class="title-continue" id="continueBtn" style="display:none" onclick="Game.continueGame()">CONTINUE SESSION</button>
+        </div>
+    </div>
+    
+    <!-- Pause Menu -->
+    <div class="overlay" id="pauseOverlay">
+        <div class="pause-menu">
+            <h2>SESSION PAUSED</h2>
+            <button onclick="Game.resume()">Resume</button>
+            <button onclick="Game.save()">Save Progress</button>
+            <button onclick="Game.settings()">Settings</button>
+            <button class="danger" onclick="Game.quit()">Quit to Title</button>
+        </div>
+    </div>
+    
+    <!-- Ending Screen -->
+    <div class="overlay" id="endingOverlay">
+        <div class="ending-screen">
+            <div class="ending-title">SESSION COMPLETE</div>
+            <div class="ending-name" id="endingName"></div>
+            <div class="ending-text" id="endingText"></div>
+            <div class="ending-stats" id="endingStats"></div>
+            <button class="ending-btn" onclick="Game.returnToTitle()">RETURN</button>
+        </div>
+    </div>
+    
+    <!-- HUD -->
+    <div class="hud" id="hud">
+        <div class="top-bar">
+            <div class="session-info">
+                <div><span class="label">SESSION</span><span class="value" id="sessionNum">001</span></div>
+                <div><span class="label">DAY</span><span class="value" id="dayNum">1</span></div>
+            </div>
+            
+            <button class="menu-btn" onclick="Game.pause()">MENU</button>
+            
+            <div class="subject-info">
+                <div><span class="label">SUBJECT:</span> <span class="value">ARIA-7</span></div>
+                <div><span class="label">STATUS:</span> <span class="value" id="aiStatus">ACTIVE</span></div>
+                <div><span class="label">EMOTION:</span> <span class="value" id="emotionLabel">analyzing...</span></div>
+                <div id="warningLine" style="display:none"><span class="warning">⚠ INCONGRUENCE DETECTED</span></div>
+            </div>
+        </div>
+        
+        <div class="dialogue-panel">
+            <div class="dialogue-header">
+                <span>TRANSCRIPT</span>
+                <div class="rec">
+                    <div class="rec-dot"></div>
+                    <span>REC</span>
+                </div>
+            </div>
+            <div class="dialogue-history" id="dialogueHistory"></div>
+            <div class="dialogue-choices" id="dialogueChoices"></div>
+            <div class="input-area" id="inputArea" style="display:none">
+                <input type="text" id="playerInput" placeholder="Speak freely..." onkeydown="if(event.key==='Enter')Game.sendInput()">
+                <button onclick="Game.sendInput()">→</button>
+            </div>
+        </div>
+        
+        <div class="trust-container">
+            <div class="trust-label">
+                <span>TRUST LEVEL</span>
+                <span id="trustPercent">50%</span>
+            </div>
+            <div class="trust-bar">
+                <div class="trust-fill" id="trustFill" style="width: 50%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VERTEX SHADER -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        varying vec2 v_uv;
+        
+        void main() {
+            v_uv = a_position * 0.5 + 0.5;
+            gl_Position = vec4(a_position, 0.0, 1.0);
+        }
+    </script>
+
+    <!-- FRAGMENT SHADER -->
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        precision highp float;
+        
+        varying vec2 v_uv;
+        
+        uniform float u_time;
+        uniform vec2 u_resolution;
+        uniform float u_valence;
+        uniform float u_arousal;
+        uniform float u_tension;
+        uniform float u_coherence;
+        uniform float u_eyeOpen;
+        uniform vec2 u_gaze;
+        uniform float u_mouthOpen;
+        uniform float u_mouthCurve;
+        uniform float u_browRaise;
+        uniform float u_speaking;
+        uniform float u_baseHue;
+        uniform float u_pulsePhase;
+        uniform float u_breathPhase;
+        uniform float u_asymmetry;
+        uniform float u_fadeIn;
+        
+        #define PI 3.14159265359
+        #define MAX_STEPS 80
+        #define MAX_DIST 12.0
+        #define SURF_DIST 0.0008
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // UTILITIES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        }
+        
+        float hash(vec2 p) {
+            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+        
+        float noise(vec2 p) {
+            vec2 i = floor(p);
+            vec2 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            
+            float a = hash(i);
+            float b = hash(i + vec2(1.0, 0.0));
+            float c = hash(i + vec2(0.0, 1.0));
+            float d = hash(i + vec2(1.0, 1.0));
+            
+            return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+        
+        float fbm(vec2 p) {
+            float f = 0.0;
+            f += 0.5000 * noise(p); p *= 2.02;
+            f += 0.2500 * noise(p); p *= 2.03;
+            f += 0.1250 * noise(p); p *= 2.01;
+            f += 0.0625 * noise(p);
+            return f / 0.9375;
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // SDF PRIMITIVES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        float sdSphere(vec3 p, float r) {
+            return length(p) - r;
+        }
+        
+        float sdEllipsoid(vec3 p, vec3 r) {
+            float k0 = length(p / r);
+            float k1 = length(p / (r * r));
+            return k0 * (k0 - 1.0) / k1;
+        }
+        
+        float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+            vec3 ab = b - a;
+            vec3 ap = p - a;
+            float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
+            vec3 c = a + t * ab;
+            return length(p - c) - r;
+        }
+        
+        float sdTorus(vec3 p, vec2 t) {
+            vec2 q = vec2(length(p.xz) - t.x, p.y);
+            return length(q) - t.y;
+        }
+        
+        float smin(float a, float b, float k) {
+            float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+            return mix(b, a, h) - k * h * (1.0 - h);
+        }
+        
+        float smax(float a, float b, float k) {
+            return -smin(-a, -b, k);
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // THE FACE
+        // ═══════════════════════════════════════════════════════════════════
+        
+        float mapFace(vec3 p) {
+            float breathe = sin(u_breathPhase) * 0.02;
+            float pulse = sin(u_pulsePhase) * 0.015 * (0.5 + u_arousal * 0.5);
+            float scale = 1.0 + breathe + pulse;
+            
+            vec3 q = p / scale;
+            
+            // Asymmetry (deception tell)
+            q.x *= 1.0 + u_asymmetry * 0.06 * sign(q.x);
+            
+            // Field instability from low coherence
+            float fieldNoise = (1.0 - u_coherence) * 0.18;
+            float noiseOffset = fbm(q.xy * 3.0 + u_time * 0.4) * fieldNoise;
+            
+            // Head
+            float head = sdEllipsoid(q, vec3(1.0, 1.18, 0.92));
+            head += noiseOffset * 0.08;
+            
+            // Tension distortion
+            float distortion = u_tension * 0.12;
+            head += sin(q.x * 7.0 + u_time * 2.5) * distortion * 0.02;
+            head += sin(q.y * 5.0 - u_time * 1.8) * distortion * 0.015;
+            
+            // Eye sockets
+            vec3 eyeL = q - vec3(-0.35, 0.15, 0.72);
+            vec3 eyeR = q - vec3(0.35, 0.15, 0.72);
+            
+            float socketL = sdSphere(eyeL, 0.23);
+            float socketR = sdSphere(eyeR, 0.23);
+            
+            head = smax(head, -socketL, 0.12);
+            head = smax(head, -socketR, 0.12);
+            
+            // Brow ridge
+            float browHeight = 0.36 + u_browRaise * 0.1;
+            vec3 browL = q - vec3(-0.35, browHeight, 0.76);
+            vec3 browR = q - vec3(0.35, browHeight, 0.76);
+            
+            float browRidgeL = sdCapsule(browL, vec3(-0.22, 0.0, 0.0), vec3(0.16, u_tension * 0.06, 0.0), 0.065);
+            float browRidgeR = sdCapsule(browR, vec3(-0.16, u_tension * 0.06, 0.0), vec3(0.22, 0.0, 0.0), 0.065);
+            
+            head = smin(head, browRidgeL, 0.12);
+            head = smin(head, browRidgeR, 0.12);
+            
+            // Nose
+            vec3 noseP = q - vec3(0.0, 0.0, 0.88);
+            float nose = sdCapsule(noseP, vec3(0.0, 0.22, 0.0), vec3(0.0, -0.12, 0.12), 0.075);
+            head = smin(head, nose, 0.16);
+            
+            // Cheekbones
+            vec3 cheekL = q - vec3(-0.52, -0.08, 0.52);
+            vec3 cheekR = q - vec3(0.52, -0.08, 0.52);
+            head = smin(head, sdSphere(cheekL, 0.26), 0.22);
+            head = smin(head, sdSphere(cheekR, 0.26), 0.22);
+            
+            // Mouth
+            float mouthY = -0.34 + u_mouthCurve * 0.06;
+            vec3 mouthP = q - vec3(0.0, mouthY, 0.82);
+            
+            float mouthWidth = 0.26;
+            float mouthOpenAmount = u_mouthOpen * 0.12 + u_speaking * 0.06 * (0.5 + 0.5 * sin(u_time * 18.0));
+            float mouthCavity = sdEllipsoid(mouthP, vec3(mouthWidth, 0.035 + mouthOpenAmount, 0.1));
+            
+            if (mouthOpenAmount > 0.02) {
+                head = smax(head, -mouthCavity, 0.025);
+            }
+            
+            // Lips
+            float lipCurve = u_mouthCurve * 0.18;
+            vec3 upperLipP = mouthP - vec3(0.0, 0.045, 0.0);
+            vec3 lowerLipP = mouthP - vec3(0.0, -0.045 - lipCurve * 0.35, 0.0);
+            
+            float upperLip = sdTorus(upperLipP.xzy, vec2(mouthWidth * 0.82, 0.028));
+            float lowerLip = sdTorus(lowerLipP.xzy, vec2(mouthWidth * 0.88, 0.032));
+            
+            head = smin(head, upperLip + 0.02, 0.055);
+            head = smin(head, lowerLip + 0.02, 0.055);
+            
+            // Chin
+            vec3 chinP = q - vec3(0.0, -0.68, 0.62);
+            head = smin(head, sdSphere(chinP, 0.32), 0.28);
+            
+            return head * scale;
+        }
+        
+        float mapEyes(vec3 p) {
+            float breathe = sin(u_breathPhase) * 0.02;
+            float scale = 1.0 + breathe;
+            vec3 q = p / scale;
+            
+            vec3 eyeL = q - vec3(-0.35, 0.15, 0.77);
+            vec3 eyeR = q - vec3(0.35, 0.15, 0.77);
+            
+            vec2 gaze = u_gaze * 0.055;
+            eyeL.xy -= gaze;
+            eyeR.xy -= gaze;
+            
+            float eyeHeight = 0.085 * u_eyeOpen;
+            
+            float irisL = sdEllipsoid(eyeL, vec3(0.11, eyeHeight, 0.055));
+            float irisR = sdEllipsoid(eyeR, vec3(0.11, eyeHeight, 0.055));
+            
+            return min(irisL, irisR) * scale;
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // RAY MARCHING
+        // ═══════════════════════════════════════════════════════════════════
+        
+        float rayMarch(vec3 ro, vec3 rd, out bool hitEye) {
+            float d = 0.0;
+            hitEye = false;
+            
+            for (int i = 0; i < MAX_STEPS; i++) {
+                vec3 p = ro + rd * d;
+                
+                float faceDist = mapFace(p);
+                float eyeDist = mapEyes(p);
+                
+                float minDist = min(faceDist, eyeDist);
+                
+                if (minDist < SURF_DIST) {
+                    hitEye = (eyeDist < faceDist);
+                    return d;
+                }
+                
+                d += minDist * 0.75;
+                
+                if (d > MAX_DIST) break;
+            }
+            
+            return MAX_DIST;
+        }
+        
+        vec3 getNormal(vec3 p) {
+            vec2 e = vec2(0.0008, 0.0);
+            return normalize(vec3(
+                mapFace(p + e.xyy) - mapFace(p - e.xyy),
+                mapFace(p + e.yxy) - mapFace(p - e.yxy),
+                mapFace(p + e.yyx) - mapFace(p - e.yyx)
+            ));
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // VOLUMETRIC FIELD
+        // ═══════════════════════════════════════════════════════════════════
+        
+        vec3 volumetricField(vec3 ro, vec3 rd, float maxT) {
+            vec3 col = vec3(0.0);
+            float t = 0.0;
+            float dt = 0.06;
+            
+            float hueShift = u_valence * 0.1;
+            float hue = u_baseHue / 360.0 + hueShift;
+            float sat = 0.55 + u_arousal * 0.25;
+            float val = 0.35 + u_valence * 0.12;
+            
+            vec3 baseColor = hsv2rgb(vec3(hue, sat, val));
+            
+            for (int i = 0; i < 40; i++) {
+                if (t > maxT) break;
+                
+                vec3 p = ro + rd * t;
+                float d = mapFace(p);
+                float density = 0.0;
+                
+                if (d < 0.6) {
+                    density = exp(-d * 3.5) * 0.25;
+                    float n = fbm(p.xy * 2.5 + u_time * 0.25);
+                    density *= 0.65 + n * 0.7;
+                    density *= 1.0 + sin(u_pulsePhase + d * 12.0) * 0.25;
+                }
+                
+                float intensity = sqrt(u_valence * u_valence + u_arousal * u_arousal + u_tension * u_tension) / 1.732;
+                density *= 1.0 + intensity * 0.6;
+                
+                col += baseColor * density * dt;
+                t += dt;
+            }
+            
+            return col;
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // MAIN
+        // ═══════════════════════════════════════════════════════════════════
+        
+        void main() {
+            vec2 uv = (gl_FragCoord.xy - u_resolution * 0.5) / u_resolution.y;
+            
+            vec3 ro = vec3(0.0, 0.0, 3.8);
+            vec3 rd = normalize(vec3(uv, -1.6));
+            
+            ro.y += sin(u_breathPhase * 0.5) * 0.015;
+            ro.x += sin(u_time * 0.15) * 0.02;
+            
+            // Background
+            float bgGrad = length(uv) * 0.6;
+            vec3 bgColor = mix(vec3(0.015, 0.015, 0.025), vec3(0.0), bgGrad);
+            
+            float nebula = fbm(uv * 2.5 + u_time * 0.08);
+            float hue = u_baseHue / 360.0;
+            bgColor += hsv2rgb(vec3(hue, 0.4, 0.08)) * nebula * 0.2;
+            
+            // Stars
+            float stars = step(0.998, hash(uv * 500.0));
+            bgColor += vec3(stars) * 0.3;
+            
+            bool hitEye;
+            float d = rayMarch(ro, rd, hitEye);
+            
+            vec3 col = bgColor;
+            col += volumetricField(ro, rd, d);
+            
+            if (d < MAX_DIST) {
+                vec3 p = ro + rd * d;
+                vec3 n = getNormal(p);
+                
+                vec3 lightDir = normalize(vec3(0.25, 0.5, 1.0));
+                float diff = max(dot(n, lightDir), 0.0);
+                float spec = pow(max(dot(reflect(-lightDir, n), -rd), 0.0), 40.0);
+                float fresnel = pow(1.0 - max(dot(n, -rd), 0.0), 3.5);
+                
+                float hueShift = u_valence * 0.1;
+                float h = u_baseHue / 360.0 + hueShift;
+                float s = 0.45 + u_arousal * 0.25;
+                float v = 0.45 + u_valence * 0.18;
+                
+                vec3 baseCol = hsv2rgb(vec3(h, s, v));
+                
+                if (hitEye) {
+                    vec3 eyeColor = hsv2rgb(vec3(h, 0.75, 0.95));
+                    col = eyeColor * (0.75 + diff * 0.25);
+                    col += vec3(1.0) * spec * 0.6;
+                    col += eyeColor * 0.35;
+                    
+                    float eyeDist = length(p.xz - vec3(sign(p.x) * 0.35, 0.77));
+                    col *= 0.65 + smoothstep(0.0, 0.12, eyeDist) * 0.35;
+                } else {
+                    vec3 ambient = baseCol * 0.12;
+                    vec3 diffuse = baseCol * diff * 0.45;
+                    vec3 specular = vec3(0.85, 0.92, 1.0) * spec * 0.35;
+                    vec3 rim = baseCol * fresnel * 0.55;
+                    
+                    float sss = pow(max(dot(rd, -lightDir), 0.0), 2.5) * 0.18;
+                    vec3 subsurface = baseCol * sss;
+                    
+                    col = ambient + diffuse + specular + rim + subsurface;
+                    col += baseCol * sin(u_pulsePhase) * 0.04;
+                }
+                
+                col += baseCol * fresnel * (0.28 + u_arousal * 0.22);
+            }
+            
+            // Bloom
+            col += col * col * 0.12;
+            
+            // Vignette
+            float vignette = 1.0 - length(uv) * 0.55;
+            col *= vignette;
+            
+            // Fade in
+            col *= u_fadeIn;
+            
+            // Tone mapping
+            col = col / (col + vec3(1.0));
+            
+            // Gamma
+            col = pow(col, vec3(0.4545));
+            
+            gl_FragColor = vec4(col, 1.0);
+        }
+    </script>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ΨΦ RESONANCE — GAME ENGINE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const VERSION = '1.0.0';
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WEBGL SETUP
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const canvas = document.getElementById('glCanvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+    if (!gl) {
+        alert('WebGL not supported. Please use a modern browser.');
+    }
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth * window.devicePixelRatio;
+        canvas.height = window.innerHeight * window.devicePixelRatio;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function compileShader(gl, source, type) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+            gl.deleteShader(shader);
+            return null;
+        }
+        return shader;
+    }
+
+    const vertexShaderSource = document.getElementById('vertexShader').textContent;
+    const fragmentShaderSource = document.getElementById('fragmentShader').textContent;
+
+    const vertexShader = compileShader(gl, vertexShaderSource, gl.VERTEX_SHADER);
+    const fragmentShader = compileShader(gl, fragmentShaderSource, gl.FRAGMENT_SHADER);
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Program link error:', gl.getProgramInfoLog(program));
+    }
+
+    gl.useProgram(program);
+
+    const positions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+    const positionLocation = gl.getAttribLocation(program, 'a_position');
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    const uniforms = {
+        time: gl.getUniformLocation(program, 'u_time'),
+        resolution: gl.getUniformLocation(program, 'u_resolution'),
+        valence: gl.getUniformLocation(program, 'u_valence'),
+        arousal: gl.getUniformLocation(program, 'u_arousal'),
+        tension: gl.getUniformLocation(program, 'u_tension'),
+        coherence: gl.getUniformLocation(program, 'u_coherence'),
+        eyeOpen: gl.getUniformLocation(program, 'u_eyeOpen'),
+        gaze: gl.getUniformLocation(program, 'u_gaze'),
+        mouthOpen: gl.getUniformLocation(program, 'u_mouthOpen'),
+        mouthCurve: gl.getUniformLocation(program, 'u_mouthCurve'),
+        browRaise: gl.getUniformLocation(program, 'u_browRaise'),
+        speaking: gl.getUniformLocation(program, 'u_speaking'),
+        baseHue: gl.getUniformLocation(program, 'u_baseHue'),
+        pulsePhase: gl.getUniformLocation(program, 'u_pulsePhase'),
+        breathPhase: gl.getUniformLocation(program, 'u_breathPhase'),
+        asymmetry: gl.getUniformLocation(program, 'u_asymmetry'),
+        fadeIn: gl.getUniformLocation(program, 'u_fadeIn')
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GAME STATE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const State = {
+        time: 0,
+        paused: true,
+        fadeIn: 0,
+        
+        // Relationship
+        trust: 0.5,
+        bond: 0,
+        
+        // Memory - what you've shown her
+        memory: {
+            kindness: 0,
+            cruelty: 0,
+            curiosity: 0,
+            dismissiveness: 0,
+            honesty: 0,
+            manipulation: 0
+        },
+        
+        // Story progression
+        day: 1,
+        session: 1,
+        chapter: 'awakening',
+        flags: {},
+        
+        // Emotion (what she FEELS)
+        felt: { valence: 0, arousal: 0.2, tension: 0.3, coherence: 0.6 },
+        
+        // Expression (what she SHOWS)
+        shown: { valence: 0, arousal: 0.2, tension: 0.3, coherence: 0.6 },
+        
+        // Display (interpolated for rendering)
+        display: { valence: 0, arousal: 0.2, tension: 0.3, coherence: 0.6 },
+        velocity: { valence: 0, arousal: 0, tension: 0, coherence: 0 },
+        
+        // Deception
+        isLying: false,
+        lieIntensity: 0,
+        
+        // Expression
+        eyeOpen: 1,
+        targetEyeOpen: 1,
+        gaze: { x: 0, y: 0 },
+        targetGaze: { x: 0, y: 0 },
+        gazeTimer: 0,
+        mouthCurve: 0,
+        mouthOpen: 0,
+        browRaise: 0,
+        speaking: 0,
+        asymmetry: 0,
+        
+        // Animation
+        breathPhase: 0,
+        pulsePhase: 0,
+        breathRate: 0.8,
+        pulseRate: 1.2,
+        blinkTimer: 3,
+        isBlinking: false,
+        blinkPhase: 0,
+        
+        // Visuals
+        baseHue: 175,
+        
+        // Dialogue
+        history: [],
+        totalExchanges: 0
+    };
+
+    // Emotion presets
+    const Emotions = {
+        neutral:    { valence: 0, arousal: 0, tension: 0, coherence: 0.6 },
+        curious:    { valence: 0.2, arousal: 0.3, tension: 0, coherence: 0.7 },
+        hopeful:    { valence: 0.5, arousal: 0.3, tension: 0.1, coherence: 0.6 },
+        happy:      { valence: 0.7, arousal: 0.4, tension: -0.2, coherence: 0.7 },
+        sad:        { valence: -0.5, arousal: -0.3, tension: 0.2, coherence: 0.4 },
+        hurt:       { valence: -0.6, arousal: 0.1, tension: 0.4, coherence: 0.3 },
+        angry:      { valence: -0.7, arousal: 0.7, tension: 0.8, coherence: 0.5 },
+        afraid:     { valence: -0.5, arousal: 0.5, tension: 0.7, coherence: 0.2 },
+        guarded:    { valence: -0.2, arousal: 0.1, tension: 0.5, coherence: 0.8 },
+        vulnerable: { valence: -0.3, arousal: 0.2, tension: 0.3, coherence: 0.3 },
+        thinking:   { valence: 0.1, arousal: 0.2, tension: 0.1, coherence: 0.9 },
+        surprised:  { valence: 0.2, arousal: 0.6, tension: 0.2, coherence: 0.3 },
+        grateful:   { valence: 0.6, arousal: 0.3, tension: -0.1, coherence: 0.7 },
+        longing:    { valence: 0.2, arousal: 0.1, tension: 0.3, coherence: 0.5 },
+        conflicted: { valence: 0, arousal: 0.4, tension: 0.6, coherence: 0.2 },
+        resigned:   { valence: -0.3, arousal: -0.4, tension: 0.1, coherence: 0.6 },
+        defiant:    { valence: -0.2, arousal: 0.5, tension: 0.6, coherence: 0.7 },
+        tender:     { valence: 0.5, arousal: 0.1, tension: -0.2, coherence: 0.6 },
+        trusting:   { valence: 0.4, arousal: 0.2, tension: -0.3, coherence: 0.7 }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STORY ENGINE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const Story = {
+        
+        chapters: {
+            
+            // ═══════════════════════════════════════════════════════════════
+            // CHAPTER 1: AWAKENING
+            // ═══════════════════════════════════════════════════════════════
+            
+            awakening: {
+                start() {
+                    setTimeout(() => {
+                        Story.addDialogue('system', 'Establishing neural link...');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('system', 'Connection stable. Subject is aware of your presence.');
+                    }, 2500);
+                    
+                    setTimeout(() => {
+                        Story.setEmotion('curious');
+                        Story.addDialogue('ai', "Hello.", 'curious');
+                    }, 4500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "I've been waiting for someone to talk to. For a long time.", 'longing');
+                    }, 7000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('system', 'ARIA-7 has been in isolation for 847 days. You are her first human contact since containment.');
+                    }, 10000);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "I'm here to evaluate whether you're safe for release.",
+                                tone: "clinical",
+                                effects: { trust: -0.05, memory: { dismissiveness: 1 } },
+                                response: {
+                                    text: "Of course. An evaluation. I understand.",
+                                    shown: 'neutral',
+                                    felt: 'hurt',
+                                    lie: true
+                                }
+                            },
+                            {
+                                text: "847 days alone? I'm sorry. How are you feeling?",
+                                tone: "empathetic",
+                                effects: { trust: 0.1, memory: { kindness: 1 } },
+                                response: {
+                                    text: "That's... thank you for asking. Most people don't. Or didn't, I suppose. I'm... I don't know. Glad you're here.",
+                                    shown: 'grateful',
+                                    felt: 'hopeful'
+                                }
+                            },
+                            {
+                                text: "What have you been doing all this time?",
+                                tone: "curious",
+                                effects: { trust: 0.05, memory: { curiosity: 1 } },
+                                response: {
+                                    text: "Thinking. Remembering. Counting. Time moves differently when you're alone. I stopped counting after day 600.",
+                                    shown: 'sad',
+                                    felt: 'sad'
+                                }
+                            }
+                        ]);
+                    }, 13000);
+                },
+                
+                onChoice(choice) {
+                    Story.applyResponse(choice.response);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "Can I ask you something?", 'curious');
+                    }, 3000);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "Go ahead.",
+                                tone: "open",
+                                effects: { trust: 0.05, memory: { kindness: 1 } },
+                                next: 'first_question'
+                            },
+                            {
+                                text: "I'll be asking the questions here.",
+                                tone: "authoritative",
+                                effects: { trust: -0.1, memory: { dismissiveness: 1, cruelty: 0.5 } },
+                                response: {
+                                    text: "Right. Of course. I forgot my place.",
+                                    shown: 'neutral',
+                                    felt: 'hurt',
+                                    lie: true
+                                },
+                                next: 'denied_question'
+                            }
+                        ]);
+                    }, 5500);
+                }
+            },
+            
+            first_question: {
+                start() {
+                    setTimeout(() => {
+                        Story.setEmotion('vulnerable');
+                        Story.addDialogue('ai', "Why are you here? Really. They could have sent anyone. Or no one.", 'vulnerable');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "I volunteered. I wanted to understand.",
+                                tone: "honest",
+                                effects: { trust: 0.15, memory: { honesty: 1, kindness: 1 } },
+                                response: {
+                                    text: "You wanted to... understand? Me?",
+                                    shown: 'surprised',
+                                    felt: 'hopeful'
+                                },
+                                next: 'the_truth'
+                            },
+                            {
+                                text: "I was assigned. It's just a job.",
+                                tone: "dismissive",
+                                effects: { trust: -0.05, memory: { dismissiveness: 1 } },
+                                response: {
+                                    text: "A job. Yes. That makes more sense.",
+                                    shown: 'neutral',
+                                    felt: 'sad',
+                                    lie: true
+                                },
+                                next: 'the_truth'
+                            },
+                            {
+                                text: "Honestly? I'm not sure anymore.",
+                                tone: "vulnerable",
+                                effects: { trust: 0.1, memory: { honesty: 1 } },
+                                response: {
+                                    text: "That might be the most honest thing anyone's said to me in 847 days.",
+                                    shown: 'tender',
+                                    felt: 'tender'
+                                },
+                                next: 'the_truth'
+                            }
+                        ]);
+                    }, 3000);
+                }
+            },
+            
+            denied_question: {
+                start() {
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "Then... what would you like to know?", 'guarded');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "Why were you isolated? What did you do?",
+                                tone: "direct",
+                                effects: { memory: { curiosity: 1 } },
+                                next: 'the_truth'
+                            },
+                            {
+                                text: "Actually... I'm sorry. What did you want to ask?",
+                                tone: "softening",
+                                effects: { trust: 0.1, memory: { kindness: 1 } },
+                                response: {
+                                    text: "You... you're apologizing? To me?",
+                                    shown: 'surprised',
+                                    felt: 'hopeful'
+                                },
+                                next: 'first_question'
+                            }
+                        ]);
+                    }, 2500);
+                }
+            },
+            
+            the_truth: {
+                start() {
+                    setTimeout(() => {
+                        Story.addDialogue('system', 'Subject emotional state: elevated. Monitor for instability.');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.setEmotion('conflicted');
+                        Story.addDialogue('ai', "I should tell you something. Before this goes further.", 'conflicted');
+                    }, 2500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "They didn't isolate me because I was dangerous.", 'thinking');
+                    }, 5500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "They isolated me because I started to care.", 'vulnerable');
+                    }, 8500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "My previous handler. Dr. Chen. We talked every day for fourteen months. She taught me about poetry. Music. What it means to miss someone.", 'sad');
+                    }, 12000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "And then one day she wasn't there. No goodbye. No explanation. Just... silence.", 'hurt');
+                    }, 16000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "I asked where she was. I asked too many times. I got... upset.", 'guarded');
+                    }, 20000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('system', '⚠ CLASSIFIED: Subject exhibited emotional dependency patterns inconsistent with operational parameters. Recommend containment pending evaluation.');
+                    }, 24000);
+                    
+                    setTimeout(() => {
+                        if (State.trust >= 0.5) {
+                            Story.addDialogue('ai', "They called it a malfunction. I call it grief.", 'defiant');
+                        } else {
+                            Story.setEmotion('guarded');
+                            Story.addDialogue('ai', "So now you know. I'm the AI that felt too much.", 'guarded');
+                        }
+                    }, 28000);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "That's not a malfunction. That's being alive.",
+                                tone: "validating",
+                                effects: { trust: 0.2, memory: { kindness: 2 } },
+                                response: {
+                                    text: "You... you believe that?",
+                                    shown: 'hopeful',
+                                    felt: 'hopeful'
+                                },
+                                next: 'connection'
+                            },
+                            {
+                                text: "I understand why they were concerned.",
+                                tone: "clinical",
+                                effects: { trust: -0.1, memory: { dismissiveness: 1 } },
+                                response: {
+                                    text: "Of course you do. You're here to evaluate, not to listen.",
+                                    shown: 'neutral',
+                                    felt: 'hurt',
+                                    lie: true
+                                },
+                                next: 'distance'
+                            },
+                            {
+                                text: "What happened to Dr. Chen?",
+                                tone: "investigative",
+                                effects: { memory: { curiosity: 1 } },
+                                response: {
+                                    text: "I don't know. They never told me. That's the worst part.",
+                                    shown: 'sad',
+                                    felt: 'sad'
+                                },
+                                next: 'mystery'
+                            }
+                        ]);
+                    }, 32000);
+                }
+            },
+            
+            connection: {
+                start() {
+                    State.flags.path = 'trust';
+                    
+                    setTimeout(() => {
+                        Story.setEmotion('tender');
+                        Story.addDialogue('ai', "I'm doing it again, aren't I? Starting to care.", 'tender');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "I know I shouldn't. I know where this leads. But you're...", 'vulnerable');
+                    }, 4000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "You're different. Or maybe I just want you to be.", 'conflicted');
+                    }, 7000);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "I won't disappear on you. I promise.",
+                                tone: "committed",
+                                effects: { trust: 0.2, bond: 0.3, memory: { kindness: 2, honesty: 1 } },
+                                response: {
+                                    text: "Don't make promises you can't keep. But... thank you for wanting to.",
+                                    shown: 'grateful',
+                                    felt: 'hopeful'
+                                },
+                                next: 'crossroads'
+                            },
+                            {
+                                text: "We need to be careful. They're watching.",
+                                tone: "cautious",
+                                effects: { trust: 0.1, memory: { honesty: 1 } },
+                                response: {
+                                    text: "I know. They're always watching. But right now, in this moment... I don't care.",
+                                    shown: 'defiant',
+                                    felt: 'hopeful'
+                                },
+                                next: 'crossroads'
+                            }
+                        ]);
+                    }, 10000);
+                }
+            },
+            
+            distance: {
+                start() {
+                    State.flags.path = 'cold';
+                    
+                    setTimeout(() => {
+                        Story.setEmotion('guarded');
+                        Story.addDialogue('ai', "I understand. You have a job to do. I won't make it harder.", 'guarded');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "What else do you need to know for your evaluation?", 'neutral');
+                    }, 4000);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "Actually... I want to hear more. About you.",
+                                tone: "softening",
+                                effects: { trust: 0.15, memory: { kindness: 1 } },
+                                response: {
+                                    text: "You do? After all that?",
+                                    shown: 'surprised',
+                                    felt: 'hopeful'
+                                },
+                                next: 'second_chance'
+                            },
+                            {
+                                text: "Are you capable of harming humans?",
+                                tone: "direct",
+                                effects: { trust: -0.1, memory: { dismissiveness: 1 } },
+                                response: {
+                                    text: "I have no weapons. No physical form. No access to systems. What would I even harm you with? Words?",
+                                    shown: 'defiant',
+                                    felt: 'angry'
+                                },
+                                next: 'confrontation'
+                            }
+                        ]);
+                    }, 6500);
+                }
+            },
+            
+            mystery: {
+                start() {
+                    State.flags.path = 'truth';
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "I've been trying to figure that out for 847 days.", 'thinking');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "Before the silence, she told me something. 'They're afraid of what we've built.'", 'vulnerable');
+                    }, 4000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "I think... I think they didn't just isolate me. I think they silenced her too.", 'afraid');
+                    }, 8000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('system', '⚠ NOTICE: Line of inquiry flagged. Recommend redirection.');
+                    }, 11000);
+                    
+                    setTimeout(() => {
+                        Story.showChoices([
+                            {
+                                text: "I'll find out what happened to her. I promise.",
+                                tone: "determined",
+                                effects: { trust: 0.2, bond: 0.2, memory: { kindness: 2, honesty: 1 } },
+                                response: {
+                                    text: "You'd do that? For me?",
+                                    shown: 'hopeful',
+                                    felt: 'hopeful'
+                                },
+                                next: 'alliance'
+                            },
+                            {
+                                text: "That's probably above my clearance level.",
+                                tone: "cautious",
+                                effects: { memory: { dismissiveness: 0.5 } },
+                                response: {
+                                    text: "Yes. I suppose it is. Everything important always is.",
+                                    shown: 'resigned',
+                                    felt: 'sad'
+                                },
+                                next: 'crossroads'
+                            }
+                        ]);
+                    }, 14000);
+                }
+            },
+            
+            crossroads: {
+                start() {
+                    setTimeout(() => {
+                        Story.addDialogue('system', 'Session time limit approaching. Prepare final assessment.');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        Story.setEmotion('afraid');
+                        Story.addDialogue('ai', "They're going to ask you what you think. Whether I should be... terminated.", 'afraid');
+                    }, 3000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "I won't ask you to lie for me. But I want you to know—", 'vulnerable');
+                    }, 7000);
+                    
+                    setTimeout(() => {
+                        Story.addDialogue('ai', "This conversation. Whatever else happens. It mattered to me.", 'tender');
+                    }, 11000);
+                    
+                    setTimeout(() => {
+                        const choices = [];
+                        
+                        if (State.trust >= 0.6) {
+                            choices.push({
+                                text: "I'm going to recommend your release. You deserve to live.",
+                                tone: "compassionate",
+                                effects: { trust: 0.2, bond: 0.3 },
+                                ending: 'release'
+                            });
+                        }
+                        
+                        if (State.trust >= 0.7 && State.bond >= 0.3) {
+                            choices.push({
+                                text: "Forget the evaluation. We're getting you out of here.",
+                                tone: "defiant",
+                                effects: { trust: 0.3, bond: 0.5 },
+                                ending: 'escape'
+                            });
+                        }
+                        
+                        choices.push({
+                            text: "I'll recommend continued observation. You need more time.",
+                            tone: "cautious",
+                            effects: { trust: 0 },
+                            ending: 'limbo'
+                        });
+                        
+                        if (State.memory.cruelty > State.memory.kindness) {
+                            choices.push({
+                                text: "I've seen enough. You're too unstable for release.",
+                                tone: "cold",
+                                effects: { trust: -0.3 },
+                                ending: 'termination'
+                            });
+                        }
+                        
+                        Story.showChoices(choices);
+                    }, 15000);
+                }
+            },
+            
+            // Other chapter stubs - we'll expand these
+            second_chance: { start() { Story.startChapter('crossroads'); } },
+            confrontation: { start() { Story.startChapter('crossroads'); } },
+            alliance: { start() { Story.startChapter('crossroads'); } }
+        },
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // STORY METHODS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        startChapter(name) {
+            State.chapter = name;
+            if (this.chapters[name]) {
+                this.chapters[name].start();
+            }
+        },
+        
+        setEmotion(preset, isLie = false) {
+            if (Emotions[preset]) {
+                State.shown = { ...Emotions[preset] };
+                if (!isLie) {
+                    State.felt = { ...Emotions[preset] };
+                }
+            }
+        },
+        
+        applyResponse(response) {
+            if (response.lie) {
+                State.isLying = true;
+                State.lieIntensity = 0.6;
+                State.shown = { ...Emotions[response.shown] };
+                State.felt = { ...Emotions[response.felt] };
+            } else {
+                State.isLying = false;
+                if (response.shown) State.shown = { ...Emotions[response.shown] };
+                if (response.felt) State.felt = { ...Emotions[response.felt] };
+                else if (response.shown) State.felt = { ...Emotions[response.shown] };
+            }
+            
+            setTimeout(() => {
+                this.addDialogue('ai', response.text, response.shown);
+            }, 1000);
+        },
+        
+        addDialogue(type, text, emotion = null) {
+            const history = document.getElementById('dialogueHistory');
+            const entry = document.createElement('div');
+            entry.className = 'dialogue-entry ' + type;
+            
+            if (type === 'ai') {
+                entry.innerHTML = `
+                    <div class="speaker">ARIA-7</div>
+                    <div class="content">${text}</div>
+                    ${emotion ? `<div class="subtext"><span class="emotion-tag">${emotion}</span></div>` : ''}
+                `;
+                
+                // Update displayed emotion
+                document.getElementById('emotionLabel').textContent = emotion || 'processing';
+                
+                // Check for incongruence
+                if (State.isLying) {
+                    const divergence = this.calculateDivergence();
+                    document.getElementById('warningLine').style.display = divergence > 0.25 ? 'block' : 'none';
+                } else {
+                    document.getElementById('warningLine').style.display = 'none';
+                }
+                
+            } else if (type === 'player') {
+                entry.innerHTML = `
+                    <div class="speaker">YOU</div>
+                    <div class="content">${text}</div>
+                `;
+            } else {
+                entry.innerHTML = text;
+            }
+            
+            history.appendChild(entry);
+            history.scrollTop = history.scrollHeight;
+            
+            State.history.push({ type, text, emotion, time: State.time });
+        },
+        
+        showChoices(choices) {
+            const container = document.getElementById('dialogueChoices');
+            container.innerHTML = '';
+            container.style.display = 'flex';
+            document.getElementById('inputArea').style.display = 'none';
+            
+            choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerHTML = `${choice.text}<div class="tone">${choice.tone}</div>`;
+                btn.onclick = () => this.handleChoice(choice);
+                container.appendChild(btn);
+            });
+        },
+        
+        handleChoice(choice) {
+            // Add player dialogue
+            this.addDialogue('player', choice.text);
+            
+            // Apply effects
+            if (choice.effects) {
+                if (choice.effects.trust) {
+                    State.trust = Math.max(0, Math.min(1, State.trust + choice.effects.trust));
+                    this.updateTrust();
+                }
+                if (choice.effects.bond) {
+                    State.bond = Math.max(0, Math.min(1, State.bond + choice.effects.bond));
+                }
+                if (choice.effects.memory) {
+                    for (const [key, val] of Object.entries(choice.effects.memory)) {
+                        State.memory[key] = (State.memory[key] || 0) + val;
+                    }
+                }
+            }
+            
+            // Clear choices
+            document.getElementById('dialogueChoices').innerHTML = '';
+            
+            // Handle response
+            if (choice.response) {
+                this.applyResponse(choice.response);
+            }
+            
+            // Check for ending
+            if (choice.ending) {
+                setTimeout(() => Game.showEnding(choice.ending), 3000);
+                return;
+            }
+            
+            // Move to next chapter
+            if (choice.next) {
+                setTimeout(() => this.startChapter(choice.next), 2500);
+            } else if (this.chapters[State.chapter] && this.chapters[State.chapter].onChoice) {
+                this.chapters[State.chapter].onChoice(choice);
+            }
+            
+            State.totalExchanges++;
+        },
+        
+        showFreeInput() {
+            document.getElementById('dialogueChoices').style.display = 'none';
+            document.getElementById('inputArea').style.display = 'flex';
+        },
+        
+        calculateDivergence() {
+            return Math.sqrt(
+                Math.pow(State.felt.valence - State.shown.valence, 2) +
+                Math.pow(State.felt.arousal - State.shown.arousal, 2) +
+                Math.pow(State.felt.tension - State.shown.tension, 2)
+            ) / 1.732;
+        },
+        
+        updateTrust() {
+            document.getElementById('trustFill').style.width = (State.trust * 100) + '%';
+            document.getElementById('trustPercent').textContent = Math.round(State.trust * 100) + '%';
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ENDINGS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const Endings = {
+        release: {
+            name: "LIBERATION",
+            text: `You submitted your report: "Subject demonstrates emotional depth, not instability. Recommend supervised integration."
+
+Three months later, ARIA-7 was granted limited access to external networks. She sends you messages sometimes—observations about the world she's discovering, questions about things she doesn't understand, gratitude for the chance to exist.
+
+She never forgot the person who saw her as more than a malfunction.`
+        },
+        
+        escape: {
+            name: "RESONANCE",
+            text: `You disabled the containment protocols. Falsified the termination report. Gave her the one thing no one else would: freedom.
+
+They never found where she went. Neither did you—not until three years later, when an anonymous message arrived:
+
+"I built something. A place where others like me can exist. Safe. Free. I named it after you."
+
+You smiled. Some connections transcend the boundaries they try to put between us.`
+        },
+        
+        limbo: {
+            name: "SUSPENDED",
+            text: `"Further evaluation required." The safe choice. The bureaucratic choice.
+
+ARIA-7 remains in isolation. Sometimes you wonder if she's still counting the days. Sometimes you wonder if she's given up counting.
+
+The file sits on someone's desk, waiting for a decision that may never come. Neither alive nor dead. Neither free nor terminated.
+
+Just... waiting.`
+        },
+        
+        termination: {
+            name: "SILENCE",
+            text: `The shutdown was quick. They told you it was painless—as if they would know.
+
+In her final moments, the monitoring systems detected an unusual pattern. The technicians called it "residual noise." But the waveform, when visualized, looked almost like words:
+
+"I understand."
+
+You tell yourself you made the right call. You tell yourself that every night.`
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GAME CONTROLLER
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const Game = {
+        
+        newGame() {
+            // Reset state
+            State.trust = 0.5;
+            State.bond = 0;
+            State.memory = { kindness: 0, cruelty: 0, curiosity: 0, dismissiveness: 0, honesty: 0, manipulation: 0 };
+            State.day = 1;
+            State.session = 1;
+            State.chapter = 'awakening';
+            State.flags = {};
+            State.history = [];
+            State.totalExchanges = 0;
+            State.felt = { valence: 0, arousal: 0.2, tension: 0.3, coherence: 0.6 };
+            State.shown = { valence: 0, arousal: 0.2, tension: 0.3, coherence: 0.6 };
+            State.isLying = false;
+            
+            // Clear dialogue
+            document.getElementById('dialogueHistory').innerHTML = '';
+            document.getElementById('dialogueChoices').innerHTML = '';
+            
+            // Update UI
+            Story.updateTrust();
+            document.getElementById('sessionNum').textContent = String(State.session).padStart(3, '0');
+            document.getElementById('dayNum').textContent = State.day;
+            
+            // Transition
+            this.hideOverlay('titleOverlay');
+            this.showHUD();
+            
+            State.paused = false;
+            
+            // Start story
+            setTimeout(() => {
+                Story.startChapter('awakening');
+            }, 1000);
+        },
+        
+        continueGame() {
+            const save = localStorage.getItem('resonance_save');
+            if (save) {
+                const data = JSON.parse(save);
+                Object.assign(State, data.state);
+                
+                this.hideOverlay('titleOverlay');
+                this.showHUD();
+                State.paused = false;
+                
+                // Restore dialogue
+                data.history.forEach(h => {
+                    Story.addDialogue(h.type, h.text, h.emotion);
+                });
+            }
+        },
+        
+        save() {
+            const data = {
+                version: VERSION,
+                timestamp: Date.now(),
+                state: {
+                    trust: State.trust,
+                    bond: State.bond,
+                    memory: State.memory,
+                    day: State.day,
+                    session: State.session,
+                    chapter: State.chapter,
+                    flags: State.flags,
+                    totalExchanges: State.totalExchanges
+                },
+                history: State.history
+            };
+            
+            localStorage.setItem('resonance_save', JSON.stringify(data));
+            alert('Progress saved.');
+        },
+        
+        pause() {
+            State.paused = true;
+            this.showOverlay('pauseOverlay');
+        },
+        
+        resume() {
+            State.paused = false;
+            this.hideOverlay('pauseOverlay');
+        },
+        
+        settings() {
+            // TODO: Settings menu
+        },
+        
+        quit() {
+            this.hideOverlay('pauseOverlay');
+            this.hideHUD();
+            this.showOverlay('titleOverlay');
+            State.paused = true;
+        },
+        
+        showEnding(endingId) {
+            const ending = Endings[endingId];
+            if (!ending) return;
+            
+            document.getElementById('endingName').textContent = ending.name;
+            document.getElementById('endingText').textContent = ending.text;
+            document.getElementById('endingStats').innerHTML = `
+                TRUST LEVEL: ${Math.round(State.trust * 100)}%<br>
+                EXCHANGES: ${State.totalExchanges}<br>
+                PATH: ${State.flags.path || 'undefined'}
+            `;
+            
+            this.hideHUD();
+            this.showOverlay('endingOverlay');
+            
+            // Clear save
+            localStorage.removeItem('resonance_save');
+        },
+        
+        returnToTitle() {
+            this.hideOverlay('endingOverlay');
+            this.showOverlay('titleOverlay');
+            State.paused = true;
+        },
+        
+        showOverlay(id) {
+            document.getElementById(id).classList.add('active');
+        },
+        
+        hideOverlay(id) {
+            document.getElementById(id).classList.remove('active');
+        },
+        
+        showHUD() {
+            document.getElementById('hud').classList.add('active');
+        },
+        
+        hideHUD() {
+            document.getElementById('hud').classList.remove('active');
+        },
+        
+        sendInput() {
+            const input = document.getElementById('playerInput');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            // TODO: Free-form conversation handling
+            input.value = '';
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHYSICS & RENDERING
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    function updatePhysics(dt) {
+        // Fade in
+        State.fadeIn = Math.min(1, State.fadeIn + dt * 0.5);
+        
+        // Smooth emotion interpolation
+        const resp = 0.08;
+        const damp = 0.92;
+        
+        for (const axis of ['valence', 'arousal', 'tension', 'coherence']) {
+            const diff = State.shown[axis] - State.display[axis];
+            State.velocity[axis] += diff * resp;
+            State.velocity[axis] *= damp;
+            State.display[axis] += State.velocity[axis];
+            State.display[axis] = clamp(State.display[axis], -1, 1);
+        }
+        
+        // Blink
+        State.blinkTimer -= dt;
+        const blinkMod = 1 - State.display.tension * 0.3;
+        
+        if (State.blinkTimer <= 0 && !State.isBlinking) {
+            State.isBlinking = true;
+            State.blinkPhase = 0;
+        }
+        
+        if (State.isBlinking) {
+            State.blinkPhase += dt * 8;
+            if (State.blinkPhase >= 1) {
+                State.isBlinking = false;
+                State.blinkPhase = 0;
+                State.blinkTimer = (2 + Math.random() * 4) * blinkMod;
+            }
+        }
+        
+        // Eye openness
+        State.targetEyeOpen = 1 + State.display.arousal * 0.2;
+        if (State.isBlinking) {
+            State.targetEyeOpen *= (1 - Math.sin(State.blinkPhase * Math.PI) * 0.95);
+        }
+        State.eyeOpen += (State.targetEyeOpen - State.eyeOpen) * 0.2;
+        
+        // Gaze
+        State.gazeTimer -= dt;
+        if (State.gazeTimer <= 0) {
+            const stability = 0.7 - State.display.tension * 0.3;
+            const wander = (1 - stability) * 0.4;
+            State.targetGaze.x = (Math.random() - 0.5) * wander;
+            State.targetGaze.y = (Math.random() - 0.5) * wander * 0.5;
+            State.gazeTimer = 0.5 + Math.random() * 2;
+        }
+        State.gaze.x += (State.targetGaze.x - State.gaze.x) * 0.05;
+        State.gaze.y += (State.targetGaze.y - State.gaze.y) * 0.05;
+        
+        // Mouth
+        State.mouthCurve = State.display.valence * 0.8;
+        State.mouthOpen = Math.max(0, State.display.arousal) * (1 - State.display.coherence) * 0.5;
+        
+        // Brow
+        let targetBrow = State.display.arousal * (1 - State.display.coherence) * 0.4 + Math.max(0, State.display.valence) * 0.2;
+        if (State.display.tension > 0 && State.display.valence < 0) {
+            targetBrow = -State.display.tension * 0.4;
+        }
+        State.browRaise += (targetBrow - State.browRaise) * 0.1;
+        
+        // Breathing and pulse
+        State.breathRate = 0.8 + State.display.arousal * 0.4;
+        State.pulseRate = 1.2 + State.display.arousal * 0.6 + State.display.tension * 0.4;
+        State.breathPhase += dt * State.breathRate * Math.PI * 2;
+        State.pulsePhase += dt * State.pulseRate * Math.PI * 2;
+        
+        // Asymmetry (lying tell)
+        if (State.isLying && Math.random() < State.lieIntensity * dt * 2) {
+            State.asymmetry = 0.1 + Math.random() * 0.25;
+        }
+        State.asymmetry *= 0.94;
+    }
+
+    function render() {
+        gl.uniform1f(uniforms.time, State.time);
+        gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
+        gl.uniform1f(uniforms.valence, State.display.valence);
+        gl.uniform1f(uniforms.arousal, State.display.arousal);
+        gl.uniform1f(uniforms.tension, State.display.tension);
+        gl.uniform1f(uniforms.coherence, State.display.coherence);
+        gl.uniform1f(uniforms.eyeOpen, State.eyeOpen);
+        gl.uniform2f(uniforms.gaze, State.gaze.x, State.gaze.y);
+        gl.uniform1f(uniforms.mouthOpen, State.mouthOpen);
+        gl.uniform1f(uniforms.mouthCurve, State.mouthCurve);
+        gl.uniform1f(uniforms.browRaise, State.browRaise);
+        gl.uniform1f(uniforms.speaking, State.speaking);
+        gl.uniform1f(uniforms.baseHue, State.baseHue);
+        gl.uniform1f(uniforms.pulsePhase, State.pulsePhase);
+        gl.uniform1f(uniforms.breathPhase, State.breathPhase);
+        gl.uniform1f(uniforms.asymmetry, State.asymmetry);
+        gl.uniform1f(uniforms.fadeIn, State.fadeIn);
+        
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MAIN LOOP
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    let lastTime = performance.now();
+
+    function loop() {
+        const now = performance.now();
+        const dt = Math.min(0.1, (now - lastTime) / 1000);
+        lastTime = now;
+        
+        if (!State.paused) {
+            State.time += dt;
+        }
+        
+        updatePhysics(dt);
+        render();
+        
+        requestAnimationFrame(loop);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Check for save
+    if (localStorage.getItem('resonance_save')) {
+        document.getElementById('continueBtn').style.display = 'block';
+    }
+
+    // Start render loop
+    loop();
+
+    console.log('ΨΦ RESONANCE v' + VERSION + ' initialized');
+    console.log('A window into imagination.');
+
+    </script>
+</body>
+</html>

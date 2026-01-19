@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laminate Stack / Cooling Module Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0d1117;
+            --panel: #161b22;
+            --panel-border: #30363d;
+            --accent: #58a6ff;
+            --accent2: #3fb950;
+            --warn: #d29922;
+            --danger: #f85149;
+            --text: #c9d1d9;
+            --text-dim: #8b949e;
+            --tungsten: #8899aa;
+            --graphene: #1a1a1a;
+            --graphite: #3d3d3d;
+            --copper: #cd853f;
+        }
+        
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+        
+        .app-container { display: grid; grid-template-columns: 380px 1fr 320px; grid-template-rows: auto 1fr; height: 100vh; gap: 1px; background: var(--panel-border); }
+        
+        header { grid-column: 1 / -1; background: var(--panel); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--panel-border); }
+        header h1 { font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 600; color: var(--accent); }
+        header .subtitle { font-size: 0.75rem; color: var(--text-dim); margin-left: 15px; }
+        .header-actions { display: flex; gap: 10px; }
+        .header-actions button { background: transparent; border: 1px solid var(--panel-border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .header-actions button:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        
+        .controls-panel { background: var(--panel); overflow-y: auto; padding: 16px; }
+        .section { margin-bottom: 20px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--panel-border); margin-bottom: 12px; cursor: pointer; }
+        .section-header h3 { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; }
+        .section-header .toggle { font-size: 0.6rem; color: var(--text-dim); }
+        .section-content { display: flex; flex-direction: column; gap: 12px; }
+        .section-content.collapsed { display: none; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        .input-group label { font-size: 0.7rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+        .input-group label span { color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+        .input-row { display: flex; gap: 8px; align-items: center; }
+        .input-row input[type="range"] { flex: 1; height: 4px; -webkit-appearance: none; background: var(--panel-border); border-radius: 2px; }
+        .input-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; }
+        .input-row input[type="number"] { width: 70px; background: var(--bg); border: 1px solid var(--panel-border); color: var(--accent); padding: 4px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; text-align: right; }
+        select { width: 100%; background: var(--bg); border: 1px solid var(--panel-border); color: var(--text); padding: 8px; border-radius: 4px; font-size: 0.75rem; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+        .checkbox-group input { width: 16px; height: 16px; accent-color: var(--accent); }
+        
+        .layer-list { background: var(--bg); border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px; max-height: 200px; overflow-y: auto; }
+        .layer-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; }
+        .layer-item:last-child { margin-bottom: 0; }
+        .layer-item .thickness { color: var(--text-dim); }
+        .layer-item.tungsten { background: rgba(136, 153, 170, 0.2); border-left: 3px solid var(--tungsten); }
+        .layer-item.graphene { background: rgba(26, 26, 26, 0.4); border-left: 3px solid #666; }
+        .layer-item.graphite { background: rgba(61, 61, 61, 0.3); border-left: 3px solid var(--graphite); }
+        .layer-item.copper { background: rgba(205, 133, 63, 0.2); border-left: 3px solid var(--copper); }
+        .layer-item.coolant { background: rgba(74, 144, 217, 0.2); border-left: 3px solid #4a90d9; }
+        
+        .viz-panel { background: var(--bg); display: flex; flex-direction: column; overflow: hidden; }
+        .viz-tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--panel-border); }
+        .viz-tab { padding: 10px 16px; font-size: 0.75rem; color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .viz-tab:hover { color: var(--text); }
+        .viz-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .viz-content { flex: 1; position: relative; overflow: hidden; }
+        .viz-canvas { width: 100%; height: 100%; display: none; }
+        .viz-canvas.active { display: block; }
+        
+        .results-panel { background: var(--panel); overflow-y: auto; padding: 16px; }
+        .result-card { background: var(--bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .result-card h4 { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; }
+        .result-value { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 600; color: var(--text); }
+        .result-value.good { color: var(--accent2); }
+        .result-value.warn { color: var(--warn); }
+        .result-value.danger { color: var(--danger); }
+        .result-unit { font-size: 0.7rem; color: var(--text-dim); margin-left: 4px; }
+        .result-bar { height: 6px; background: var(--panel-border); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .result-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .temp-gradient { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+        .temp-layer { display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; padding: 4px 8px; border-radius: 4px; }
+        .degradation-list { font-size: 0.7rem; color: var(--text-dim); list-style: none; }
+        .degradation-list li { margin-bottom: 4px; padding-left: 16px; position: relative; }
+        .degradation-list li::before { content: '⚠'; position: absolute; left: 0; color: var(--warn); }
+        .suggestion { background: rgba(88, 166, 255, 0.1); border-left: 3px solid var(--accent); padding: 8px 12px; font-size: 0.7rem; margin-top: 8px; border-radius: 0 4px 4px 0; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal h2 { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--accent); margin-bottom: 16px; }
+        .modal-content { font-size: 0.75rem; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; background: var(--bg); padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+        .modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+        .btn-primary { background: var(--accent); border: none; color: var(--bg); }
+        .btn-secondary { background: transparent; border: 1px solid var(--panel-border); color: var(--text); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div style="display: flex; align-items: center;">
+                <h1>🔥 LAMINATE STACK GENERATOR</h1>
+                <span class="subtitle">Thermal Shield Design Tool</span>
+            </div>
+            <div class="header-actions">
+                <button onclick="exportJSON()">📄 JSON</button>
+                <button onclick="exportBlueprint()">📋 Blueprint</button>
+                <button onclick="exportSTL()">🧊 STL</button>
+                <button onclick="showSummary()">📊 Summary</button>
+            </div>
+        </header>
+        
+        <div class="controls-panel">
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>🎯 Application & Load</h3>
+                    <span class="toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>Application</label>
+                        <select id="application" onchange="updateDesign()">
+                            <option value="fusion">Fusion Reactor First Wall</option>
+                            <option value="divertor">Fusion Divertor</option>
+                            <option value="spacecraft">Spacecraft TPS</option>
+                            <option value="hypersonic">Hypersonic Leading Edge</option>
+                            <option value="laser">High-Power Laser Dump</option>
+                            <option value="accelerator">Particle Beam Stop</option>
+                            <option value="nuclear">Nuclear Reactor Shield</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Heat Flux <span id="heatFluxVal">10</span> MW/m²</label>
+                        <div class="input-row">
+                            <input type="range" id="heatFlux" min="0.1" max="50" step="0.1" value="10" oninput="syncSlider('heatFlux')">
+                            <input type="number" id="heatFlux_num" min="0.1" max="50" step="0.1" value="10" onchange="syncNumber('heatFlux')">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Max Backside Temp <span id="maxBackTempVal">150</span> °C</label>
+                        <div class="input-row">
+                            <input type="range" id="maxBackTemp" min="20" max="500" step="5" value="150" oninput="syncSlider('maxBackTemp')">
+                            <input type="number" id="maxBackTemp_num" min="20" max="500" step="5" value="150" onchange="syncNumber('maxBackTemp')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>📚 Layer Structure</h3>
+                    <span class="toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label>Tungsten Strike Plate <span id="tungstenThickVal">2</span> mm</label>
+                        <div class="input-row">
+                            <input type="range" id="tungstenThick" min="0.1" max="10" step="0.1" value="2" oninput="syncSlider('tungstenThick')">
+                            <input type="number" id="tungstenThick_num" min="0.1" max="10" step="0.1" value="2" onchange="syncNumber('tungstenThick')">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Graphene Layers <span id="grapheneCountVal">3</span></label>
+                        <div class="input-row">
+                            <input type="range" id="grapheneCount" min="1" max="200" step="1" value="3" oninput="syncSlider('grapheneCount')">
+                            <input type="number" id="grapheneCount_num" min="1" max="200" step="1" value="3" onchange="syncNumber('grapheneCount')">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Graphene Thickness <span id="grapheneThickVal">0.34</span> nm/layer</label>
+                        <div class="input-row">
+                            <input type="range" id="grapheneThick" min="0.34" max="10" step="0.34" value="0.34" oninput="syncSlider('grapheneThick')">
+                            <input type="number" id="grapheneThick_num" min="0.34" max="10" step="0.34" value="0.34" onchange="syncNumber('grapheneThick')">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Graphite Foil <span id="graphiteThickVal">50</span> μm</label>
+                        <div class="input-row">
+                            <input type="range" id="graphiteThick" min="10" max="500" step="10" value="50" oninput="syncSlider('graphiteThick')">
+                            <input type="number" id="graphiteThick_num" min="10" max="500" step="10" value="50" onchange="syncNumber('graphiteThick')">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Stack Repeats <span id="stackRepeatsVal">5</span>×</label>
+                        <div class="input-row">
+                            <input type="range" id="stackRepeats" min="1" max="30" step="1" value="5" oninput="syncSlider('stackRepeats')">
+                            <input type="number" id="stackRepeats_num" min="1" max="30" step="1" value="5" onchange="syncNumber('stackRepeats')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>➕ Optional Layers</h3>
+                    <span class="toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="addHighZ" onchange="updateDesign()">
+                        <label for="addHighZ">High-Z Addon Layer</label>
+                    </div>
+                    <div class="input-group" id="highZOptions" style="display: none;">
+                        <select id="highZMaterial" onchange="updateDesign()">
+                            <option value="W">Tungsten (W)</option>
+                            <option value="Ta">Tantalum (Ta)</option>
+                            <option value="HfC">Hafnium Carbide (HfC)</option>
+                        </select>
+                        <div class="input-row" style="margin-top: 6px;">
+                            <label style="flex: 1;">Thickness</label>
+                            <input type="number" id="highZThick" min="0.1" max="5" step="0.1" value="1" onchange="updateDesign()">
+                            <span style="font-size: 0.7rem; color: var(--text-dim);">mm</span>
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="addLowZ" onchange="updateDesign()">
+                        <label for="addLowZ">Low-Z Moderation Layer</label>
+                    </div>
+                    <div class="input-group" id="lowZOptions" style="display: none;">
+                        <select id="lowZMaterial" onchange="updateDesign()">
+                            <option value="C">Carbon (C)</option>
+                            <option value="B4C">Boron Carbide (B₄C)</option>
+                            <option value="BPoly">Borated Polyethylene</option>
+                        </select>
+                        <div class="input-row" style="margin-top: 6px;">
+                            <label style="flex: 1;">Thickness</label>
+                            <input type="number" id="lowZThick" min="1" max="50" step="1" value="10" onchange="updateDesign()">
+                            <span style="font-size: 0.7rem; color: var(--text-dim);">mm</span>
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="addThermalRibs" checked onchange="updateDesign()">
+                        <label for="addThermalRibs">Tungsten Thermal Ribs</label>
+                    </div>
+                    <div class="input-group" id="ribOptions">
+                        <div class="input-row">
+                            <label style="flex: 1;">Rib Spacing</label>
+                            <input type="number" id="ribSpacing" min="5" max="50" step="5" value="20" onchange="updateDesign()">
+                            <span style="font-size: 0.7rem; color: var(--text-dim);">mm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h3>❄️ Cooling System</h3>
+                    <span class="toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="coolingEnabled" checked onchange="updateDesign()">
+                        <label for="coolingEnabled">Enable Active Cooling</label>
+                    </div>
+                    
+                    <div id="coolingOptions">
+                        <div class="input-group">
+                            <label>Coolant Type</label>
+                            <select id="coolantType" onchange="updateDesign()">
+                                <option value="water">Water (H₂O)</option>
+                                <option value="NaK">Liquid Metal (NaK)</option>
+                                <option value="LBE">Lead-Bismuth Eutectic</option>
+                                <option value="FLiBe">FLiBe Salt</option>
+                                <option value="silicone">Silicone Oil</option>
+                                <option value="sCO2">Supercritical CO₂</option>
+                                <option value="helium">Helium Gas</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Heat Sink Material</label>
+                            <select id="sinkMaterial" onchange="updateDesign()">
+                                <option value="CuCrZr">CuCrZr Alloy</option>
+                                <option value="Cu">Pure Copper</option>
+                                <option value="Al">Aluminum</option>
+                                <option value="W">Tungsten</option>
+                                <option value="Mo">Molybdenum</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Channel Architecture</label>
+                            <select id="channelArch" onchange="updateDesign()">
+                                <option value="microchannel">Microchannels</option>
+                                <option value="serpentine">Serpentine</option>
+                                <option value="parallel">Parallel Headers</option>
+                                <option value="pinFin">Pin-Fin Array</option>
+                                <option value="jet">Jet Impingement</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Channel Size <span id="channelSizeVal">2</span> mm</label>
+                            <div class="input-row">
+                                <input type="range" id="channelSize" min="0.5" max="10" step="0.5" value="2" oninput="syncSlider('channelSize')">
+                                <input type="number" id="channelSize_num" min="0.5" max="10" step="0.5" value="2" onchange="syncNumber('channelSize')">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Inlet Temp <span id="inletTempVal">25</span> °C</label>
+                            <div class="input-row">
+                                <input type="range" id="inletTemp" min="-50" max="400" step="5" value="25" oninput="syncSlider('inletTemp')">
+                                <input type="number" id="inletTemp_num" min="-50" max="400" step="5" value="25" onchange="syncNumber('inletTemp')">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Flow Rate <span id="flowRateVal">5</span> L/min</label>
+                            <div class="input-row">
+                                <input type="range" id="flowRate" min="0.5" max="50" step="0.5" value="5" oninput="syncSlider('flowRate')">
+                                <input type="number" id="flowRate_num" min="0.5" max="50" step="0.5" value="5" onchange="syncNumber('flowRate')">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Pressure <span id="pressureVal">1</span> MPa</label>
+                            <div class="input-row">
+                                <input type="range" id="pressure" min="0.1" max="20" step="0.1" value="1" oninput="syncSlider('pressure')">
+                                <input type="number" id="pressure_num" min="0.1" max="20" step="0.1" value="1" onchange="syncNumber('pressure')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header">
+                    <h3>📋 Layer Stack</h3>
+                </div>
+                <div class="layer-list" id="layerList"></div>
+            </div>
+        </div>
+        
+        <div class="viz-panel">
+            <div class="viz-tabs">
+                <div class="viz-tab active" onclick="switchTab('cross')">Cross-Section</div>
+                <div class="viz-tab" onclick="switchTab('iso')">3D Isometric</div>
+                <div class="viz-tab" onclick="switchTab('annotated')">Annotated</div>
+                <div class="viz-tab" onclick="switchTab('sketch')">Hand-Sketch</div>
+                <div class="viz-tab" onclick="switchTab('thermal')">Thermal Map</div>
+            </div>
+            <div class="viz-content">
+                <canvas id="crossCanvas" class="viz-canvas active"></canvas>
+                <canvas id="isoCanvas" class="viz-canvas"></canvas>
+                <canvas id="annotatedCanvas" class="viz-canvas"></canvas>
+                <canvas id="sketchCanvas" class="viz-canvas"></canvas>
+                <canvas id="thermalCanvas" class="viz-canvas"></canvas>
+            </div>
+        </div>
+        
+        <div class="results-panel">
+            <div class="result-card">
+                <h4>Peak Surface Temp</h4>
+                <div class="result-value" id="peakTemp">1850</div><span class="result-unit">°C</span>
+                <div class="result-bar"><div class="result-bar-fill" id="peakTempBar" style="width: 60%; background: linear-gradient(90deg, #3fb950, #d29922, #f85149);"></div></div>
+            </div>
+            
+            <div class="result-card">
+                <h4>Backside Temperature</h4>
+                <div class="result-value" id="backTemp">142</div><span class="result-unit">°C</span>
+                <div class="result-bar"><div class="result-bar-fill" id="backTempBar" style="width: 30%; background: var(--accent2);"></div></div>
+            </div>
+            
+            <div class="result-card">
+                <h4>Thermal Resistance</h4>
+                <div class="result-value" id="thermalR">0.0042</div><span class="result-unit">m²K/W</span>
+            </div>
+            
+            <div class="result-card">
+                <h4>Heat Removal Rate</h4>
+                <div class="result-value" id="heatRemoval">98.5</div><span class="result-unit">%</span>
+                <div class="result-bar"><div class="result-bar-fill" id="heatRemovalBar" style="width: 98%; background: var(--accent2);"></div></div>
+            </div>
+            
+            <div class="result-card">
+                <h4>Temperature Profile</h4>
+                <div class="temp-gradient" id="tempGradient"></div>
+            </div>
+            
+            <div class="result-card">
+                <h4>Thermal Stress</h4>
+                <div class="result-value" id="thermalStress">245</div><span class="result-unit">MPa</span>
+                <div style="font-size: 0.65rem; color: var(--text-dim); margin-top: 6px;">CTE mismatch: <span id="cteMismatch">W/C: 4.5×10⁻⁶</span></div>
+            </div>
+            
+            <div class="result-card">
+                <h4>Radiation Attenuation</h4>
+                <div style="font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>X-ray (100 keV):</span><span id="xrayAtten">99.2%</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Gamma (1 MeV):</span><span id="gammaAtten">45.3%</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Beta:</span><span id="betaAtten">99.9%</span></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Neutrons (14 MeV):</span><span id="neutronAtten">12.1%</span></div>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h4>Time-to-Failure</h4>
+                <div class="result-value" id="ttf">~10,000</div><span class="result-unit">cycles</span>
+            </div>
+            
+            <div class="result-card">
+                <h4>Degradation Modes</h4>
+                <ul class="degradation-list" id="degradationList">
+                    <li>W recrystallization >1200°C</li>
+                    <li>Graphene oxidation risk</li>
+                    <li>CTE delamination</li>
+                </ul>
+            </div>
+            
+            <div class="result-card">
+                <h4>💡 Suggestions</h4>
+                <div class="suggestion" id="suggestions">Design meets targets.</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2 id="modalTitle">Export</h2>
+            <div class="modal-content" id="modalContent"></div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closeModal()">Close</button>
+                <button class="btn-primary" onclick="copyModalContent()">Copy</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const state = { application: 'fusion', heatFlux: 10, maxBackTemp: 150, tungstenThick: 2, grapheneCount: 3, grapheneThick: 0.34, graphiteThick: 50, stackRepeats: 5, addHighZ: false, highZMaterial: 'W', highZThick: 1, addLowZ: false, lowZMaterial: 'C', lowZThick: 10, addThermalRibs: true, ribSpacing: 20, coolingEnabled: true, coolantType: 'water', sinkMaterial: 'CuCrZr', channelArch: 'microchannel', channelSize: 2, inletTemp: 25, flowRate: 5, pressure: 1 };
+        
+        const materials = {
+            W: { name: 'Tungsten', k: 173, alpha: 4.5e-6, Tm: 3422, color: '#8899aa' },
+            Ta: { name: 'Tantalum', k: 57, alpha: 6.3e-6, Tm: 3017, color: '#9988aa' },
+            HfC: { name: 'Hafnium Carbide', k: 20, alpha: 6.6e-6, Tm: 3900, color: '#aa9988' },
+            C: { name: 'Carbon', k: 120, alpha: 2.0e-6, color: '#444444' },
+            B4C: { name: 'Boron Carbide', k: 30, alpha: 5.0e-6, color: '#554433' },
+            BPoly: { name: 'Borated Poly', k: 0.4, alpha: 100e-6, color: '#ccddcc' },
+            graphene: { name: 'Graphene', k: 3500, alpha: -1e-6, color: '#1a1a1a' },
+            graphite: { name: 'Graphite', k: 150, alpha: 2.0e-6, color: '#3d3d3d' },
+            CuCrZr: { name: 'CuCrZr', k: 320, alpha: 17.0e-6, Tm: 1080, color: '#cd853f' },
+            Cu: { name: 'Copper', k: 400, alpha: 17.0e-6, Tm: 1085, color: '#b87333' },
+            Al: { name: 'Aluminum', k: 237, alpha: 23.0e-6, color: '#aabbcc' },
+            Mo: { name: 'Molybdenum', k: 138, alpha: 5.0e-6, color: '#778899' }
+        };
+        
+        const coolants = {
+            water: { name: 'Water', cp: 4186, rho: 1000, color: '#4a90d9' },
+            NaK: { name: 'NaK', cp: 1000, rho: 870, color: '#9966cc' },
+            LBE: { name: 'LBE', cp: 146, rho: 10500, color: '#666688' },
+            FLiBe: { name: 'FLiBe', cp: 2350, rho: 1940, color: '#66cc66' },
+            silicone: { name: 'Silicone Oil', cp: 1500, rho: 960, color: '#ccaacc' },
+            sCO2: { name: 'sCO₂', cp: 2500, rho: 700, color: '#ff9966' },
+            helium: { name: 'Helium', cp: 5193, rho: 0.16, color: '#aaddff' }
+        };
+        
+        function syncSlider(id) {
+            const slider = document.getElementById(id);
+            const num = document.getElementById(id + '_num');
+            const valSpan = document.getElementById(id + 'Val');
+            if (num) num.value = slider.value;
+            if (valSpan) valSpan.textContent = slider.value;
+            state[id] = parseFloat(slider.value);
+            updateDesign();
+        }
+        
+        function syncNumber(id) {
+            const slider = document.getElementById(id);
+            const num = document.getElementById(id + '_num');
+            const valSpan = document.getElementById(id + 'Val');
+            let val = parseFloat(num.value);
+            val = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), val));
+            slider.value = val; num.value = val;
+            if (valSpan) valSpan.textContent = val;
+            state[id] = val;
+            updateDesign();
+        }
+        
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.toggle');
+            content.classList.toggle('collapsed');
+            toggle.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.viz-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.viz-canvas').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Canvas').classList.add('active');
+            renderVisualization(tab);
+        }
+        
+        function calculateDesign() {
+            const layers = [];
+            let totalThickness = 0;
+            
+            layers.push({ material: 'W', thickness: state.tungstenThick, unit: 'mm', k: materials.W.k });
+            totalThickness += state.tungstenThick;
+            
+            if (state.addHighZ) {
+                const mat = materials[state.highZMaterial];
+                layers.push({ material: state.highZMaterial, thickness: state.highZThick, unit: 'mm', k: mat.k });
+                totalThickness += state.highZThick;
+            }
+            
+            for (let i = 0; i < state.stackRepeats; i++) {
+                const grapheneTotal = state.grapheneCount * state.grapheneThick;
+                layers.push({ material: 'graphene', thickness: grapheneTotal, unit: 'nm', k: materials.graphene.k, layers: state.grapheneCount });
+                totalThickness += grapheneTotal / 1e6;
+                layers.push({ material: 'graphite', thickness: state.graphiteThick, unit: 'μm', k: materials.graphite.k });
+                totalThickness += state.graphiteThick / 1000;
+            }
+            
+            if (state.addLowZ) {
+                const mat = materials[state.lowZMaterial];
+                layers.push({ material: state.lowZMaterial, thickness: state.lowZThick, unit: 'mm', k: mat.k });
+                totalThickness += state.lowZThick;
+            }
+            
+            if (state.coolingEnabled) {
+                const mat = materials[state.sinkMaterial];
+                layers.push({ material: state.sinkMaterial, thickness: 20, unit: 'mm', k: mat.k, isCooling: true });
+                totalThickness += 20;
+            }
+            
+            let R_total = 0;
+            layers.forEach(layer => {
+                const t_m = layer.unit === 'nm' ? layer.thickness * 1e-9 : layer.unit === 'μm' ? layer.thickness * 1e-6 : layer.thickness * 1e-3;
+                R_total += t_m / layer.k;
+            });
+            
+            const q = state.heatFlux * 1e6;
+            const deltaT = q * R_total;
+            let T_surface = state.inletTemp + deltaT;
+            const tempProfile = [];
+            let T_current = T_surface;
+            
+            layers.forEach(layer => {
+                const t_m = layer.unit === 'nm' ? layer.thickness * 1e-9 : layer.unit === 'μm' ? layer.thickness * 1e-6 : layer.thickness * 1e-3;
+                const dT = q * t_m / layer.k;
+                tempProfile.push({ material: layer.material, T_top: T_current, T_bottom: T_current - dT });
+                T_current -= dT;
+            });
+            
+            const T_back = T_current;
+            const alpha_W = materials.W.alpha;
+            const alpha_C = materials.graphite.alpha;
+            const E_W = 411e9;
+            const dT_interface = (T_surface - T_back) / layers.length;
+            const stress = E_W * Math.abs(alpha_W - alpha_C) * dT_interface;
+            
+            const rho_avg = 10000;
+            const t_total = totalThickness / 1000;
+            const xrayAtten = (1 - Math.exp(-0.5 * rho_avg * t_total * 0.1)) * 100;
+            const gammaAtten = (1 - Math.exp(-0.05 * rho_avg * t_total * 0.1)) * 100;
+            const N_cycles = Math.pow(1000 / (stress / 1e6), 2) * 1000;
+            
+            return { layers, totalThickness, R_total, T_surface, T_back, tempProfile, stress, xrayAtten, gammaAtten, N_cycles, heatRemoval: Math.min(99.9, 100 - (T_back - state.maxBackTemp) / 10) };
+        }
+        
+        function updateDesign() {
+            state.application = document.getElementById('application').value;
+            state.addHighZ = document.getElementById('addHighZ').checked;
+            state.addLowZ = document.getElementById('addLowZ').checked;
+            state.addThermalRibs = document.getElementById('addThermalRibs').checked;
+            state.coolingEnabled = document.getElementById('coolingEnabled').checked;
+            state.coolantType = document.getElementById('coolantType').value;
+            state.sinkMaterial = document.getElementById('sinkMaterial').value;
+            state.channelArch = document.getElementById('channelArch').value;
+            
+            if (state.addHighZ) { state.highZMaterial = document.getElementById('highZMaterial').value; state.highZThick = parseFloat(document.getElementById('highZThick').value); }
+            if (state.addLowZ) { state.lowZMaterial = document.getElementById('lowZMaterial').value; state.lowZThick = parseFloat(document.getElementById('lowZThick').value); }
+            if (state.addThermalRibs) state.ribSpacing = parseFloat(document.getElementById('ribSpacing').value);
+            
+            document.getElementById('highZOptions').style.display = state.addHighZ ? 'block' : 'none';
+            document.getElementById('lowZOptions').style.display = state.addLowZ ? 'block' : 'none';
+            document.getElementById('ribOptions').style.display = state.addThermalRibs ? 'block' : 'none';
+            document.getElementById('coolingOptions').style.display = state.coolingEnabled ? 'block' : 'none';
+            
+            const results = calculateDesign();
+            
+            document.getElementById('peakTemp').textContent = Math.round(results.T_surface);
+            document.getElementById('peakTemp').className = 'result-value ' + (results.T_surface > 3000 ? 'danger' : results.T_surface > 2000 ? 'warn' : 'good');
+            document.getElementById('peakTempBar').style.width = Math.min(100, results.T_surface / 35) + '%';
+            
+            document.getElementById('backTemp').textContent = Math.round(results.T_back);
+            document.getElementById('backTemp').className = 'result-value ' + (results.T_back > state.maxBackTemp ? 'danger' : results.T_back > state.maxBackTemp * 0.8 ? 'warn' : 'good');
+            document.getElementById('backTempBar').style.width = Math.min(100, results.T_back / 5) + '%';
+            
+            document.getElementById('thermalR').textContent = results.R_total.toExponential(3);
+            document.getElementById('heatRemoval').textContent = results.heatRemoval.toFixed(1);
+            document.getElementById('heatRemovalBar').style.width = results.heatRemoval + '%';
+            
+            document.getElementById('thermalStress').textContent = Math.round(results.stress / 1e6);
+            document.getElementById('thermalStress').className = 'result-value ' + (results.stress > 500e6 ? 'danger' : results.stress > 300e6 ? 'warn' : '');
+            
+            document.getElementById('xrayAtten').textContent = results.xrayAtten.toFixed(1) + '%';
+            document.getElementById('gammaAtten').textContent = results.gammaAtten.toFixed(1) + '%';
+            document.getElementById('neutronAtten').textContent = (state.addLowZ && state.lowZMaterial.includes('B') ? '45' : '12') + '%';
+            document.getElementById('ttf').textContent = '~' + Math.round(results.N_cycles).toLocaleString();
+            
+            const gradientHTML = results.tempProfile.slice(0, 6).map(p => {
+                const mat = materials[p.material] || { name: p.material, color: '#666' };
+                const tempColor = p.T_top > 2000 ? '#f85149' : p.T_top > 1000 ? '#d29922' : '#3fb950';
+                return `<div class="temp-layer" style="background: ${mat.color}20; border-left: 3px solid ${mat.color};"><span>${mat.name}</span><span style="color: ${tempColor}; font-family: 'JetBrains Mono', monospace;">${Math.round(p.T_top)}°C</span></div>`;
+            }).join('');
+            document.getElementById('tempGradient').innerHTML = gradientHTML;
+            
+            const layerListHTML = results.layers.map(layer => {
+                const mat = materials[layer.material] || { name: layer.material };
+                const className = layer.material === 'graphene' ? 'graphene' : layer.material === 'graphite' ? 'graphite' : layer.material === 'W' ? 'tungsten' : layer.isCooling ? 'coolant' : 'copper';
+                return `<div class="layer-item ${className}"><span>${mat.name}</span><span class="thickness">${layer.thickness} ${layer.unit}</span></div>`;
+            }).join('');
+            document.getElementById('layerList').innerHTML = layerListHTML;
+            
+            let suggestions = [];
+            if (results.T_surface > materials.W.Tm) suggestions.push('⚠️ Surface exceeds W melting point!');
+            if (results.T_back > state.maxBackTemp) suggestions.push('Increase flow rate or cooling.');
+            if (results.stress > 300e6) suggestions.push('Add compliant interlayers for CTE.');
+            if (!state.addThermalRibs && state.heatFlux > 5) suggestions.push('Enable W thermal ribs.');
+            if (suggestions.length === 0) suggestions.push('Design meets all targets ✓');
+            document.getElementById('suggestions').innerHTML = suggestions.join('<br>');
+            
+            renderVisualization(document.querySelector('.viz-tab.active').textContent.toLowerCase().includes('3d') ? 'iso' : document.querySelector('.viz-tab.active').textContent.toLowerCase().includes('sketch') ? 'sketch' : document.querySelector('.viz-tab.active').textContent.toLowerCase().includes('thermal') ? 'thermal' : document.querySelector('.viz-tab.active').textContent.toLowerCase().includes('annot') ? 'annotated' : 'cross');
+        }
+        
+        function renderVisualization(type) {
+            const canvas = document.getElementById(type + 'Canvas');
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * 2; canvas.height = rect.height * 2;
+            ctx.scale(2, 2);
+            const W = rect.width, H = rect.height;
+            const results = calculateDesign();
+            
+            if (type === 'cross') renderCrossSection(ctx, W, H, results);
+            else if (type === 'iso') renderIsometric(ctx, W, H, results);
+            else if (type === 'annotated') renderAnnotated(ctx, W, H, results);
+            else if (type === 'sketch') renderSketch(ctx, W, H, results);
+            else if (type === 'thermal') renderThermalMap(ctx, W, H, results);
+        }
+        
+        function renderCrossSection(ctx, W, H, results) {
+            ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            
+            const marginX = 80, marginY = 60, panelW = W - marginX * 2, panelH = (H - marginY * 2) * 0.9;
+            let weights = [], totalWeight = 0;
+            results.layers.forEach(layer => { let w = layer.unit === 'nm' ? 0.5 : layer.unit === 'μm' ? 1 : Math.log10(layer.thickness + 1) * 3; if (layer.isCooling) w = 8; weights.push(w); totalWeight += w; });
+            
+            let y = marginY;
+            results.layers.forEach((layer, i) => {
+                const h = (weights[i] / totalWeight) * panelH;
+                const mat = materials[layer.material] || { color: '#666' };
+                ctx.fillStyle = mat.color; ctx.fillRect(marginX, y, panelW, h);
+                ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.strokeRect(marginX, y, panelW, h);
+                
+                if (layer.isCooling) {
+                    ctx.fillStyle = coolants[state.coolantType].color;
+                    for (let c = 1; c <= 5; c++) ctx.fillRect(marginX + c * panelW / 6 - 10, y + h * 0.25, 20, h * 0.5);
+                }
+                if (state.addThermalRibs && !layer.isCooling && layer.material !== 'W') {
+                    ctx.fillStyle = materials.W.color;
+                    const numRibs = Math.floor(panelW / state.ribSpacing);
+                    for (let r = 1; r < numRibs; r++) ctx.fillRect(marginX + r * state.ribSpacing * (panelW / (numRibs * state.ribSpacing)) - 3, y, 6, h);
+                }
+                y += h;
+            });
+            
+            ctx.font = '600 14px "JetBrains Mono", monospace'; ctx.fillStyle = '#58a6ff'; ctx.textAlign = 'center';
+            ctx.fillText('CROSS-SECTION VIEW', W / 2, 25);
+            ctx.font = '500 11px "JetBrains Mono", monospace'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+            ctx.fillText('HOT FACE ← ' + state.heatFlux + ' MW/m²', marginX, marginY - 15);
+        }
+        
+        function renderIsometric(ctx, W, H, results) {
+            ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+            const cx = W * 0.5, cy = H * 0.45, scale = Math.min(W, H) * 0.003, isoAngle = Math.PI / 6;
+            function iso(x, y, z) { return { x: cx + (x - z) * Math.cos(isoAngle) * scale, y: cy + ((x + z) * Math.sin(isoAngle) - y) * scale }; }
+            
+            const blockW = 100, blockD = 60;
+            let y = 0;
+            const layerData = results.layers.map(layer => {
+                let h = layer.unit === 'nm' ? 1 : layer.unit === 'μm' ? 2 : Math.max(3, layer.thickness * 2);
+                if (layer.isCooling) h = 25;
+                return { ...layer, h };
+            }).reverse();
+            
+            layerData.forEach(layer => {
+                const mat = materials[layer.material] || { color: '#666' };
+                ['top', 'right', 'front'].forEach(face => {
+                    ctx.beginPath();
+                    const pts = face === 'top' ? [iso(0, y + layer.h, 0), iso(blockW, y + layer.h, 0), iso(blockW, y + layer.h, blockD), iso(0, y + layer.h, blockD)] :
+                               face === 'right' ? [iso(blockW, y, 0), iso(blockW, y, blockD), iso(blockW, y + layer.h, blockD), iso(blockW, y + layer.h, 0)] :
+                               [iso(0, y, blockD), iso(blockW, y, blockD), iso(blockW, y + layer.h, blockD), iso(0, y + layer.h, blockD)];
+                    ctx.moveTo(pts[0].x, pts[0].y); pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y)); ctx.closePath();
+                    ctx.fillStyle = face === 'top' ? lighten(mat.color, 30) : face === 'right' ? mat.color : darken(mat.color, 20);
+                    ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 0.5; ctx.stroke();
+                });
+                y += layer.h + 2;
+            });
+            
+            ctx.font = '600 14px "JetBrains Mono", monospace'; ctx.fillStyle = '#58a6ff'; ctx.textAlign = 'center';
+            ctx.fillText('3D ISOMETRIC EXPLODED VIEW', W / 2, 25);
+        }
+        
+        function renderAnnotated(ctx, W, H, results) {
+            renderCrossSection(ctx, W, H, results);
+            const marginX = 80, marginY = 60, panelW = W - marginX * 2, panelH = (H - marginY * 2) * 0.9;
+            let weights = [], totalWeight = 0;
+            results.layers.forEach(layer => { let w = layer.unit === 'nm' ? 0.5 : layer.unit === 'μm' ? 1 : Math.log10(layer.thickness + 1) * 3; if (layer.isCooling) w = 8; weights.push(w); totalWeight += w; });
+            
+            ctx.font = '500 10px "JetBrains Mono", monospace';
+            let y = marginY;
+            results.layers.slice(0, 8).forEach((layer, i) => {
+                const h = (weights[i] / totalWeight) * panelH;
+                const mat = materials[layer.material] || { name: layer.material };
+                const temp = results.tempProfile[i];
+                const rightX = marginX + panelW + 15, midY = y + h / 2;
+                
+                ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+                ctx.fillText(mat.name, rightX, midY - 6);
+                ctx.fillStyle = '#58a6ff'; ctx.fillText(layer.thickness + ' ' + layer.unit, rightX, midY + 6);
+                if (temp) { ctx.fillStyle = temp.T_top > 2000 ? '#f85149' : '#3fb950'; ctx.fillText(Math.round(temp.T_top) + '°C', rightX, midY + 18); }
+                
+                ctx.strokeStyle = '#30363d'; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(marginX + panelW, midY); ctx.lineTo(rightX - 5, midY); ctx.stroke(); ctx.setLineDash([]);
+                y += h;
+            });
+            ctx.font = '600 14px "JetBrains Mono", monospace'; ctx.fillStyle = '#58a6ff'; ctx.textAlign = 'center';
+            ctx.fillText('ANNOTATED CROSS-SECTION', W / 2, 25);
+        }
+        
+        function renderSketch(ctx, W, H, results) {
+            ctx.fillStyle = '#f5f0e8'; ctx.fillRect(0, 0, W, H);
+            for (let i = 0; i < 3000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.03})`; ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1); }
+            
+            const marginX = 100, marginY = 80, panelW = W - marginX * 2, panelH = (H - marginY * 2) * 0.85;
+            function sketchyRect(x, y, w, h) {
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+                [[x, y, x + w, y], [x + w, y, x + w, y + h], [x + w, y + h, x, y + h], [x, y + h, x, y]].forEach(([x1, y1, x2, y2]) => {
+                    for (let p = 0; p < 2; p++) { ctx.beginPath(); ctx.moveTo(x1 + (Math.random() - 0.5) * 2, y1 + (Math.random() - 0.5) * 2);
+                        for (let s = 1; s <= 8; s++) ctx.lineTo(x1 + (x2 - x1) * s / 8 + (Math.random() - 0.5) * 3, y1 + (y2 - y1) * s / 8 + (Math.random() - 0.5) * 3);
+                        ctx.stroke(); }
+                });
+            }
+            function hatch(x, y, w, h, angle = 45, spacing = 6) {
+                ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+                ctx.strokeStyle = '#666'; ctx.lineWidth = 0.5;
+                const rad = angle * Math.PI / 180, len = Math.sqrt(w * w + h * h);
+                for (let i = -len; i < len * 2; i += spacing) { ctx.beginPath(); ctx.moveTo(x + i, y); ctx.lineTo(x + i + Math.cos(rad) * len, y + Math.sin(rad) * len); ctx.stroke(); }
+                ctx.restore();
+            }
+            
+            let weights = [], totalWeight = 0;
+            results.layers.forEach(layer => { let w = layer.unit === 'nm' ? 0.5 : layer.unit === 'μm' ? 1 : Math.log10(layer.thickness + 1) * 3; if (layer.isCooling) w = 8; weights.push(w); totalWeight += w; });
+            
+            let y = marginY;
+            results.layers.forEach((layer, i) => {
+                const h = (weights[i] / totalWeight) * panelH;
+                if (layer.material === 'W' || layer.material === 'Ta' || layer.material === 'HfC') { hatch(marginX, y, panelW, h, 45, 4); hatch(marginX, y, panelW, h, -45, 4); }
+                else if (layer.material === 'graphene') { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(marginX, y, panelW, h); }
+                else if (layer.material === 'graphite') hatch(marginX, y, panelW, h, 0, 5);
+                else if (layer.isCooling) { hatch(marginX, y, panelW, h, 90, 8); for (let c = 1; c <= 4; c++) { ctx.beginPath(); ctx.arc(marginX + c * panelW / 5, y + h / 2, 8, 0, Math.PI * 2); ctx.stroke(); } }
+                sketchyRect(marginX, y, panelW, h);
+                y += h;
+            });
+            
+            ctx.font = 'italic 16px Georgia, serif'; ctx.fillStyle = '#333'; ctx.textAlign = 'center';
+            ctx.fillText('Hand-Sketch Style Diagram', W / 2, 40);
+        }
+        
+        function renderThermalMap(ctx, W, H, results) {
+            ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+            const marginX = 80, marginY = 60, panelW = W - marginX * 2 - 60, panelH = (H - marginY * 2) * 0.85;
+            
+            function tempToColor(T) {
+                const t = Math.max(0, Math.min(1, (T - state.inletTemp) / (results.T_surface - state.inletTemp)));
+                let r, g, b;
+                if (t < 0.25) { r = 0; g = t * 4 * 255; b = 255; }
+                else if (t < 0.5) { r = 0; g = 255; b = (1 - (t - 0.25) * 4) * 255; }
+                else if (t < 0.75) { r = (t - 0.5) * 4 * 255; g = 255; b = 0; }
+                else { r = 255; g = (1 - (t - 0.75) * 4) * 255; b = 0; }
+                return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+            }
+            
+            let weights = [], totalWeight = 0;
+            results.layers.forEach(layer => { let w = layer.unit === 'nm' ? 0.5 : layer.unit === 'μm' ? 1 : Math.log10(layer.thickness + 1) * 3; if (layer.isCooling) w = 8; weights.push(w); totalWeight += w; });
+            
+            let y = marginY;
+            results.layers.forEach((layer, i) => {
+                const h = (weights[i] / totalWeight) * panelH;
+                const temp = results.tempProfile[i];
+                if (temp) {
+                    const grad = ctx.createLinearGradient(marginX, y, marginX, y + h);
+                    grad.addColorStop(0, tempToColor(temp.T_top)); grad.addColorStop(1, tempToColor(temp.T_bottom));
+                    ctx.fillStyle = grad;
+                } else ctx.fillStyle = tempToColor(state.inletTemp);
+                ctx.fillRect(marginX, y, panelW, h);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(marginX, y, panelW, h);
+                y += h;
+            });
+            
+            const scaleX = marginX + panelW + 30, scaleW = 20, scaleH = panelH;
+            for (let i = 0; i < scaleH; i++) { ctx.fillStyle = tempToColor(results.T_surface - (i / scaleH) * (results.T_surface - state.inletTemp)); ctx.fillRect(scaleX, marginY + i, scaleW, 1); }
+            ctx.strokeStyle = '#444'; ctx.strokeRect(scaleX, marginY, scaleW, scaleH);
+            
+            ctx.font = '500 10px "JetBrains Mono", monospace'; ctx.fillStyle = '#8b949e'; ctx.textAlign = 'left';
+            ctx.fillText(Math.round(results.T_surface) + '°C', scaleX + scaleW + 5, marginY + 10);
+            ctx.fillText(Math.round(state.inletTemp) + '°C', scaleX + scaleW + 5, marginY + scaleH);
+            
+            ctx.font = '600 14px "JetBrains Mono", monospace'; ctx.fillStyle = '#58a6ff'; ctx.textAlign = 'center';
+            ctx.fillText('THERMAL DISTRIBUTION MAP', W / 2, 25);
+        }
+        
+        function lighten(hex, pct) { const n = parseInt(hex.replace('#', ''), 16), a = Math.round(2.55 * pct); return '#' + (0x1000000 + Math.min(255, (n >> 16) + a) * 0x10000 + Math.min(255, ((n >> 8) & 0xFF) + a) * 0x100 + Math.min(255, (n & 0xFF) + a)).toString(16).slice(1); }
+        function darken(hex, pct) { const n = parseInt(hex.replace('#', ''), 16), a = Math.round(2.55 * pct); return '#' + (0x1000000 + Math.max(0, (n >> 16) - a) * 0x10000 + Math.max(0, ((n >> 8) & 0xFF) - a) * 0x100 + Math.max(0, (n & 0xFF) - a)).toString(16).slice(1); }
+        
+        function exportJSON() {
+            const results = calculateDesign();
+            const json = { application: state.application, heatFlux_MW_m2: state.heatFlux, maxBacksideTemp_C: state.maxBackTemp, layers: results.layers.map(l => ({ material: l.material, thickness: l.thickness, unit: l.unit, k: l.k })), cooling: state.coolingEnabled ? { coolant: state.coolantType, sink: state.sinkMaterial, architecture: state.channelArch, channelSize_mm: state.channelSize, inletTemp_C: state.inletTemp, flowRate_L_min: state.flowRate } : null, results: { peakTemp_C: Math.round(results.T_surface), backTemp_C: Math.round(results.T_back), thermalR: results.R_total, stress_MPa: Math.round(results.stress / 1e6) } };
+            showModal('Export JSON', JSON.stringify(json, null, 2));
+        }
+        
+        function exportBlueprint() {
+            const results = calculateDesign();
+            let bp = `╔════════════════════════════════════════════════════╗
+║     LAMINATE THERMAL SHIELD BLUEPRINT              ║
+╠════════════════════════════════════════════════════╣
+║ Application: ${state.application.padEnd(36)}║
+║ Heat Flux: ${(state.heatFlux + ' MW/m²').padEnd(38)}║
+╠════════════════════════════════════════════════════╣
+║ LAYER STACK                                        ║
+`;
+            results.layers.forEach((l, i) => { const mat = materials[l.material] || { name: l.material }; bp += `║ ${(i + 1).toString().padStart(2)}. ${mat.name.padEnd(18)} ${(l.thickness + ' ' + l.unit).padEnd(15)}║\n`; });
+            bp += `╠════════════════════════════════════════════════════╣
+║ Peak Temp: ${(Math.round(results.T_surface) + '°C').padEnd(38)}║
+║ Back Temp: ${(Math.round(results.T_back) + '°C').padEnd(38)}║
+╚════════════════════════════════════════════════════╝`;
+            showModal('Blueprint', bp);
+        }
+        
+        function exportSTL() {
+            const results = calculateDesign();
+            let stl = `# Pseudo-STL Geometry\nsolid laminate_shield\n`;
+            let z = 0;
+            results.layers.forEach((l, i) => {
+                const t = l.unit === 'nm' ? l.thickness / 1e6 : l.unit === 'μm' ? l.thickness / 1000 : l.thickness;
+                stl += `  # Layer ${i + 1}: ${materials[l.material]?.name || l.material}, Z: ${z.toFixed(4)} to ${(z + t).toFixed(4)} mm\n`;
+                z += t;
+            });
+            stl += `endsolid laminate_shield`;
+            showModal('STL Pseudo-Geometry', stl);
+        }
+        
+        function showSummary() {
+            const results = calculateDesign();
+            let s = `═══════════════════════════════════════════════════
+              DESIGN SUMMARY
+═══════════════════════════════════════════════════
+
+THERMAL PERFORMANCE
+• Peak surface: ${Math.round(results.T_surface)}°C ${results.T_surface > 3000 ? '⚠️ CRITICAL' : '✓'}
+• Backside: ${Math.round(results.T_back)}°C ${results.T_back > state.maxBackTemp ? '⚠️ EXCEEDS TARGET' : '✓'}
+• Thermal R: ${results.R_total.toExponential(3)} m²K/W
+
+STRUCTURAL
+• Stress: ${Math.round(results.stress / 1e6)} MPa ${results.stress > 300e6 ? '⚠️ HIGH' : '✓'}
+• Est. cycles: ~${Math.round(results.N_cycles).toLocaleString()}
+
+RADIATION
+• X-ray: ${results.xrayAtten.toFixed(1)}%
+• Gamma: ${results.gammaAtten.toFixed(1)}%
+• Neutron: ${state.addLowZ ? '~45%' : '~12%'}
+
+═══════════════════════════════════════════════════`;
+            showModal('Design Summary', s);
+        }
+        
+        function showModal(title, content) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalContent').textContent = content; document.getElementById('modalOverlay').classList.add('active'); }
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+        function copyModalContent() { navigator.clipboard.writeText(document.getElementById('modalContent').textContent).then(() => { event.target.textContent = 'Copied!'; setTimeout(() => event.target.textContent = 'Copy', 2000); }); }
+        
+        document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === document.getElementById('modalOverlay')) closeModal(); });
+        
+        const resizeObserver = new ResizeObserver(() => { const active = document.querySelector('.viz-tab.active').textContent.toLowerCase(); renderVisualization(active.includes('3d') ? 'iso' : active.includes('sketch') ? 'sketch' : active.includes('thermal') ? 'thermal' : active.includes('annot') ? 'annotated' : 'cross'); });
+        window.addEventListener('load', () => { resizeObserver.observe(document.querySelector('.viz-content')); updateDesign(); });
+    </script>
+</body>
+</html>

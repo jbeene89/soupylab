@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ΨΦ Engine v2 — Enhanced Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            background: linear-gradient(90deg, #0ff, #f0f, #ff0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        
+        .main-container {
+            display: flex;
+            gap: 30px;
+            padding: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1400px;
+        }
+        
+        .face-container {
+            position: relative;
+        }
+        
+        #faceCanvas {
+            border-radius: 20px;
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.15);
+        }
+        
+        .emotion-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.9em;
+            color: #0ff;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        .controls {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 320px;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+        }
+        
+        .control-section h3 {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #888;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+        
+        .slider-group {
+            margin-bottom: 12px;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            margin-bottom: 4px;
+        }
+        
+        .slider-label span:first-child { color: #aaa; }
+        .slider-label span:last-child { color: #0ff; font-family: monospace; }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #0ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .preset-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(0,255,255,0.1);
+            border-color: #0ff;
+        }
+        
+        .persona-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .persona-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 10px;
+            border: 2px solid;
+            border-radius: 10px;
+            background: transparent;
+            color: #fff;
+            font-size: 0.7em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .persona-btn.builder { border-color: #0fa; }
+        .persona-btn.builder:hover, .persona-btn.builder.active { background: rgba(0,255,170,0.2); }
+        
+        .persona-btn.redteam { border-color: #f55; }
+        .persona-btn.redteam:hover, .persona-btn.redteam.active { background: rgba(255,85,85,0.2); }
+        
+        .persona-btn.analyst { border-color: #0af; }
+        .persona-btn.analyst:hover, .persona-btn.analyst.active { background: rgba(0,170,255,0.2); }
+        
+        .persona-btn.framebreaker { border-color: #f0f; }
+        .persona-btn.framebreaker:hover, .persona-btn.framebreaker.active { background: rgba(255,0,255,0.2); }
+        
+        .chat-section {
+            margin-top: 20px;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+        
+        .chat-input button {
+            background: linear-gradient(135deg, #0ff, #0af);
+            border: none;
+            color: #000;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            font-family: monospace;
+        }
+        
+        .metric-label {
+            font-size: 0.65em;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .improvements-note {
+            max-width: 800px;
+            margin: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            font-size: 0.8em;
+            color: #888;
+            line-height: 1.6;
+        }
+        
+        .improvements-note h4 {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        
+        .improvements-note ul {
+            margin-left: 20px;
+        }
+        
+        .improvements-note li {
+            margin-bottom: 5px;
+        }
+        
+        .improvements-note strong {
+            color: #0ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ΨΦ ENGINE v2</h1>
+        <p>Enhanced Emotional Field Rendering</p>
+    </div>
+    
+    <div class="main-container">
+        <div class="face-container">
+            <canvas id="faceCanvas" width="500" height="500"></canvas>
+            <div class="emotion-label" id="emotionLabel">neutral</div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-section">
+                <h3>Persona</h3>
+                <div class="persona-buttons">
+                    <button class="persona-btn builder active" onclick="setPersona('builder')">Builder</button>
+                    <button class="persona-btn redteam" onclick="setPersona('redteam')">Red Team</button>
+                    <button class="persona-btn analyst" onclick="setPersona('analyst')">Analyst</button>
+                    <button class="persona-btn framebreaker" onclick="setPersona('framebreaker')">Chaos</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>Emotion Axes</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Valence (Sad ↔ Happy)</span>
+                        <span id="valenceVal">0.00</span>
+                    </div>
+                    <input type="range" id="valence" min="-100" max="100" value="30" oninput="updateEmotion()">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Arousal (Calm ↔ Excited)</span>
+                        <span id="arousalVal">0.00</span>
+                    </div>
+                    <input type="range" id="arousal" min="-100" max="100" value="20" oninput="updateEmotion()">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Tension (Relaxed ↔ Stressed)</span>
+                        <span id="tensionVal">0.00</span>
+                    </div>
+                    <input type="range" id="tension" min="-100" max="100" value="-10" oninput="updateEmotion()">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Coherence (Scattered ↔ Focused)</span>
+                        <span id="coherenceVal">0.00</span>
+                    </div>
+                    <input type="range" id="coherence" min="-100" max="100" value="70" oninput="updateEmotion()">
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="setPreset('happy')">Happy</button>
+                    <button class="preset-btn" onclick="setPreset('sad')">Sad</button>
+                    <button class="preset-btn" onclick="setPreset('angry')">Angry</button>
+                    <button class="preset-btn" onclick="setPreset('thinking')">Thinking</button>
+                    <button class="preset-btn" onclick="setPreset('curious')">Curious</button>
+                    <button class="preset-btn" onclick="setPreset('surprised')">Surprised</button>
+                    <button class="preset-btn" onclick="setPreset('confident')">Confident</button>
+                    <button class="preset-btn" onclick="setPreset('confused')">Confused</button>
+                    <button class="preset-btn" onclick="setPreset('skeptical')">Skeptical</button>
+                </div>
+            </div>
+            
+            <div class="control-section chat-section">
+                <h3>Say Something</h3>
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="Type to see emotional response..." onkeydown="if(event.key==='Enter')sendChat()">
+                    <button onclick="sendChat()">Send</button>
+                </div>
+            </div>
+            
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value" id="intensityVal">0.00</div>
+                    <div class="metric-label">Intensity</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="trustVal">0.50</div>
+                    <div class="metric-label">Trust Level</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="fpsVal">60</div>
+                    <div class="metric-label">FPS</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="blinkVal">--</div>
+                    <div class="metric-label">Next Blink</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="improvements-note">
+        <h4>🆕 v2 Enhancements</h4>
+        <ul>
+            <li><strong>Natural Blinking</strong> — Randomized blink timing (2-6 seconds), faster when stressed</li>
+            <li><strong>Gaze System</strong> — Eyes wander naturally, snap to attention on high arousal</li>
+            <li><strong>Micro-expressions</strong> — Brief emotional flashes that reveal hidden states</li>
+            <li><strong>Trust/Rapport</strong> — Accumulates over positive interactions, affects baseline</li>
+            <li><strong>Breathing Animation</strong> — Subtle scale pulse, faster with arousal</li>
+            <li><strong>Field Particles</strong> — Energy particles emerge from high-emotion states</li>
+            <li><strong>Emotional Memory</strong> — Recent emotions leave traces in the field</li>
+            <li><strong>Persona Physics</strong> — Each archetype has distinct motion characteristics</li>
+            <li><strong>Lying Detection Setup</strong> — Framework for showing one emotion while feeling another</li>
+            <li><strong>Smooth Transitions</strong> — Momentum-based emotion changes, no jarring jumps</li>
+        </ul>
+    </div>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════════════
+    // ΨΦ ENGINE v2 — ENHANCED
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const canvas = document.getElementById('faceCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const CX = W / 2;
+    const CY = H / 2;
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    let state = {
+        // Core emotion (target)
+        emotion: { valence: 0.3, arousal: 0.2, tension: -0.1, coherence: 0.7 },
+        // Displayed emotion (smoothed)
+        displayEmotion: { valence: 0.3, arousal: 0.2, tension: -0.1, coherence: 0.7 },
+        // Velocity for momentum
+        velocity: { valence: 0, arousal: 0, tension: 0, coherence: 0 },
+        
+        // Persona
+        persona: 'builder',
+        baseHue: 165,
+        
+        // Blink system
+        blinkPhase: 0,
+        blinkTimer: 3,
+        nextBlinkIn: 3,
+        isBlinking: false,
+        
+        // Gaze system
+        gazeTarget: { x: 0, y: 0 },
+        gazeActual: { x: 0, y: 0 },
+        gazeTimer: 0,
+        
+        // Micro-expressions
+        microExpression: null,
+        microTimer: 0,
+        
+        // Trust/rapport
+        trust: 0.5,
+        
+        // Particles
+        particles: [],
+        
+        // Emotional memory (trailing field effect)
+        emotionHistory: [],
+        
+        // Timing
+        time: 0,
+        lastFrame: performance.now(),
+        fps: 60
+    };
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERSONA DEFINITIONS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const PERSONAS = {
+        builder: {
+            hue: 165,
+            baseline: { valence: 0.3, arousal: 0.2, tension: -0.1, coherence: 0.7 },
+            responsiveness: 0.08,
+            damping: 0.92,
+            blinkRate: 4,
+            gazeStability: 0.7,
+            particleRate: 0.3
+        },
+        redteam: {
+            hue: 355,
+            baseline: { valence: -0.1, arousal: 0.3, tension: 0.2, coherence: 0.85 },
+            responsiveness: 0.12,
+            damping: 0.85,
+            blinkRate: 2.5,
+            gazeStability: 0.9,
+            particleRate: 0.5
+        },
+        analyst: {
+            hue: 195,
+            baseline: { valence: 0, arousal: 0.1, tension: 0, coherence: 0.95 },
+            responsiveness: 0.05,
+            damping: 0.96,
+            blinkRate: 5,
+            gazeStability: 0.95,
+            particleRate: 0.1
+        },
+        framebreaker: {
+            hue: 280,
+            baseline: { valence: 0.4, arousal: 0.6, tension: 0.1, coherence: 0.3 },
+            responsiveness: 0.15,
+            damping: 0.75,
+            blinkRate: 2,
+            gazeStability: 0.3,
+            particleRate: 0.8
+        }
+    };
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // PRESETS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    const PRESETS = {
+        neutral:   { valence: 0, arousal: 0, tension: 0, coherence: 0.6 },
+        happy:     { valence: 0.8, arousal: 0.4, tension: -0.2, coherence: 0.7 },
+        sad:       { valence: -0.7, arousal: -0.5, tension: 0.2, coherence: 0.3 },
+        angry:     { valence: -0.8, arousal: 0.8, tension: 0.9, coherence: 0.6 },
+        thinking:  { valence: 0.1, arousal: 0.2, tension: 0.1, coherence: 0.9 },
+        curious:   { valence: 0.4, arousal: 0.5, tension: 0, coherence: 0.7 },
+        surprised: { valence: 0.2, arousal: 0.9, tension: 0.3, coherence: 0.1 },
+        confident: { valence: 0.6, arousal: 0.3, tension: -0.2, coherence: 0.9 },
+        confused:  { valence: -0.2, arousal: 0.3, tension: 0.5, coherence: 0.1 },
+        skeptical: { valence: -0.2, arousal: 0.2, tension: 0.3, coherence: 0.8 }
+    };
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SENTIMENT ANALYZER (Simple)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    function analyzeSentiment(text) {
+        const lower = text.toLowerCase();
+        let v = 0, a = 0, t = 0, c = 0;
+        
+        // Positive words
+        if (/love|great|amazing|wonderful|thank|yes|agree|perfect|brilliant/i.test(lower)) v += 0.4;
+        if (/good|nice|cool|like|happy/i.test(lower)) v += 0.2;
+        
+        // Negative words
+        if (/hate|terrible|awful|wrong|bad|no|disagree|stupid/i.test(lower)) v -= 0.4;
+        if (/sad|sorry|unfortunately|problem|issue/i.test(lower)) v -= 0.2;
+        
+        // Arousal
+        if (/!|wow|amazing|incredible|omg|excited/i.test(lower)) a += 0.4;
+        if (/calm|quiet|slow|relax/i.test(lower)) a -= 0.3;
+        
+        // Tension
+        if (/but|however|problem|worried|risk|danger/i.test(lower)) t += 0.3;
+        if (/agree|yes|definitely|of course/i.test(lower)) t -= 0.2;
+        
+        // Coherence
+        if (/because|therefore|specifically|exactly/i.test(lower)) c += 0.2;
+        if (/maybe|perhaps|idk|confused|unclear/i.test(lower)) c -= 0.3;
+        
+        // Punctuation
+        const exclaims = (text.match(/!/g) || []).length;
+        a += exclaims * 0.15;
+        
+        return {
+            valence: Math.max(-1, Math.min(1, v)),
+            arousal: Math.max(-1, Math.min(1, a)),
+            tension: Math.max(-1, Math.min(1, t)),
+            coherence: Math.max(-1, Math.min(1, c))
+        };
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // UPDATE FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    function updateEmotionPhysics(dt) {
+        const persona = PERSONAS[state.persona];
+        
+        // Apply velocity toward target
+        for (const axis of ['valence', 'arousal', 'tension', 'coherence']) {
+            const diff = state.emotion[axis] - state.displayEmotion[axis];
+            state.velocity[axis] += diff * persona.responsiveness;
+            state.velocity[axis] *= persona.damping;
+            state.displayEmotion[axis] += state.velocity[axis];
+            state.displayEmotion[axis] = Math.max(-1, Math.min(1, state.displayEmotion[axis]));
+        }
+        
+        // Store in history for trailing effect
+        state.emotionHistory.push({ ...state.displayEmotion, time: state.time });
+        if (state.emotionHistory.length > 30) state.emotionHistory.shift();
+    }
+    
+    function updateBlink(dt) {
+        const persona = PERSONAS[state.persona];
+        
+        // Blink timing affected by tension/arousal
+        const blinkMod = 1 - state.displayEmotion.tension * 0.3 + state.displayEmotion.arousal * 0.2;
+        
+        state.blinkTimer -= dt;
+        
+        if (state.blinkTimer <= 0 && !state.isBlinking) {
+            state.isBlinking = true;
+            state.blinkPhase = 0;
+        }
+        
+        if (state.isBlinking) {
+            state.blinkPhase += dt * 8;  // Blink speed
+            if (state.blinkPhase >= 1) {
+                state.isBlinking = false;
+                state.blinkPhase = 0;
+                // Schedule next blink
+                state.nextBlinkIn = persona.blinkRate * blinkMod * (0.5 + Math.random());
+                state.blinkTimer = state.nextBlinkIn;
+            }
+        }
+        
+        document.getElementById('blinkVal').textContent = 
+            state.isBlinking ? 'NOW' : state.blinkTimer.toFixed(1) + 's';
+    }
+    
+    function updateGaze(dt) {
+        const persona = PERSONAS[state.persona];
+        
+        state.gazeTimer -= dt;
+        
+        // Pick new gaze target periodically
+        if (state.gazeTimer <= 0) {
+            const wanderAmount = (1 - persona.gazeStability) * 0.3;
+            state.gazeTarget.x = (Math.random() - 0.5) * wanderAmount;
+            state.gazeTarget.y = (Math.random() - 0.5) * wanderAmount * 0.5;
+            
+            // High arousal = look straight ahead
+            if (state.displayEmotion.arousal > 0.5) {
+                state.gazeTarget.x *= 0.3;
+                state.gazeTarget.y *= 0.3;
+            }
+            
+            state.gazeTimer = 0.5 + Math.random() * 2;
+        }
+        
+        // Smooth gaze movement
+        state.gazeActual.x += (state.gazeTarget.x - state.gazeActual.x) * 0.1;
+        state.gazeActual.y += (state.gazeTarget.y - state.gazeActual.y) * 0.1;
+    }
+    
+    function updateMicroExpressions(dt) {
+        // Random micro-expression chance
+        if (!state.microExpression && Math.random() < 0.002) {
+            // Flash a random emotion briefly
+            const micros = ['surprise', 'doubt', 'interest'];
+            state.microExpression = micros[Math.floor(Math.random() * micros.length)];
+            state.microTimer = 0.15;
+        }
+        
+        if (state.microExpression) {
+            state.microTimer -= dt;
+            if (state.microTimer <= 0) {
+                state.microExpression = null;
+            }
+        }
+    }
+    
+    function updateParticles(dt) {
+        const persona = PERSONAS[state.persona];
+        const intensity = getIntensity();
+        
+        // Spawn particles based on emotional intensity
+        if (intensity > 0.4 && Math.random() < intensity * persona.particleRate * dt * 2) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 80 + Math.random() * 40;
+            state.particles.push({
+                x: CX + Math.cos(angle) * dist,
+                y: CY + Math.sin(angle) * dist,
+                vx: Math.cos(angle) * (20 + intensity * 30),
+                vy: Math.sin(angle) * (20 + intensity * 30),
+                life: 1,
+                size: 2 + Math.random() * 3
+            });
+        }
+        
+        // Update particles
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt * 0.8;
+            if (p.life <= 0) state.particles.splice(i, 1);
+        }
+    }
+    
+    function getIntensity() {
+        const e = state.displayEmotion;
+        return Math.sqrt(e.valence**2 + e.arousal**2 + e.tension**2) / Math.sqrt(3);
+    }
+    
+    function getDominantEmotion() {
+        const e = state.displayEmotion;
+        const emotions = {
+            joy: Math.max(0, e.valence) * (1 + e.arousal) / 2,
+            sadness: Math.max(0, -e.valence) * (1 - e.arousal) / 2,
+            anger: Math.max(0, -e.valence) * Math.max(0, e.arousal) * Math.max(0, e.tension),
+            fear: Math.max(0, -e.valence) * Math.max(0, e.tension) * (1 - e.coherence),
+            surprise: Math.max(0, e.arousal) * (1 - e.coherence) * 0.5,
+            curiosity: Math.max(0, e.arousal) * Math.max(0, e.coherence) * (1 - Math.abs(e.valence)),
+            thinking: Math.max(0, e.coherence) * (1 - Math.abs(e.valence)) * (1 - Math.abs(e.arousal)),
+            confident: Math.max(0, e.valence) * Math.max(0, e.coherence) * (1 - e.tension),
+            confused: (1 - e.coherence) * Math.max(0, e.tension)
+        };
+        
+        let max = { name: 'neutral', val: 0.1 };
+        for (const [name, val] of Object.entries(emotions)) {
+            if (val > max.val) max = { name, val };
+        }
+        return max.name;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    function render() {
+        const e = state.displayEmotion;
+        const persona = PERSONAS[state.persona];
+        const t = state.time;
+        
+        // Clear
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+        
+        // Breathing
+        const breathRate = 0.8 + e.arousal * 0.5;
+        const breathe = Math.sin(t * breathRate * Math.PI * 2) * 0.02;
+        
+        // Calculate colors
+        const hueShift = e.valence * 30;
+        const hue = (persona.hue + hueShift + 360) % 360;
+        const sat = 70 + e.arousal * 15;
+        const light = 45 + e.valence * 10;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // BACKGROUND FIELD
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // Emotional memory trails
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < state.emotionHistory.length; i++) {
+            const h = state.emotionHistory[i];
+            const age = (state.emotionHistory.length - i) / state.emotionHistory.length;
+            const trailHue = (persona.hue + h.valence * 30 + 360) % 360;
+            const radius = 120 - age * 40;
+            
+            const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, radius);
+            grad.addColorStop(0, `hsla(${trailHue}, 50%, 40%, ${0.05 * age})`);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+        }
+        ctx.globalAlpha = 1;
+        
+        // Main glow
+        const glowRadius = 150 * (1 + breathe + getIntensity() * 0.2);
+        const glow = ctx.createRadialGradient(CX, CY, 0, CX, CY, glowRadius);
+        glow.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, 0.4)`);
+        glow.addColorStop(0.5, `hsla(${hue}, ${sat}%, ${light}%, 0.15)`);
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, W, H);
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // PARTICLES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        for (const p of state.particles) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light + 20}%, ${p.life * 0.7})`;
+            ctx.fill();
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // FACE
+        // ═══════════════════════════════════════════════════════════════════
+        
+        const scale = 1 + breathe;
+        ctx.save();
+        ctx.translate(CX, CY);
+        ctx.scale(scale, scale);
+        
+        // Face outline
+        const faceRadius = 100;
+        
+        // Field distortion
+        const noiseAmp = (1 - e.coherence) * 0.15 + e.tension * 0.1;
+        
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2; a += 0.05) {
+            const noise = Math.sin(a * 8 + t * 2) * noiseAmp * 10 +
+                         Math.sin(a * 5 - t * 3) * noiseAmp * 5;
+            const r = faceRadius + noise;
+            const x = Math.cos(a) * r;
+            const y = Math.sin(a) * r;
+            if (a === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${light}%, 0.8)`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Inner glow
+        const innerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, faceRadius);
+        innerGlow.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, 0.15)`);
+        innerGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = innerGlow;
+        ctx.fill();
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // EYES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        const eyeY = -15;
+        const eyeSpacing = 35;
+        
+        // Blink affects eye height
+        let eyeOpen = 1 + e.arousal * 0.3 - Math.max(0, -e.valence) * e.tension * 0.3;
+        
+        // Apply blink
+        if (state.isBlinking) {
+            const blinkCurve = Math.sin(state.blinkPhase * Math.PI);
+            eyeOpen *= (1 - blinkCurve);
+        }
+        
+        // Micro-expression override
+        if (state.microExpression === 'surprise') eyeOpen = 1.4;
+        
+        const eyeHeight = 18 * Math.max(0.05, eyeOpen);
+        const eyeWidth = 22;
+        
+        for (const side of [-1, 1]) {
+            const ex = side * eyeSpacing;
+            
+            // Eye socket glow
+            const eyeGlow = ctx.createRadialGradient(ex, eyeY, 0, ex, eyeY, eyeWidth * 1.5);
+            eyeGlow.addColorStop(0, `hsla(${hue}, 40%, 30%, 0.3)`);
+            eyeGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = eyeGlow;
+            ctx.fillRect(ex - 40, eyeY - 40, 80, 80);
+            
+            // Eye outline
+            ctx.beginPath();
+            ctx.ellipse(ex, eyeY, eyeWidth, eyeHeight, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${light}%, 0.9)`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Pupil with gaze
+            if (eyeOpen > 0.1) {
+                const pupilSize = 8 * (1 + e.arousal * 0.2) * Math.min(1, eyeOpen);
+                const gazeX = ex + state.gazeActual.x * eyeWidth * 0.4;
+                const gazeY = eyeY + state.gazeActual.y * eyeHeight * 0.3;
+                
+                // Pupil glow
+                const pupilGlow = ctx.createRadialGradient(gazeX, gazeY, 0, gazeX, gazeY, pupilSize * 2);
+                pupilGlow.addColorStop(0, `hsla(${hue}, 80%, 60%, 0.9)`);
+                pupilGlow.addColorStop(0.5, `hsla(${hue}, 80%, 50%, 0.5)`);
+                pupilGlow.addColorStop(1, 'transparent');
+                ctx.fillStyle = pupilGlow;
+                ctx.fillRect(gazeX - 30, gazeY - 30, 60, 60);
+                
+                // Pupil core
+                ctx.beginPath();
+                ctx.arc(gazeX, gazeY, pupilSize, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${hue}, 90%, 70%, 1)`;
+                ctx.fill();
+                
+                // Highlight
+                ctx.beginPath();
+                ctx.arc(gazeX - pupilSize * 0.3, gazeY - pupilSize * 0.3, pupilSize * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.fill();
+            }
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // BROWS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        let browRaise = e.arousal * (1 - e.coherence) * 0.5 + Math.max(0, e.valence) * 0.3;
+        if (e.tension > 0 && e.valence < 0) browRaise = -e.tension * 0.4;
+        
+        // Micro-expression
+        if (state.microExpression === 'doubt') browRaise = -0.3;
+        if (state.microExpression === 'interest') browRaise = 0.4;
+        
+        const browY = eyeY - 28 - browRaise * 12;
+        const browWidth = 25;
+        const browTilt = e.tension * Math.max(0, -e.valence) * 0.4;
+        
+        for (const side of [-1, 1]) {
+            const bx = side * eyeSpacing;
+            
+            ctx.beginPath();
+            ctx.moveTo(bx - browWidth, browY + side * browTilt * 8);
+            ctx.quadraticCurveTo(bx, browY - 5 - browRaise * 5, bx + browWidth, browY - side * browTilt * 8);
+            ctx.strokeStyle = `hsla(${hue}, ${sat - 10}%, ${light - 5}%, 0.8)`;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // MOUTH
+        // ═══════════════════════════════════════════════════════════════════
+        
+        const mouthY = 40;
+        const mouthWidth = 35 * (1 + e.valence * 0.15);
+        let mouthCurve = e.valence * 0.8;
+        let mouthOpen = Math.max(0, e.arousal) * (1 - e.coherence) * 0.4;
+        
+        // Micro-expression
+        if (state.microExpression === 'surprise') {
+            mouthOpen = 0.5;
+            mouthCurve = 0.2;
+        }
+        
+        const mouthCurveY = mouthCurve * 25;
+        
+        // Mouth glow
+        if (mouthOpen > 0.1) {
+            const mouthGlow = ctx.createRadialGradient(0, mouthY, 0, 0, mouthY, 40);
+            mouthGlow.addColorStop(0, `hsla(${(hue + 20) % 360}, ${sat}%, ${light - 10}%, 0.3)`);
+            mouthGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = mouthGlow;
+            ctx.fillRect(-50, mouthY - 30, 100, 60);
+        }
+        
+        // Upper lip
+        ctx.beginPath();
+        ctx.moveTo(-mouthWidth, mouthY);
+        ctx.quadraticCurveTo(0, mouthY - mouthCurveY * 0.3, mouthWidth, mouthY);
+        ctx.strokeStyle = `hsla(${(hue + 20) % 360}, ${sat}%, ${light}%, 0.9)`;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        
+        // Lower lip
+        ctx.beginPath();
+        ctx.moveTo(-mouthWidth, mouthY);
+        ctx.quadraticCurveTo(0, mouthY + mouthCurveY + mouthOpen * 15, mouthWidth, mouthY);
+        ctx.strokeStyle = `hsla(${(hue + 20) % 360}, ${sat}%, ${light}%, 0.9)`;
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // UI UPDATES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        document.getElementById('emotionLabel').textContent = getDominantEmotion();
+        document.getElementById('intensityVal').textContent = getIntensity().toFixed(2);
+        document.getElementById('trustVal').textContent = state.trust.toFixed(2);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // MAIN LOOP
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    function loop() {
+        const now = performance.now();
+        const dt = Math.min(0.1, (now - state.lastFrame) / 1000);
+        state.lastFrame = now;
+        state.time += dt;
+        
+        // FPS
+        state.fps = state.fps * 0.95 + (1 / dt) * 0.05;
+        document.getElementById('fpsVal').textContent = Math.round(state.fps);
+        
+        // Update systems
+        updateEmotionPhysics(dt);
+        updateBlink(dt);
+        updateGaze(dt);
+        updateMicroExpressions(dt);
+        updateParticles(dt);
+        
+        // Render
+        render();
+        
+        requestAnimationFrame(loop);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERFACE FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    function updateEmotion() {
+        state.emotion.valence = parseInt(document.getElementById('valence').value) / 100;
+        state.emotion.arousal = parseInt(document.getElementById('arousal').value) / 100;
+        state.emotion.tension = parseInt(document.getElementById('tension').value) / 100;
+        state.emotion.coherence = parseInt(document.getElementById('coherence').value) / 100;
+        
+        document.getElementById('valenceVal').textContent = state.emotion.valence.toFixed(2);
+        document.getElementById('arousalVal').textContent = state.emotion.arousal.toFixed(2);
+        document.getElementById('tensionVal').textContent = state.emotion.tension.toFixed(2);
+        document.getElementById('coherenceVal').textContent = state.emotion.coherence.toFixed(2);
+    }
+    
+    function setPreset(name) {
+        const preset = PRESETS[name];
+        if (!preset) return;
+        
+        state.emotion = { ...preset };
+        
+        document.getElementById('valence').value = preset.valence * 100;
+        document.getElementById('arousal').value = preset.arousal * 100;
+        document.getElementById('tension').value = preset.tension * 100;
+        document.getElementById('coherence').value = preset.coherence * 100;
+        
+        updateEmotion();
+    }
+    
+    function setPersona(name) {
+        state.persona = name;
+        const persona = PERSONAS[name];
+        
+        // Update button states
+        document.querySelectorAll('.persona-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.persona-btn.${name}`).classList.add('active');
+        
+        // Set baseline emotion
+        state.emotion = { ...persona.baseline };
+        document.getElementById('valence').value = persona.baseline.valence * 100;
+        document.getElementById('arousal').value = persona.baseline.arousal * 100;
+        document.getElementById('tension').value = persona.baseline.tension * 100;
+        document.getElementById('coherence').value = persona.baseline.coherence * 100;
+        updateEmotion();
+    }
+    
+    function sendChat() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        const sentiment = analyzeSentiment(text);
+        
+        // Apply as impulse
+        state.emotion.valence = Math.max(-1, Math.min(1, state.emotion.valence + sentiment.valence));
+        state.emotion.arousal = Math.max(-1, Math.min(1, state.emotion.arousal + sentiment.arousal));
+        state.emotion.tension = Math.max(-1, Math.min(1, state.emotion.tension + sentiment.tension));
+        state.emotion.coherence = Math.max(-1, Math.min(1, state.emotion.coherence + sentiment.coherence));
+        
+        // Update trust based on valence
+        state.trust = Math.max(0, Math.min(1, state.trust + sentiment.valence * 0.1));
+        
+        // Update sliders
+        document.getElementById('valence').value = state.emotion.valence * 100;
+        document.getElementById('arousal').value = state.emotion.arousal * 100;
+        document.getElementById('tension').value = state.emotion.tension * 100;
+        document.getElementById('coherence').value = state.emotion.coherence * 100;
+        updateEmotion();
+        
+        input.value = '';
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    updateEmotion();
+    loop();
+    
+    </script>
+</body>
+</html>

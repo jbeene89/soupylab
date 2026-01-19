@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TectonoVolcCore - Tectonic & Volcanic Simulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #ff6b35;
+            --accent2: #ffaa00;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        header {
+            background: linear-gradient(180deg, rgba(255,107,53,0.15) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255,107,53,0.3);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.1rem; color: var(--accent); }
+        header a { color: #00ff9d; text-decoration: none; padding: 5px 10px; border: 1px solid rgba(0,255,157,0.3); border-radius: 4px; font-size: 0.75rem; }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: 1fr auto;
+            height: calc(100vh - 50px);
+        }
+        
+        .controls {
+            background: var(--panel);
+            padding: 12px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            grid-row: 1 / 3;
+            font-size: 0.7rem;
+        }
+        
+        .section { margin-bottom: 16px; }
+        .section h3 {
+            font-size: 0.7rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,107,53,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section h3 .toggle {
+            cursor: pointer;
+            font-size: 0.6rem;
+            color: var(--dim);
+        }
+        
+        .param-category {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .param-category-header {
+            background: rgba(255,107,53,0.1);
+            padding: 8px 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.65rem;
+            color: var(--accent2);
+            font-weight: 600;
+        }
+        .param-category-header:hover { background: rgba(255,107,53,0.2); }
+        .param-category-header .arrow { transition: transform 0.2s; }
+        .param-category-header.collapsed .arrow { transform: rotate(-90deg); }
+        .param-category-content { padding: 8px 10px; }
+        .param-category-content.hidden { display: none; }
+        
+        .slider-row { margin-bottom: 10px; }
+        .slider-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: var(--dim);
+            margin-bottom: 3px;
+        }
+        .slider-row label span { color: var(--accent); font-family: monospace; }
+        .slider-input-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .slider-input-row input[type="range"] {
+            flex: 1;
+            height: 3px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        .slider-input-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px; height: 12px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .slider-input-row input[type="number"] {
+            width: 55px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--accent);
+            padding: 3px 5px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-family: monospace;
+            text-align: right;
+        }
+        
+        .preset-row { margin-bottom: 10px; }
+        .preset-row label { display: block; font-size: 0.6rem; color: var(--dim); margin-bottom: 3px; }
+        .preset-row select {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-box .label { font-size: 0.5rem; color: var(--dim); text-transform: uppercase; }
+        .stat-box .value { font-size: 0.75rem; font-family: monospace; color: var(--accent); margin-top: 2px; }
+        .stat-box.alert .value { color: #ff4444; }
+        .stat-box.warn .value { color: #ffaa00; }
+        .stat-box.good .value { color: #00ff88; }
+        
+        .event-log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 0.6rem;
+            font-family: monospace;
+        }
+        .event-log .event { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .event-log .quake { color: #ff6b35; }
+        .event-log .eruption { color: #ff4444; }
+        .event-log .vent { color: #00aaff; }
+        
+        .canvas-area { position: relative; background: #000; }
+        canvas { width: 100%; height: 100%; display: block; }
+        
+        .overlay-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+        }
+        .overlay-controls button {
+            display: block;
+            width: 100%;
+            margin-bottom: 4px;
+            padding: 5px 10px;
+            background: rgba(255,107,53,0.2);
+            border: 1px solid rgba(255,107,53,0.4);
+            color: var(--text);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.6rem;
+        }
+        .overlay-controls button:hover { background: rgba(255,107,53,0.4); }
+        .overlay-controls button.active { background: var(--accent); color: #000; }
+        
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.6rem;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+        .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+        
+        /* AI Panel */
+        .ai-panel {
+            background: var(--panel);
+            border-top: 1px solid rgba(0,255,157,0.2);
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 180px;
+        }
+        .ai-header { display: flex; justify-content: space-between; align-items: center; }
+        .ai-header h4 { font-size: 0.7rem; color: #00ff9d; }
+        .ai-header button {
+            background: none;
+            border: 1px solid rgba(0,255,157,0.3);
+            color: #00ff9d;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            cursor: pointer;
+        }
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 0.65rem;
+            color: var(--dim);
+            background: rgba(0,0,0,0.2);
+            padding: 6px;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+        .ai-messages .user { color: var(--accent); }
+        .ai-messages .assistant { color: #00ff9d; }
+        .ai-input-row { display: flex; gap: 6px; }
+        .ai-input-row input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+        .ai-input-row button {
+            background: linear-gradient(135deg, #00ff9d, #00aa66);
+            border: none;
+            color: #000;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🌋 TECTONO-VOLC CORE - Plate Tectonics & Volcanic Simulator</h1>
+        <a href="index.html">← BACK TO LAB</a>
+    </header>
+    
+    <div class="main-container">
+        <div class="controls">
+            <!-- SCENARIO -->
+            <div class="section">
+                <h3>SCENARIO <span class="toggle">▼</span></h3>
+                <div class="preset-row">
+                    <label>Preset Configuration</label>
+                    <select id="scenarioPreset" onchange="loadScenario()">
+                        <option value="subduction">Subduction Zone (Pacific-style)</option>
+                        <option value="ridge">Mid-Ocean Ridge</option>
+                        <option value="hotspot">Hotspot Volcanism (Hawaii-style)</option>
+                        <option value="rift">Continental Rift</option>
+                        <option value="collision">Continental Collision</option>
+                        <option value="transform">Transform Fault (San Andreas)</option>
+                        <option value="custom">Custom Configuration</option>
+                    </select>
+                </div>
+                <div class="preset-row">
+                    <label>Time Scale</label>
+                    <select id="timeScale" onchange="update()">
+                        <option value="0.001">1 sec = 1,000 years</option>
+                        <option value="0.01">1 sec = 10,000 years</option>
+                        <option value="0.1" selected>1 sec = 100,000 years</option>
+                        <option value="1">1 sec = 1 million years</option>
+                        <option value="10">1 sec = 10 million years</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- PLATE KINEMATICS -->
+            <div class="param-category">
+                <div class="param-category-header" onclick="toggleCategory(this)">
+                    <span>⚙️ PLATE KINEMATICS</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="param-category-content">
+                    <div class="preset-row">
+                        <label>Kinematic Mode</label>
+                        <select id="kinematicMode" onchange="update()">
+                            <option value="prescribed">Prescribed Velocities</option>
+                            <option value="dynamic">Dynamic (Buoyancy-Driven)</option>
+                            <option value="hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                    <div class="slider-row">
+                        <label>Plate A Velocity <span>cm/yr</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="plateA_vel" min="0" max="20" step="0.1" value="5" oninput="sync('plateA_vel')">
+                            <input type="number" id="plateA_vel_num" min="0" max="20" step="0.1" value="5" onchange="syncNum('plateA_vel')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Plate A Direction <span>°</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="plateA_dir" min="0" max="360" step="1" value="270" oninput="sync('plateA_dir')">
+                            <input type="number" id="plateA_dir_num" min="0" max="360" step="1" value="270" onchange="syncNum('plateA_dir')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Plate B Velocity <span>cm/yr</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="plateB_vel" min="0" max="20" step="0.1" value="8" oninput="sync('plateB_vel')">
+                            <input type="number" id="plateB_vel_num" min="0" max="20" step="0.1" value="8" onchange="syncNum('plateB_vel')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Plate B Direction <span>°</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="plateB_dir" min="0" max="360" step="1" value="90" oninput="sync('plateB_dir')">
+                            <input type="number" id="plateB_dir_num" min="0" max="360" step="1" value="90" onchange="syncNum('plateB_dir')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Convergence Rate <span>cm/yr</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="convergenceRate" min="0" max="25" step="0.5" value="10" oninput="sync('convergenceRate')">
+                            <input type="number" id="convergenceRate_num" min="0" max="25" step="0.5" value="10" onchange="syncNum('convergenceRate')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Obliquity Angle <span>°</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="obliquity" min="0" max="90" step="1" value="15" oninput="sync('obliquity')">
+                            <input type="number" id="obliquity_num" min="0" max="90" step="1" value="15" onchange="syncNum('obliquity')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- LITHOSPHERE PROPERTIES -->
+            <div class="param-category">
+                <div class="param-category-header" onclick="toggleCategory(this)">
+                    <span>🪨 LITHOSPHERE PROPERTIES</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="param-category-content">
+                    <div class="preset-row">
+                        <label>Plate A Type</label>
+                        <select id="plateA_type" onchange="update()">
+                            <option value="oceanic_young">Oceanic (Young, &lt;20 Ma)</option>
+                            <option value="oceanic_mature" selected>Oceanic (Mature, 20-80 Ma)</option>
+                            <option value="oceanic_old">Oceanic (Old, &gt;80 Ma)</option>
+                            <option value="continental_thin">Continental (Thin)</option>
+                            <option value="continental_thick">Continental (Thick/Craton)</option>
+                        </select>
+                    </div>
+                    <div class="preset-row">
+                        <label>Plate B Type</label>
+                        <select id="plateB_type" onchange="update()">
+                            <option value="oceanic_young">Oceanic (Young)</option>
+                            <option value="oceanic_mature">Oceanic (Mature)</option>
+                            <option value="oceanic_old">Oceanic (Old)</option>
+                            <option value="continental_thin">Continental (Thin)</option>
+                            <option value="continental_thick" selected>Continental (Thick/Craton)</option>
+                        </select>
+                    </div>
+                    <div class="slider-row">
+                        <label>Lithosphere Thickness A <span>km</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="lithoThickA" min="10" max="250" step="5" value="80" oninput="sync('lithoThickA')">
+                            <input type="number" id="lithoThickA_num" min="10" max="250" step="5" value="80" onchange="syncNum('lithoThickA')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Lithosphere Thickness B <span>km</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="lithoThickB" min="10" max="250" step="5" value="150" oninput="sync('lithoThickB')">
+                            <input type="number" id="lithoThickB_num" min="10" max="250" step="5" value="150" onchange="syncNum('lithoThickB')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Brittle-Ductile Depth <span>km</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="brittleDuctile" min="5" max="40" step="1" value="15" oninput="sync('brittleDuctile')">
+                            <input type="number" id="brittleDuctile_num" min="5" max="40" step="1" value="15" onchange="syncNum('brittleDuctile')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- THERMAL FIELD -->
+            <div class="param-category">
+                <div class="param-category-header collapsed" onclick="toggleCategory(this)">
+                    <span>🔥 THERMAL FIELD</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="param-category-content hidden">
+                    <div class="slider-row">
+                        <label>Mantle Potential Temp <span>°C</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="mantleTemp" min="1200" max="1600" step="10" value="1350" oninput="sync('mantleTemp')">
+                            <input type="number" id="mantleTemp_num" min="1200" max="1600" step="10" value="1350" onchange="syncNum('mantleTemp')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Surface Temperature <span>°C</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="surfaceTemp" min="-20" max="40" step="1" value="10" oninput="sync('surfaceTemp')">
+                            <input type="number" id="surfaceTemp_num" min="-20" max="40" step="1" value="10" onchange="syncNum('surfaceTemp')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Thermal Diffusivity <span>×10⁻⁶ m²/s</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="thermalDiff" min="0.5" max="2" step="0.1" value="1" oninput="sync('thermalDiff')">
+                            <input type="number" id="thermalDiff_num" min="0.5" max="2" step="0.1" value="1" onchange="syncNum('thermalDiff')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Radiogenic Heating <span>μW/m³</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="radiogenic" min="0" max="5" step="0.1" value="1.5" oninput="sync('radiogenic')">
+                            <input type="number" id="radiogenic_num" min="0" max="5" step="0.1" value="1.5" onchange="syncNum('radiogenic')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Hotspot Anomaly <span>°C</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="hotspotAnomaly" min="0" max="400" step="10" value="200" oninput="sync('hotspotAnomaly')">
+                            <input type="number" id="hotspotAnomaly_num" min="0" max="400" step="10" value="200" onchange="syncNum('hotspotAnomaly')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- STRESS & FAULTING -->
+            <div class="param-category">
+                <div class="param-category-header collapsed" onclick="toggleCategory(this)">
+                    <span>💥 STRESS & FAULTING</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="param-category-content hidden">
+                    <div class="slider-row">
+                        <label>Friction Coefficient <span>μ</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="friction" min="0.1" max="0.9" step="0.05" value="0.6" oninput="sync('friction')">
+                            <input type="number" id="friction_num" min="0.1" max="0.9" step="0.05" value="0.6" onchange="syncNum('friction')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Cohesion <span>MPa</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="cohesion" min="0" max="100" step="5" value="20" oninput="sync('cohesion')">
+                            <input type="number" id="cohesion_num" min="0" max="100" step="5" value="20" onchange="syncNum('cohesion')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Locking Depth <span>km</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="lockingDepth" min="5" max="30" step="1" value="15" oninput="sync('lockingDepth')">
+                            <input type="number" id="lockingDepth_num" min="5" max="30" step="1" value="15" onchange="syncNum('lockingDepth')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Coupling Coefficient <span></span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="coupling" min="0" max="1" step="0.05" value="0.8" oninput="sync('coupling')">
+                            <input type="number" id="coupling_num" min="0" max="1" step="0.05" value="0.8" onchange="syncNum('coupling')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Viscosity (Asthenosphere) <span>×10¹⁹ Pa·s</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="viscosity" min="0.1" max="100" step="0.5" value="10" oninput="sync('viscosity')">
+                            <input type="number" id="viscosity_num" min="0.1" max="100" step="0.5" value="10" onchange="syncNum('viscosity')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MAGMA & VOLCANISM -->
+            <div class="param-category">
+                <div class="param-category-header" onclick="toggleCategory(this)">
+                    <span>🌋 MAGMA & VOLCANISM</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="param-category-content">
+                    <div class="preset-row">
+                        <label>Melting Model</label>
+                        <select id="meltModel" onchange="update()">
+                            <option value="simple">Simple Parametric</option>
+                            <option value="batch">Batch Melting</option>
+                            <option value="fractional">Fractional Melting</option>
+                            <option value="flux">Flux Melting (Subduction)</option>
+                        </select>
+                    </div>
+                    <div class="slider-row">
+                        <label>Solidus Temperature <span>°C</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="solidus" min="1000" max="1300" step="10" value="1100" oninput="sync('solidus')">
+                            <input type="number" id="solidus_num" min="1000" max="1300" step="10" value="1100" onchange="syncNum('solidus')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Liquidus Temperature <span>°C</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="liquidus" min="1200" max="1500" step="10" value="1300" oninput="sync('liquidus')">
+                            <input type="number" id="liquidus_num" min="1200" max="1500" step="10" value="1300" onchange="syncNum('liquidus')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Water Content <span>wt%</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="waterContent" min="0" max="5" step="0.1" value="0.5" oninput="sync('waterContent')">
+                            <input type="number" id="waterContent_num" min="0" max="5" step="0.1" value="0.5" onchange="syncNum('waterContent')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Magma Viscosity <span>×10⁴ Pa·s</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="magmaVisc" min="0.1" max="100" step="0.5" value="10" oninput="sync('magmaVisc')">
+                            <input type="number" id="magmaVisc_num" min="0.1" max="100" step="0.5" value="10" onchange="syncNum('magmaVisc')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Gas Fraction <span>%</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="gasFraction" min="0" max="10" step="0.5" value="3" oninput="sync('gasFraction')">
+                            <input type="number" id="gasFraction_num" min="0" max="10" step="0.5" value="3" onchange="syncNum('gasFraction')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ERUPTION PARAMETERS -->
+            <div class="param-category">
+                <div class="param-category-header collapsed" onclick="toggleCategory(this)">
+                    <span>💨 ERUPTION DYNAMICS</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="param-category-content hidden">
+                    <div class="preset-row">
+                        <label>Eruption Style Bias</label>
+                        <select id="eruptionStyle" onchange="update()">
+                            <option value="effusive">Effusive (Hawaiian)</option>
+                            <option value="mixed" selected>Mixed</option>
+                            <option value="explosive">Explosive (Plinian)</option>
+                        </select>
+                    </div>
+                    <div class="slider-row">
+                        <label>Reservoir Pressure Thresh <span>MPa</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="pressureThresh" min="10" max="200" step="5" value="50" oninput="sync('pressureThresh')">
+                            <input type="number" id="pressureThresh_num" min="10" max="200" step="5" value="50" onchange="syncNum('pressureThresh')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Reservoir Volume <span>km³</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="reservoirVol" min="0.1" max="100" step="0.5" value="10" oninput="sync('reservoirVol')">
+                            <input type="number" id="reservoirVol_num" min="0.1" max="100" step="0.5" value="10" onchange="syncNum('reservoirVol')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>Mass Flux Rate <span>kg/s ×10⁶</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="massFlux" min="0.01" max="10" step="0.1" value="1" oninput="sync('massFlux')">
+                            <input type="number" id="massFlux_num" min="0.01" max="10" step="0.1" value="1" onchange="syncNum('massFlux')">
+                        </div>
+                    </div>
+                    <div class="slider-row">
+                        <label>SO₂ Emission <span>kt/day</span></label>
+                        <div class="slider-input-row">
+                            <input type="range" id="so2Emission" min="0" max="100" step="1" value="10" oninput="sync('so2Emission')">
+                            <input type="number" id="so2Emission_num" min="0" max="100" step="1" value="10" onchange="syncNum('so2Emission')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SIMULATION STATS -->
+            <div class="section">
+                <h3>SIMULATION STATUS</h3>
+                <div class="stats-grid">
+                    <div class="stat-box" id="stressBox">
+                        <div class="label">Max Stress</div>
+                        <div class="value" id="maxStress">45 MPa</div>
+                    </div>
+                    <div class="stat-box" id="meltBox">
+                        <div class="label">Melt Fraction</div>
+                        <div class="value" id="meltFrac">12%</div>
+                    </div>
+                    <div class="stat-box" id="quakeBox">
+                        <div class="label">Earthquakes</div>
+                        <div class="value" id="quakeCount">0</div>
+                    </div>
+                    <div class="stat-box" id="eruptBox">
+                        <div class="label">Eruptions</div>
+                        <div class="value" id="eruptCount">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Sim Time</div>
+                        <div class="value" id="simTime">0 Ma</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Heat Flux</div>
+                        <div class="value" id="heatFlux">85 mW/m²</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- EVENT LOG -->
+            <div class="section">
+                <h3>EVENT LOG</h3>
+                <div class="event-log" id="eventLog">
+                    <div class="event">Simulation initialized...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-area">
+            <canvas id="canvas"></canvas>
+            
+            <div class="overlay-controls">
+                <button id="btn_topo" class="active" onclick="setView('topo')">Topography</button>
+                <button id="btn_temp" onclick="setView('temp')">Temperature</button>
+                <button id="btn_stress" onclick="setView('stress')">Stress Field</button>
+                <button id="btn_melt" onclick="setView('melt')">Melt Fraction</button>
+                <button id="btn_velocity" onclick="setView('velocity')">Plate Velocity</button>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 5px 0;">
+                <button onclick="togglePlay()">⏯️ Play/Pause</button>
+                <button onclick="resetSim()">🔄 Reset</button>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background: #ff4444;"></div> Volcano</div>
+                <div class="legend-item"><div class="legend-color" style="background: #ffaa00;"></div> Magma Chamber</div>
+                <div class="legend-item"><div class="legend-color" style="background: #00aaff;"></div> Hydrothermal Vent</div>
+                <div class="legend-item"><div class="legend-color" style="background: #ff6b35;"></div> Earthquake</div>
+                <div class="legend-item"><div class="legend-color" style="background: linear-gradient(90deg, #224, #4a4, #aa4, #a44);"></div> Plate Boundary</div>
+            </div>
+        </div>
+        
+        <!-- AI Panel -->
+        <div class="ai-panel">
+            <div class="ai-header">
+                <h4>🤖 GEOLOGY AI ASSISTANT (Gemini)</h4>
+                <button onclick="toggleApiKey()">⚙️ API Key</button>
+            </div>
+            <div id="apiKeyInput" class="hidden" style="margin-bottom: 6px;">
+                <input type="password" id="geminiKey" placeholder="Enter Gemini API Key" style="width: 100%; padding: 5px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 3px; font-size: 0.65rem;">
+                <button onclick="saveApiKey()" style="margin-top: 3px; padding: 3px 6px; background: #00ff9d; border: none; color: #000; border-radius: 3px; font-size: 0.6rem; cursor: pointer;">Save</button>
+            </div>
+            <div class="ai-messages" id="aiMessages">
+                <div class="assistant">Hello! I can help explain plate tectonics, volcanism, earthquake mechanics, and the simulation parameters. Ask me anything!</div>
+            </div>
+            <div class="ai-input-row">
+                <input type="text" id="aiInput" placeholder="Ask about tectonics, volcanoes, earthquakes..." onkeypress="if(event.key==='Enter')askAI()">
+                <button onclick="askAI()" id="askBtn">Ask</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let time = 0;
+        let simTime = 0;
+        let playing = true;
+        let viewMode = 'topo';
+        let quakeCount = 0;
+        let eruptCount = 0;
+        
+        // Simulation state
+        const state = {
+            plates: [],
+            faults: [],
+            volcanoes: [],
+            reservoirs: [],
+            quakes: [],
+            eruptions: []
+        };
+        
+        // All parameters with defaults
+        const params = {
+            // Kinematics
+            plateA_vel: 5, plateA_dir: 270,
+            plateB_vel: 8, plateB_dir: 90,
+            convergenceRate: 10, obliquity: 15,
+            // Lithosphere
+            lithoThickA: 80, lithoThickB: 150,
+            brittleDuctile: 15,
+            // Thermal
+            mantleTemp: 1350, surfaceTemp: 10,
+            thermalDiff: 1, radiogenic: 1.5, hotspotAnomaly: 200,
+            // Stress
+            friction: 0.6, cohesion: 20, lockingDepth: 15,
+            coupling: 0.8, viscosity: 10,
+            // Magma
+            solidus: 1100, liquidus: 1300, waterContent: 0.5,
+            magmaVisc: 10, gasFraction: 3,
+            // Eruption
+            pressureThresh: 50, reservoirVol: 10, massFlux: 1, so2Emission: 10
+        };
+        
+        function sync(id) {
+            const slider = document.getElementById(id);
+            const numInput = document.getElementById(id + '_num');
+            if (numInput) numInput.value = slider.value;
+            params[id] = parseFloat(slider.value);
+            update();
+        }
+        
+        function syncNum(id) {
+            const numInput = document.getElementById(id + '_num');
+            const slider = document.getElementById(id);
+            let val = parseFloat(numInput.value);
+            val = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), val));
+            slider.value = val;
+            numInput.value = val;
+            params[id] = val;
+            update();
+        }
+        
+        function toggleCategory(header) {
+            header.classList.toggle('collapsed');
+            header.nextElementSibling.classList.toggle('hidden');
+        }
+        
+        function loadScenario() {
+            const scenario = document.getElementById('scenarioPreset').value;
+            // Set default values based on scenario
+            if (scenario === 'subduction') {
+                setParam('convergenceRate', 10);
+                setParam('plateA_vel', 5);
+                setParam('plateB_vel', 2);
+            } else if (scenario === 'ridge') {
+                setParam('convergenceRate', 0);
+                setParam('plateA_vel', 3);
+                setParam('plateA_dir', 270);
+                setParam('plateB_vel', 3);
+                setParam('plateB_dir', 90);
+            } else if (scenario === 'hotspot') {
+                setParam('hotspotAnomaly', 300);
+                setParam('plateA_vel', 7);
+            }
+            update();
+        }
+        
+        function setParam(id, val) {
+            params[id] = val;
+            const slider = document.getElementById(id);
+            const numInput = document.getElementById(id + '_num');
+            if (slider) slider.value = val;
+            if (numInput) numInput.value = val;
+        }
+        
+        function setView(mode) {
+            viewMode = mode;
+            document.querySelectorAll('.overlay-controls button').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn_' + mode)?.classList.add('active');
+        }
+        
+        function togglePlay() { playing = !playing; }
+        function resetSim() {
+            simTime = 0;
+            quakeCount = 0;
+            eruptCount = 0;
+            state.quakes = [];
+            state.eruptions = [];
+            document.getElementById('eventLog').innerHTML = '<div class="event">Simulation reset...</div>';
+            update();
+        }
+        
+        function update() {
+            // Calculate derived values
+            const relVel = Math.sqrt(
+                Math.pow(params.plateA_vel * Math.cos(params.plateA_dir * Math.PI/180) - params.plateB_vel * Math.cos(params.plateB_dir * Math.PI/180), 2) +
+                Math.pow(params.plateA_vel * Math.sin(params.plateA_dir * Math.PI/180) - params.plateB_vel * Math.sin(params.plateB_dir * Math.PI/180), 2)
+            );
+            
+            // Melt fraction from temperature
+            const meltFrac = Math.max(0, Math.min(100, 
+                (params.mantleTemp + params.hotspotAnomaly - params.solidus) / (params.liquidus - params.solidus) * 100
+            ));
+            
+            // Stress accumulation
+            const stressRate = relVel * params.coupling * 0.5;
+            const maxStress = stressRate * simTime * 10 + Math.random() * 20;
+            
+            // Heat flux
+            const heatFlux = 40 + params.mantleTemp / 20 + params.radiogenic * 10;
+            
+            // Update displays
+            document.getElementById('meltFrac').textContent = meltFrac.toFixed(1) + '%';
+            document.getElementById('maxStress').textContent = maxStress.toFixed(0) + ' MPa';
+            document.getElementById('heatFlux').textContent = heatFlux.toFixed(0) + ' mW/m²';
+            document.getElementById('simTime').textContent = simTime.toFixed(2) + ' Ma';
+            document.getElementById('quakeCount').textContent = quakeCount;
+            document.getElementById('eruptCount').textContent = eruptCount;
+            
+            // Color coding
+            document.getElementById('stressBox').className = 'stat-box ' + (maxStress > 100 ? 'alert' : maxStress > 50 ? 'warn' : '');
+            document.getElementById('meltBox').className = 'stat-box ' + (meltFrac > 20 ? 'alert' : meltFrac > 10 ? 'warn' : '');
+        }
+        
+        function logEvent(type, message) {
+            const log = document.getElementById('eventLog');
+            const div = document.createElement('div');
+            div.className = 'event ' + type;
+            div.textContent = `[${simTime.toFixed(3)} Ma] ${message}`;
+            log.insertBefore(div, log.firstChild);
+            if (log.children.length > 50) log.removeChild(log.lastChild);
+        }
+        
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        
+        function render() {
+            const dt = 0.016;
+            if (playing) {
+                const timeScale = parseFloat(document.getElementById('timeScale').value);
+                simTime += dt * timeScale;
+                
+                // Random events
+                if (Math.random() < 0.01 * params.coupling) {
+                    const mag = 3 + Math.random() * 5;
+                    quakeCount++;
+                    logEvent('quake', `M${mag.toFixed(1)} earthquake at depth ${(params.lockingDepth * Math.random()).toFixed(0)} km`);
+                    state.quakes.push({ x: Math.random(), y: Math.random(), t: time, mag });
+                }
+                
+                if (Math.random() < 0.002 * (params.mantleTemp - 1200) / 400) {
+                    eruptCount++;
+                    const vei = Math.floor(Math.random() * 5);
+                    logEvent('eruption', `VEI-${vei} eruption! ${params.massFlux.toFixed(1)}×10⁶ kg/s mass flux`);
+                    state.eruptions.push({ x: Math.random(), y: Math.random(), t: time, vei });
+                }
+            }
+            time += dt;
+            
+            const W = canvas.width, H = canvas.height;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, W, H);
+            
+            // Draw based on view mode
+            if (viewMode === 'topo') {
+                drawTopography(W, H);
+            } else if (viewMode === 'temp') {
+                drawTemperature(W, H);
+            } else if (viewMode === 'stress') {
+                drawStress(W, H);
+            } else if (viewMode === 'melt') {
+                drawMelt(W, H);
+            } else if (viewMode === 'velocity') {
+                drawVelocity(W, H);
+            }
+            
+            // Draw events
+            state.quakes.forEach((q, i) => {
+                const age = time - q.t;
+                if (age < 2) {
+                    const alpha = 1 - age / 2;
+                    const size = 5 + q.mag * 3 + age * 20;
+                    ctx.beginPath();
+                    ctx.arc(q.x * W, q.y * H, size, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 107, 53, ${alpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+            
+            state.eruptions.forEach((e, i) => {
+                const age = time - e.t;
+                if (age < 3) {
+                    const alpha = 1 - age / 3;
+                    ctx.beginPath();
+                    ctx.arc(e.x * W, e.y * H, 10 + e.vei * 5, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 50, 50, ${alpha * 0.5})`;
+                    ctx.fill();
+                    
+                    // Ash plume
+                    for (let j = 0; j < 10; j++) {
+                        const px = e.x * W + (Math.random() - 0.5) * 50 * age;
+                        const py = e.y * H - age * 30 - Math.random() * 20;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 3 + Math.random() * 5, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.3})`;
+                        ctx.fill();
+                    }
+                }
+            });
+            
+            update();
+            requestAnimationFrame(render);
+        }
+        
+        function drawTopography(W, H) {
+            // Cross-section view
+            const gradient = ctx.createLinearGradient(0, 0, W, 0);
+            gradient.addColorStop(0, '#224');
+            gradient.addColorStop(0.3, '#335');
+            gradient.addColorStop(0.5, '#446');
+            gradient.addColorStop(0.7, '#553');
+            gradient.addColorStop(1, '#663');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, H * 0.3, W, H * 0.7);
+            
+            // Plate boundary
+            const boundaryX = W * 0.5;
+            ctx.strokeStyle = '#ff6b35';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(boundaryX, H * 0.3);
+            ctx.lineTo(boundaryX, H);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Subducting plate
+            ctx.beginPath();
+            ctx.moveTo(0, H * 0.35);
+            ctx.lineTo(boundaryX, H * 0.35);
+            ctx.lineTo(boundaryX + W * 0.3, H * 0.8);
+            ctx.strokeStyle = '#88a';
+            ctx.lineWidth = params.lithoThickA / 10;
+            ctx.stroke();
+            
+            // Overriding plate
+            ctx.beginPath();
+            ctx.moveTo(boundaryX, H * 0.3);
+            ctx.lineTo(W, H * 0.3);
+            ctx.strokeStyle = '#aa8';
+            ctx.lineWidth = params.lithoThickB / 10;
+            ctx.stroke();
+            
+            // Volcanic arc
+            const volcX = boundaryX + W * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(volcX - 30, H * 0.3);
+            ctx.lineTo(volcX, H * 0.15);
+            ctx.lineTo(volcX + 30, H * 0.3);
+            ctx.fillStyle = '#664';
+            ctx.fill();
+            
+            // Magma chamber
+            ctx.beginPath();
+            ctx.ellipse(volcX, H * 0.45, 40, 25, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 100, 50, 0.5)';
+            ctx.fill();
+            
+            // Labels
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Oceanic Plate', 50, H * 0.25);
+            ctx.fillText('Continental Plate', W - 150, H * 0.25);
+            ctx.fillText('Subduction Zone', boundaryX - 50, H * 0.5);
+            ctx.fillText('Volcanic Arc', volcX - 30, H * 0.1);
+        }
+        
+        function drawTemperature(W, H) {
+            for (let y = 0; y < H; y += 4) {
+                for (let x = 0; x < W; x += 4) {
+                    const depth = y / H;
+                    const temp = params.surfaceTemp + (params.mantleTemp - params.surfaceTemp) * depth;
+                    const hotspot = Math.exp(-Math.pow((x - W*0.6)/100, 2)) * params.hotspotAnomaly * depth;
+                    const T = temp + hotspot;
+                    
+                    const r = Math.min(255, T / 5);
+                    const g = Math.min(255, Math.max(0, (T - 500) / 3));
+                    const b = Math.max(0, 100 - T / 10);
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.fillRect(x, y, 4, 4);
+                }
+            }
+            
+            // Isotherms
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            [400, 800, 1200].forEach(T => {
+                const y = H * (T - params.surfaceTemp) / (params.mantleTemp - params.surfaceTemp);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.fillText(T + '°C', 10, y - 5);
+            });
+        }
+        
+        function drawStress(W, H) {
+            for (let y = 0; y < H; y += 8) {
+                for (let x = 0; x < W; x += 8) {
+                    const boundaryDist = Math.abs(x - W * 0.5) / (W * 0.3);
+                    const depth = y / H;
+                    const stress = params.coupling * (1 - boundaryDist) * (1 - depth) * 100;
+                    
+                    const intensity = Math.min(1, stress / 100);
+                    ctx.fillStyle = `rgb(${intensity * 255}, ${(1-intensity) * 100}, ${(1-intensity) * 150})`;
+                    ctx.fillRect(x, y, 8, 8);
+                }
+            }
+            
+            // Fault lines
+            ctx.strokeStyle = '#ff0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(W * 0.5, 0);
+            ctx.lineTo(W * 0.5, H);
+            ctx.stroke();
+        }
+        
+        function drawMelt(W, H) {
+            for (let y = 0; y < H; y += 6) {
+                for (let x = 0; x < W; x += 6) {
+                    const depth = y / H;
+                    const subductDist = Math.max(0, 1 - Math.abs(x - W * 0.65) / (W * 0.2));
+                    const melt = subductDist * depth * (params.mantleTemp - params.solidus) / (params.liquidus - params.solidus);
+                    
+                    if (melt > 0.1) {
+                        ctx.fillStyle = `rgba(255, ${150 - melt * 100}, 50, ${melt})`;
+                        ctx.fillRect(x, y, 6, 6);
+                    } else {
+                        ctx.fillStyle = `rgba(50, 50, 80, 0.5)`;
+                        ctx.fillRect(x, y, 6, 6);
+                    }
+                }
+            }
+        }
+        
+        function drawVelocity(W, H) {
+            ctx.fillStyle = '#112';
+            ctx.fillRect(0, 0, W, H);
+            
+            // Velocity vectors
+            for (let y = 50; y < H; y += 60) {
+                for (let x = 50; x < W; x += 60) {
+                    const onPlateA = x < W * 0.5;
+                    const vel = onPlateA ? params.plateA_vel : params.plateB_vel;
+                    const dir = onPlateA ? params.plateA_dir : params.plateB_dir;
+                    
+                    const vx = vel * Math.cos(dir * Math.PI / 180) * 5;
+                    const vy = -vel * Math.sin(dir * Math.PI / 180) * 5;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + vx, y + vy);
+                    ctx.strokeStyle = onPlateA ? '#4af' : '#fa4';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Arrow head
+                    const angle = Math.atan2(vy, vx);
+                    ctx.beginPath();
+                    ctx.moveTo(x + vx, y + vy);
+                    ctx.lineTo(x + vx - 8 * Math.cos(angle - 0.4), y + vy - 8 * Math.sin(angle - 0.4));
+                    ctx.moveTo(x + vx, y + vy);
+                    ctx.lineTo(x + vx - 8 * Math.cos(angle + 0.4), y + vy - 8 * Math.sin(angle + 0.4));
+                    ctx.stroke();
+                }
+            }
+            
+            // Legend
+            ctx.fillStyle = '#4af';
+            ctx.fillText(`Plate A: ${params.plateA_vel} cm/yr @ ${params.plateA_dir}°`, 20, 30);
+            ctx.fillStyle = '#fa4';
+            ctx.fillText(`Plate B: ${params.plateB_vel} cm/yr @ ${params.plateB_dir}°`, 20, 50);
+        }
+        
+        // AI Functions
+        let geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+        
+        function toggleApiKey() { document.getElementById('apiKeyInput').classList.toggle('hidden'); }
+        
+        function saveApiKey() {
+            geminiApiKey = document.getElementById('geminiKey').value;
+            localStorage.setItem('geminiApiKey', geminiApiKey);
+            document.getElementById('apiKeyInput').classList.add('hidden');
+            addMessage('assistant', 'API key saved!');
+        }
+        
+        function addMessage(role, text) {
+            const messages = document.getElementById('aiMessages');
+            const div = document.createElement('div');
+            div.className = role;
+            div.innerHTML = `<strong>${role === 'user' ? 'You' : 'AI'}:</strong> ${text}`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        async function askAI() {
+            const input = document.getElementById('aiInput');
+            const question = input.value.trim();
+            if (!question || !geminiApiKey) {
+                if (!geminiApiKey) addMessage('assistant', 'Please set your Gemini API key first.');
+                return;
+            }
+            
+            addMessage('user', question);
+            input.value = '';
+            
+            const context = `TectonoVolcCore simulation parameters:
+- Plate A: ${params.plateA_vel} cm/yr @ ${params.plateA_dir}°, thickness ${params.lithoThickA} km
+- Plate B: ${params.plateB_vel} cm/yr @ ${params.plateB_dir}°, thickness ${params.lithoThickB} km
+- Convergence: ${params.convergenceRate} cm/yr, obliquity ${params.obliquity}°
+- Mantle temp: ${params.mantleTemp}°C, hotspot anomaly: ${params.hotspotAnomaly}°C
+- Solidus: ${params.solidus}°C, liquidus: ${params.liquidus}°C
+- Friction: ${params.friction}, cohesion: ${params.cohesion} MPa
+- Earthquakes: ${quakeCount}, Eruptions: ${eruptCount}
+
+You are a geology expert. Explain plate tectonics, volcanism, earthquakes, and help interpret the simulation.`;
+            
+            try {
+                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiApiKey, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: context + '\n\nQuestion: ' + question }] }],
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 400 }
+                    })
+                });
+                const data = await response.json();
+                if (data.candidates?.[0]) addMessage('assistant', data.candidates[0].content.parts[0].text);
+                else addMessage('assistant', 'Error generating response.');
+            } catch (err) {
+                addMessage('assistant', 'Error: ' + err.message);
+            }
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+        update();
+        render();
+        
+        if (geminiApiKey) document.getElementById('geminiKey').value = geminiApiKey;
+    </script>
+</body>
+</html>
