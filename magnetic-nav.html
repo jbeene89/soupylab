@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magnetic Anomaly Navigation - SOUPY LABS</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -19,167 +20,174 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
         }
         .header {
             text-align: center;
-            padding: 30px 20px;
+            padding: 20px;
             background: linear-gradient(135deg, rgba(255,205,0,0.1) 0%, transparent 100%);
             border-bottom: 1px solid rgba(255,205,0,0.2);
         }
         .header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
+            font-size: 1.8rem;
             color: var(--accent);
             text-shadow: 0 0 20px rgba(255,205,0,0.3);
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
-        .header p { color: var(--dim); font-size: 0.9rem; }
+        .header p { color: var(--dim); font-size: 0.85rem; }
         .back-link {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 15px;
+            left: 15px;
             color: var(--accent);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: opacity 0.3s;
+            z-index: 1000;
         }
         .back-link:hover { opacity: 0.7; }
         .container {
-            max-width: 1400px;
-            margin: 20px auto;
-            padding: 0 20px;
             display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
+            grid-template-columns: 280px 1fr;
+            height: calc(100vh - 100px);
+            gap: 15px;
+            padding: 15px;
         }
         .controls {
             background: var(--card);
             border-radius: 10px;
-            padding: 20px;
+            padding: 15px;
             border: 1px solid rgba(255,205,0,0.1);
-            height: fit-content;
+            overflow-y: auto;
         }
         .control-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .control-group label {
             display: block;
             color: var(--accent);
-            font-size: 0.8rem;
-            margin-bottom: 8px;
+            font-size: 0.75rem;
+            margin-bottom: 6px;
             font-weight: 500;
         }
         input[type="range"] {
             width: 100%;
-            height: 6px;
+            height: 5px;
             background: rgba(255,205,0,0.2);
             outline: none;
             border-radius: 3px;
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             background: var(--accent);
             border-radius: 50%;
             cursor: pointer;
         }
         .value-display {
             color: var(--text);
-            font-size: 0.85rem;
-            margin-top: 4px;
+            font-size: 0.75rem;
+            margin-top: 3px;
         }
         button {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             background: linear-gradient(135deg, rgba(255,205,0,0.2), rgba(255,205,0,0.1));
             border: 1px solid var(--accent);
             color: var(--accent);
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             transition: all 0.3s;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         button:hover {
             background: linear-gradient(135deg, rgba(255,205,0,0.3), rgba(255,205,0,0.2));
-            box-shadow: 0 0 20px rgba(255,205,0,0.2);
+            box-shadow: 0 0 15px rgba(255,205,0,0.2);
         }
-        .simulation-area {
+        .main-area {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            gap: 15px;
+        }
+        .viewport-container {
             background: var(--card);
             border-radius: 10px;
-            padding: 20px;
             border: 1px solid rgba(255,205,0,0.1);
+            overflow: hidden;
+            position: relative;
         }
-        #canvas {
+        #viewport3D {
             width: 100%;
-            height: 600px;
-            background: #080810;
-            border-radius: 8px;
-            border: 1px solid rgba(255,205,0,0.1);
+            height: 100%;
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,205,0,0.1);
         }
         .stat-card {
             background: rgba(255,205,0,0.05);
             border: 1px solid rgba(255,205,0,0.1);
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 6px;
+            padding: 10px;
             text-align: center;
         }
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--dim);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .stat-value {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: var(--accent);
             font-family: 'Orbitron', sans-serif;
         }
-        .info-panel {
-            background: rgba(255,205,0,0.05);
-            border-left: 3px solid var(--accent);
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 4px;
+        .view-mode {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            gap: 5px;
         }
-        .info-panel h3 {
-            color: var(--accent);
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-        }
-        .info-panel p {
-            font-size: 0.75rem;
-            line-height: 1.5;
-            color: var(--dim);
+        .view-mode button {
+            padding: 5px 10px;
+            font-size: 0.65rem;
+            width: auto;
+            margin: 0;
         }
         .legend {
-            display: flex;
-            gap: 15px;
-            margin-top: 10px;
-            flex-wrap: wrap;
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.65rem;
         }
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 0.75rem;
+            gap: 8px;
+            margin: 4px 0;
         }
         .legend-color {
             width: 20px;
             height: 12px;
             border-radius: 2px;
         }
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .container {
                 grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
             }
         }
     </style>
@@ -189,12 +197,12 @@
 
     <div class="header">
         <h1>🧲 MAGNETIC ANOMALY NAVIGATION</h1>
-        <p>Map-matching using Earth's magnetic field for GPS-denied positioning</p>
+        <p>3D Magnetic Field Visualization | GPS-Denied Positioning | GPU-Accelerated</p>
     </div>
 
     <div class="container">
         <div class="controls">
-            <h3 style="color: var(--accent); margin-bottom: 15px; font-size: 1rem;">Control Panel</h3>
+            <h3 style="color: var(--accent); margin-bottom: 12px; font-size: 0.9rem;">Control Panel</h3>
 
             <div class="control-group">
                 <label>Vehicle Speed (m/s)</label>
@@ -215,9 +223,9 @@
             </div>
 
             <div class="control-group">
-                <label>Correlation Window (samples)</label>
+                <label>Correlation Window</label>
                 <input type="range" id="corrWindow" min="5" max="50" value="20" step="5">
-                <div class="value-display" id="corrWindowVal">20</div>
+                <div class="value-display" id="corrWindowVal">20 samples</div>
             </div>
 
             <div class="control-group">
@@ -227,31 +235,45 @@
             </div>
 
             <div class="control-group">
+                <label>Field Lines Density</label>
+                <input type="range" id="fieldDensity" min="1" max="20" value="8" step="1">
+                <div class="value-display" id="fieldDensityVal">8</div>
+            </div>
+
+            <div class="control-group">
                 <label>Simulation Speed</label>
                 <input type="range" id="simSpeed" min="0.1" max="5" value="1" step="0.1">
                 <div class="value-display" id="simSpeedVal">1.0x</div>
             </div>
 
             <button id="resetBtn">🔄 Reset Simulation</button>
-            <button id="toggleMap">🗺️ Toggle Map Display</button>
-            <button id="randomPath">🎲 Random Flight Path</button>
+            <button id="toggleField">🌈 Field Map: ON</button>
+            <button id="toggleLines">〰️ Field Lines: ON</button>
+            <button id="randomPath">🎲 Random Flight</button>
         </div>
 
-        <div class="simulation-area">
-            <canvas id="canvas" width="1000" height="600"></canvas>
-
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: linear-gradient(to right, blue, cyan, green, yellow, red);"></div>
-                    <span>Magnetic Field Intensity</span>
+        <div class="main-area">
+            <div class="viewport-container">
+                <div id="viewport3D"></div>
+                <div class="view-mode">
+                    <button id="viewFollow">Follow</button>
+                    <button id="viewTop">Top</button>
+                    <button id="viewSide">Side</button>
+                    <button id="viewFree">Free</button>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #00ff9d;"></div>
-                    <span>True Path</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #ff6b35;"></div>
-                    <span>Estimated Position</span>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ff9d;"></div>
+                        <span>True Path</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6b35;"></div>
+                        <span>Estimated Position</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: linear-gradient(to right, blue, cyan, lime, yellow, red);"></div>
+                        <span>Magnetic Field (nT)</span>
+                    </div>
                 </div>
             </div>
 
@@ -261,85 +283,239 @@
                     <div class="stat-value" id="posError">0.0 m</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Correlation Score</div>
-                    <div class="stat-value" id="correlation">0.00</div>
+                    <div class="stat-label">Correlation</div>
+                    <div class="stat-value" id="correlation">1.00</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Current Field</div>
+                    <div class="stat-label">Field Strength</div>
                     <div class="stat-value" id="currentField">45000 nT</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Distance Traveled</div>
-                    <div class="stat-value" id="distance">0 km</div>
+                    <div class="stat-label">Distance</div>
+                    <div class="stat-value" id="distance">0.0 km</div>
                 </div>
-            </div>
-
-            <div class="info-panel">
-                <h3>About Magnetic Anomaly Navigation (MagNav)</h3>
-                <p>
-                    <strong>MagNav</strong> is a passive GPS-denied navigation technique that compares real-time magnetometer
-                    measurements to a pre-stored magnetic anomaly map. The Earth's magnetic field varies spatially due to
-                    geological features (iron deposits, crustal variations). By measuring the local field and correlating
-                    the readings with the map using algorithms like cross-correlation or particle filters, a vehicle can
-                    estimate its position. This simulation shows a vehicle (green trail) flying over a synthetic magnetic
-                    anomaly field (colored background). The red marker shows the estimated position from MagNav correlation.
-                    Watch how noise and map resolution affect positioning accuracy.
-                </p>
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        // ===== THREE.JS SCENE SETUP =====
+        let scene, camera, renderer;
+        let trueVehicle, estMarker, fieldMesh, fieldLines = [];
+        let viewMode = 'follow';
 
-        // Magnetic anomaly map (2D field)
-        const mapWidth = canvas.width / 5;
-        const mapHeight = canvas.height / 5;
+        // Magnetic map (heightfield)
+        const mapSize = 100;
+        const mapScale = 5;
         let magMap = [];
-        let showMap = true;
 
-        // Vehicle state
-        let truePos = { x: 100, y: 300 };
-        let estPos = { x: 100, y: 300 };
-        let velocity = { x: 30, y: 0 };
+        // Simulation state
+        let time = 0, totalDistance = 0;
+        let truePos = new THREE.Vector3(0, 10, 0);
+        let estPos = new THREE.Vector3(0, 10, 0);
+        let velocity = new THREE.Vector3(30, 0, 0);
         let truePath = [];
         let measurements = [];
-        let time = 0;
-        let totalDistance = 0;
 
         // Parameters
-        let speed = 30;
-        let magNoise = 20;
-        let mapRes = 50;
-        let corrWindow = 20;
-        let variance = 5;
-        let simSpeed = 1;
+        let params = {
+            speed: 30,
+            magNoise: 20,
+            mapRes: 50,
+            corrWindow: 20,
+            variance: 5,
+            fieldDensity: 8,
+            simSpeed: 1,
+            showField: true,
+            showLines: true
+        };
 
-        // Generate synthetic magnetic anomaly map using Perlin-like noise
+        function initThreeJS() {
+            const container = document.getElementById('viewport3D');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x080810);
+            scene.fog = new THREE.Fog(0x080810, 100, 800);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1500);
+            camera.position.set(-100, 150, 100);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight.position.set(200, 300, 200);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.left = -300;
+            dirLight.shadow.camera.right = 300;
+            dirLight.shadow.camera.top = 300;
+            dirLight.shadow.camera.bottom = -300;
+            scene.add(dirLight);
+
+            // Generate magnetic map
+            generateMagMap();
+
+            // Create field visualization
+            createFieldMesh();
+            createFieldLines();
+
+            // True vehicle (green)
+            const vehicleGeo = new THREE.ConeGeometry(2, 6, 4);
+            const vehicleMat = new THREE.MeshStandardMaterial({
+                color: 0x00ff9d,
+                emissive: 0x00ff9d,
+                emissiveIntensity: 0.4
+            });
+            trueVehicle = new THREE.Mesh(vehicleGeo, vehicleMat);
+            trueVehicle.castShadow = true;
+            scene.add(trueVehicle);
+
+            // Estimated position marker (red)
+            const estGeo = new THREE.SphereGeometry(3, 16, 16);
+            const estMat = new THREE.MeshStandardMaterial({
+                color: 0xff6b35,
+                emissive: 0xff6b35,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.7
+            });
+            estMarker = new THREE.Mesh(estGeo, estMat);
+            scene.add(estMarker);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(500, 25, 0xffcd00, 0x333333);
+            gridHelper.position.y = 0;
+            scene.add(gridHelper);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
         function generateMagMap() {
             magMap = [];
-            for (let y = 0; y < mapHeight; y++) {
+            for (let y = 0; y < mapSize; y++) {
                 magMap[y] = [];
-                for (let x = 0; x < mapWidth; x++) {
+                for (let x = 0; x < mapSize; x++) {
                     let value = 0;
-                    // Multi-octave noise
+                    // Multi-octave Perlin-like noise
                     for (let octave = 1; octave <= 4; octave++) {
-                        const freq = octave * 0.05;
-                        const amp = variance * 5000 / octave;
-                        value += amp * (Math.sin(x * freq) * Math.cos(y * freq) +
-                                       Math.sin((x + 37) * freq * 1.3) * Math.cos((y + 23) * freq * 0.7));
+                        const freq = octave * 0.08;
+                        const amp = params.variance * 5000 / octave;
+                        value += amp * (
+                            Math.sin(x * freq) * Math.cos(y * freq) +
+                            Math.sin((x + 37) * freq * 1.3) * Math.cos((y + 23) * freq * 0.7)
+                        );
                     }
-                    magMap[y][x] = 45000 + value; // Base field ~45000 nT
+                    magMap[y][x] = 45000 + value;
                 }
             }
         }
 
-        function getMagField(x, y) {
-            const mapX = Math.floor(x / 5);
-            const mapY = Math.floor(y / 5);
-            if (mapX >= 0 && mapX < mapWidth && mapY >= 0 && mapY < mapHeight) {
-                return magMap[mapY][mapX];
+        function createFieldMesh() {
+            const geometry = new THREE.PlaneGeometry(mapSize * mapScale, mapSize * mapScale, mapSize - 1, mapSize - 1);
+            const vertices = geometry.attributes.position.array;
+            const colors = new Float32Array(vertices.length);
+
+            for (let i = 0; i < vertices.length / 3; i++) {
+                const x = Math.floor((vertices[i * 3] / mapScale + mapSize / 2));
+                const z = Math.floor((vertices[i * 3 + 1] / mapScale + mapSize / 2));
+
+                if (x >= 0 && x < mapSize && z >= 0 && z < mapSize) {
+                    const fieldValue = magMap[z][x];
+                    const height = (fieldValue - 45000) / 200;
+                    vertices[i * 3 + 2] = height;
+
+                    // Color based on field strength
+                    const normalized = (fieldValue - 40000) / 10000;
+                    const hue = (1 - Math.max(0, Math.min(1, normalized))) * 240 / 360;
+                    const color = new THREE.Color().setHSL(hue, 0.8, 0.5);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+                }
+            }
+
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.7,
+                metalness: 0.3,
+                roughness: 0.7
+            });
+
+            if (fieldMesh) scene.remove(fieldMesh);
+            fieldMesh = new THREE.Mesh(geometry, material);
+            fieldMesh.rotation.x = -Math.PI / 2;
+            fieldMesh.position.y = 5;
+            scene.add(fieldMesh);
+        }
+
+        function createFieldLines() {
+            fieldLines.forEach(line => scene.remove(line));
+            fieldLines = [];
+
+            const step = Math.floor(mapSize / params.fieldDensity);
+
+            for (let y = 0; y < mapSize; y += step) {
+                for (let x = 0; x < mapSize; x += step) {
+                    const points = [];
+                    let cx = x, cy = y;
+
+                    for (let i = 0; i < 30; i++) {
+                        const fx = Math.floor(cx);
+                        const fy = Math.floor(cy);
+
+                        if (fx < 0 || fx >= mapSize - 1 || fy < 0 || fy >= mapSize - 1) break;
+
+                        const height = (magMap[fy][fx] - 45000) / 200;
+                        points.push(new THREE.Vector3(
+                            (cx - mapSize / 2) * mapScale,
+                            height + 8,
+                            (cy - mapSize / 2) * mapScale
+                        ));
+
+                        // Gradient direction
+                        const gradX = magMap[fy][Math.min(fx + 1, mapSize - 1)] - magMap[fy][Math.max(fx - 1, 0)];
+                        const gradY = magMap[Math.min(fy + 1, mapSize - 1)][fx] - magMap[Math.max(fy - 1, 0)][fx];
+
+                        cx += gradX * 0.00005;
+                        cy += gradY * 0.00005;
+                    }
+
+                    if (points.length > 2) {
+                        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                        const material = new THREE.LineBasicMaterial({
+                            color: 0xffcd00,
+                            transparent: true,
+                            opacity: 0.4,
+                            linewidth: 1
+                        });
+                        const line = new THREE.Line(geometry, material);
+                        scene.add(line);
+                        fieldLines.push(line);
+                    }
+                }
+            }
+        }
+
+        function getMagField(x, z) {
+            const mapX = Math.floor(x / mapScale + mapSize / 2);
+            const mapZ = Math.floor(z / mapScale + mapSize / 2);
+            if (mapX >= 0 && mapX < mapSize && mapZ >= 0 && mapZ < mapSize) {
+                return magMap[mapZ][mapX];
             }
             return 45000;
         }
@@ -351,38 +527,34 @@
             return mean + z0 * stdDev;
         }
 
-        // Cross-correlation for position estimation
         function estimatePosition() {
-            if (measurements.length < corrWindow) {
-                return truePos;
+            if (measurements.length < params.corrWindow) {
+                return truePos.clone();
             }
 
             let bestScore = -Infinity;
-            let bestPos = { ...truePos };
+            let bestPos = estPos.clone();
 
-            // Search grid around current estimate
-            const searchRadius = 100;
-            const step = mapRes;
+            const searchRadius = 50;
+            const step = params.mapRes / 2;
 
-            for (let dy = -searchRadius; dy <= searchRadius; dy += step) {
+            for (let dz = -searchRadius; dz <= searchRadius; dz += step) {
                 for (let dx = -searchRadius; dx <= searchRadius; dx += step) {
                     const testX = estPos.x + dx;
-                    const testY = estPos.y + dy;
+                    const testZ = estPos.z + dz;
 
-                    // Calculate correlation score
                     let score = 0;
-                    const recentMeasurements = measurements.slice(-corrWindow);
-                    for (let i = 0; i < recentMeasurements.length; i++) {
-                        const m = recentMeasurements[i];
-                        const backtrackX = testX - (corrWindow - i) * velocity.x * 0.1;
-                        const backtrackY = testY - (corrWindow - i) * velocity.y * 0.1;
-                        const mapValue = getMagField(backtrackX, backtrackY);
-                        score -= Math.abs(m - mapValue); // Negative MAE
+                    const recentMeas = measurements.slice(-params.corrWindow);
+                    for (let i = 0; i < recentMeas.length; i++) {
+                        const backtrackX = testX - (params.corrWindow - i) * velocity.x * 0.01;
+                        const backtrackZ = testZ - (params.corrWindow - i) * velocity.z * 0.01;
+                        const mapValue = getMagField(backtrackX, backtrackZ);
+                        score -= Math.abs(recentMeas[i] - mapValue);
                     }
 
                     if (score > bestScore) {
                         bestScore = score;
-                        bestPos = { x: testX, y: testY };
+                        bestPos.set(testX, truePos.y, testZ);
                     }
                 }
             }
@@ -390,166 +562,183 @@
             return bestPos;
         }
 
-        // Update controls
-        document.getElementById('speed').addEventListener('input', e => {
-            speed = parseFloat(e.target.value);
-            document.getElementById('speedVal').textContent = speed + ' m/s';
-        });
-        document.getElementById('magNoise').addEventListener('input', e => {
-            magNoise = parseFloat(e.target.value);
-            document.getElementById('magNoiseVal').textContent = magNoise + ' nT';
-        });
-        document.getElementById('mapRes').addEventListener('input', e => {
-            mapRes = parseFloat(e.target.value);
-            document.getElementById('mapResVal').textContent = mapRes + ' m';
-        });
-        document.getElementById('corrWindow').addEventListener('input', e => {
-            corrWindow = parseInt(e.target.value);
-            document.getElementById('corrWindowVal').textContent = corrWindow;
-        });
-        document.getElementById('variance').addEventListener('input', e => {
-            variance = parseFloat(e.target.value);
-            document.getElementById('varianceVal').textContent = variance;
-            generateMagMap();
-        });
-        document.getElementById('simSpeed').addEventListener('input', e => {
-            simSpeed = parseFloat(e.target.value);
-            document.getElementById('simSpeedVal').textContent = simSpeed.toFixed(1) + 'x';
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', reset);
-        document.getElementById('toggleMap').addEventListener('click', () => {
-            showMap = !showMap;
-        });
-        document.getElementById('randomPath').addEventListener('click', () => {
-            const angle = Math.random() * Math.PI * 2;
-            velocity.x = speed * Math.cos(angle);
-            velocity.y = speed * Math.sin(angle);
-        });
-
-        function reset() {
-            truePos = { x: 100, y: 300 };
-            estPos = { x: 100, y: 300 };
-            const angle = Math.random() * Math.PI * 2;
-            velocity.x = speed * Math.cos(angle);
-            velocity.y = speed * Math.sin(angle);
-            truePath = [];
-            measurements = [];
-            time = 0;
-            totalDistance = 0;
-            generateMagMap();
-        }
-
         function updateSimulation(dt) {
             // Update true position
             truePos.x += velocity.x * dt;
-            truePos.y += velocity.y * dt;
+            truePos.z += velocity.z * dt;
 
             // Boundary wrap
-            if (truePos.x < 0) truePos.x = canvas.width;
-            if (truePos.x > canvas.width) truePos.x = 0;
-            if (truePos.y < 0) truePos.y = canvas.height;
-            if (truePos.y > canvas.height) truePos.y = 0;
+            const bound = 200;
+            if (truePos.x < -bound || truePos.x > bound) velocity.x *= -1;
+            if (truePos.z < -bound || truePos.z > bound) velocity.z *= -1;
 
-            truePath.push({ ...truePos });
+            truePath.push(truePos.clone());
             if (truePath.length > 1000) truePath.shift();
 
             // Measure magnetic field with noise
-            const trueField = getMagField(truePos.x, truePos.y);
-            const measuredField = trueField + gaussian(0, magNoise);
+            const trueField = getMagField(truePos.x, truePos.z);
+            const measuredField = trueField + gaussian(0, params.magNoise);
             measurements.push(measuredField);
-            if (measurements.length > corrWindow * 2) measurements.shift();
+            if (measurements.length > params.corrWindow * 2) measurements.shift();
 
-            // Estimate position using correlation
-            if (measurements.length >= corrWindow) {
+            // Estimate position
+            if (measurements.length >= params.corrWindow) {
                 estPos = estimatePosition();
             }
 
-            totalDistance += Math.sqrt(velocity.x**2 + velocity.y**2) * dt / 1000; // km
+            totalDistance += Math.sqrt(velocity.x**2 + velocity.z**2) * dt / 1000;
             time += dt;
         }
 
-        function drawMagMap() {
-            if (!showMap) return;
+        function updateVehicles() {
+            // True vehicle
+            trueVehicle.position.copy(truePos);
+            const angle = Math.atan2(velocity.z, velocity.x);
+            trueVehicle.rotation.set(Math.PI / 2, 0, -angle);
 
-            for (let y = 0; y < mapHeight; y++) {
-                for (let x = 0; x < mapWidth; x++) {
-                    const value = magMap[y][x];
-                    const normalized = (value - 40000) / 10000; // Normalize for color
-                    const hue = Math.max(0, Math.min(240, 240 * (1 - normalized)));
-                    ctx.fillStyle = `hsl(${hue}, 80%, 40%)`;
-                    ctx.fillRect(x * 5, y * 5, 5, 5);
-                }
+            // Estimated marker
+            estMarker.position.copy(estPos);
+
+            // Pulsing effect
+            const scale = 1 + 0.2 * Math.sin(time * 3);
+            estMarker.scale.setScalar(scale);
+        }
+
+        function updateCamera() {
+            switch(viewMode) {
+                case 'follow':
+                    camera.position.set(
+                        truePos.x - 100,
+                        100,
+                        truePos.z + 80
+                    );
+                    camera.lookAt(truePos);
+                    break;
+                case 'top':
+                    camera.position.set(truePos.x, 300, truePos.z);
+                    camera.lookAt(truePos);
+                    break;
+                case 'side':
+                    camera.position.set(truePos.x + 200, 80, truePos.z);
+                    camera.lookAt(truePos);
+                    break;
+                case 'free':
+                    // Free camera
+                    break;
             }
         }
 
-        function draw() {
-            ctx.fillStyle = '#080810';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw magnetic anomaly map
-            drawMagMap();
-
-            // True path (green)
-            ctx.strokeStyle = '#00ff9d';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            truePath.forEach((p, i) => {
-                if (i === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
-            });
-            ctx.stroke();
-
-            // True position
-            ctx.fillStyle = '#00ff9d';
-            ctx.beginPath();
-            ctx.arc(truePos.x, truePos.y, 8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Estimated position
-            ctx.fillStyle = '#ff6b35';
-            ctx.strokeStyle = '#ff6b35';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(estPos.x, estPos.y, 12, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Line connecting true and estimated
-            ctx.strokeStyle = 'rgba(255,107,53,0.3)';
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(truePos.x, truePos.y);
-            ctx.lineTo(estPos.x, estPos.y);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Update stats
-            const posError = Math.sqrt((estPos.x - truePos.x)**2 + (estPos.y - truePos.y)**2);
+        function updateUI() {
+            const posError = truePos.distanceTo(estPos);
             const currentField = measurements.length > 0 ? measurements[measurements.length - 1] : 45000;
-
-            // Calculate correlation coefficient
-            let correlation = 0;
-            if (measurements.length >= corrWindow) {
-                const recent = measurements.slice(-corrWindow);
-                const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
-                const std = Math.sqrt(recent.reduce((a, b) => a + (b - mean)**2, 0) / recent.length);
-                correlation = std > 0 ? 1 - (posError / 100) : 0; // Simplified
-            }
+            const correlation = measurements.length >= params.corrWindow ?
+                Math.max(0, 1 - posError / 100) : 0;
 
             document.getElementById('posError').textContent = posError.toFixed(1) + ' m';
-            document.getElementById('correlation').textContent = Math.max(0, Math.min(1, correlation)).toFixed(2);
+            document.getElementById('correlation').textContent = correlation.toFixed(2);
             document.getElementById('currentField').textContent = currentField.toFixed(0) + ' nT';
-            document.getElementById('distance').textContent = totalDistance.toFixed(1) + ' km';
+            document.getElementById('distance').textContent = totalDistance.toFixed(2) + ' km';
         }
 
         function animate() {
-            const dt = 0.1 * simSpeed;
-            updateSimulation(dt);
-            draw();
             requestAnimationFrame(animate);
+
+            const dt = 0.05 * params.simSpeed;
+            updateSimulation(dt);
+            updateVehicles();
+            updateCamera();
+            updateUI();
+
+            // Update field visibility
+            if (fieldMesh) fieldMesh.visible = params.showField;
+            fieldLines.forEach(line => line.visible = params.showLines);
+
+            renderer.render(scene, camera);
         }
 
-        reset();
+        function onWindowResize() {
+            const container = document.getElementById('viewport3D');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function reset() {
+            time = 0;
+            totalDistance = 0;
+            truePos.set(0, 10, 0);
+            estPos.set(0, 10, 0);
+            const angle = Math.random() * Math.PI * 2;
+            velocity.set(
+                params.speed * Math.cos(angle),
+                0,
+                params.speed * Math.sin(angle)
+            );
+            truePath = [];
+            measurements = [];
+        }
+
+        // Event listeners
+        document.getElementById('speed').addEventListener('input', e => {
+            params.speed = parseFloat(e.target.value);
+            document.getElementById('speedVal').textContent = params.speed + ' m/s';
+        });
+        document.getElementById('magNoise').addEventListener('input', e => {
+            params.magNoise = parseFloat(e.target.value);
+            document.getElementById('magNoiseVal').textContent = params.magNoise + ' nT';
+        });
+        document.getElementById('mapRes').addEventListener('input', e => {
+            params.mapRes = parseFloat(e.target.value);
+            document.getElementById('mapResVal').textContent = params.mapRes + ' m';
+        });
+        document.getElementById('corrWindow').addEventListener('input', e => {
+            params.corrWindow = parseInt(e.target.value);
+            document.getElementById('corrWindowVal').textContent = params.corrWindow + ' samples';
+        });
+        document.getElementById('variance').addEventListener('input', e => {
+            params.variance = parseFloat(e.target.value);
+            document.getElementById('varianceVal').textContent = params.variance;
+            generateMagMap();
+            createFieldMesh();
+            createFieldLines();
+        });
+        document.getElementById('fieldDensity').addEventListener('input', e => {
+            params.fieldDensity = parseInt(e.target.value);
+            document.getElementById('fieldDensityVal').textContent = params.fieldDensity;
+            createFieldLines();
+        });
+        document.getElementById('simSpeed').addEventListener('input', e => {
+            params.simSpeed = parseFloat(e.target.value);
+            document.getElementById('simSpeedVal').textContent = params.simSpeed.toFixed(1) + 'x';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        document.getElementById('toggleField').addEventListener('click', () => {
+            params.showField = !params.showField;
+            document.getElementById('toggleField').textContent =
+                params.showField ? '🌈 Field Map: ON' : '🌈 Field Map: OFF';
+        });
+        document.getElementById('toggleLines').addEventListener('click', () => {
+            params.showLines = !params.showLines;
+            document.getElementById('toggleLines').textContent =
+                params.showLines ? '〰️ Field Lines: ON' : '〰️ Field Lines: OFF';
+        });
+        document.getElementById('randomPath').addEventListener('click', () => {
+            const angle = Math.random() * Math.PI * 2;
+            velocity.set(
+                params.speed * Math.cos(angle),
+                0,
+                params.speed * Math.sin(angle)
+            );
+        });
+
+        document.getElementById('viewFollow').addEventListener('click', () => viewMode = 'follow');
+        document.getElementById('viewTop').addEventListener('click', () => viewMode = 'top');
+        document.getElementById('viewSide').addEventListener('click', () => viewMode = 'side');
+        document.getElementById('viewFree').addEventListener('click', () => viewMode = 'free');
+
+        // Initialize
+        initThreeJS();
         animate();
     </script>
 </body>

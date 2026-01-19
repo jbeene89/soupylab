@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inertial Navigation System - SOUPY LABS</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -19,150 +20,165 @@
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow: hidden;
         }
         .header {
             text-align: center;
-            padding: 30px 20px;
+            padding: 20px;
             background: linear-gradient(135deg, rgba(255,205,0,0.1) 0%, transparent 100%);
             border-bottom: 1px solid rgba(255,205,0,0.2);
         }
         .header h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
+            font-size: 1.8rem;
             color: var(--accent);
             text-shadow: 0 0 20px rgba(255,205,0,0.3);
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
-        .header p { color: var(--dim); font-size: 0.9rem; }
+        .header p { color: var(--dim); font-size: 0.85rem; }
         .back-link {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 15px;
+            left: 15px;
             color: var(--accent);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: opacity 0.3s;
+            z-index: 1000;
         }
         .back-link:hover { opacity: 0.7; }
         .container {
-            max-width: 1400px;
-            margin: 20px auto;
-            padding: 0 20px;
             display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
+            grid-template-columns: 280px 1fr;
+            height: calc(100vh - 100px);
+            gap: 15px;
+            padding: 15px;
         }
         .controls {
             background: var(--card);
             border-radius: 10px;
-            padding: 20px;
+            padding: 15px;
             border: 1px solid rgba(255,205,0,0.1);
-            height: fit-content;
+            overflow-y: auto;
         }
         .control-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .control-group label {
             display: block;
             color: var(--accent);
-            font-size: 0.8rem;
-            margin-bottom: 8px;
+            font-size: 0.75rem;
+            margin-bottom: 6px;
             font-weight: 500;
         }
         input[type="range"] {
             width: 100%;
-            height: 6px;
+            height: 5px;
             background: rgba(255,205,0,0.2);
             outline: none;
             border-radius: 3px;
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             background: var(--accent);
             border-radius: 50%;
             cursor: pointer;
         }
         .value-display {
             color: var(--text);
-            font-size: 0.85rem;
-            margin-top: 4px;
+            font-size: 0.75rem;
+            margin-top: 3px;
         }
         button {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             background: linear-gradient(135deg, rgba(255,205,0,0.2), rgba(255,205,0,0.1));
             border: 1px solid var(--accent);
             color: var(--accent);
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             transition: all 0.3s;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         button:hover {
             background: linear-gradient(135deg, rgba(255,205,0,0.3), rgba(255,205,0,0.2));
-            box-shadow: 0 0 20px rgba(255,205,0,0.2);
+            box-shadow: 0 0 15px rgba(255,205,0,0.2);
         }
-        .simulation-area {
+        .main-area {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            gap: 15px;
+        }
+        .viewport-container {
             background: var(--card);
             border-radius: 10px;
-            padding: 20px;
             border: 1px solid rgba(255,205,0,0.1);
+            overflow: hidden;
+            position: relative;
         }
-        #canvas {
+        #viewport3D {
             width: 100%;
-            height: 600px;
-            background: #080810;
-            border-radius: 8px;
-            border: 1px solid rgba(255,205,0,0.1);
+            height: 100%;
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,205,0,0.1);
         }
         .stat-card {
             background: rgba(255,205,0,0.05);
             border: 1px solid rgba(255,205,0,0.1);
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 6px;
+            padding: 10px;
             text-align: center;
         }
         .stat-label {
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             color: var(--dim);
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .stat-value {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: var(--accent);
             font-family: 'Orbitron', sans-serif;
         }
-        .info-panel {
-            background: rgba(255,205,0,0.05);
-            border-left: 3px solid var(--accent);
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 4px;
+        .view-mode {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            gap: 5px;
         }
-        .info-panel h3 {
+        .view-mode button {
+            padding: 5px 10px;
+            font-size: 0.65rem;
+            width: auto;
+            margin: 0;
+        }
+        .info-overlay {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.7rem;
             color: var(--accent);
-            font-size: 0.9rem;
-            margin-bottom: 8px;
+            font-family: 'Orbitron', monospace;
         }
-        .info-panel p {
-            font-size: 0.75rem;
-            line-height: 1.5;
-            color: var(--dim);
-        }
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .container {
                 grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
             }
         }
     </style>
@@ -172,12 +188,12 @@
 
     <div class="header">
         <h1>🧭 INERTIAL NAVIGATION SYSTEM</h1>
-        <p>IMU sensor fusion with truth anchors to bound drift</p>
+        <p>3D IMU Sensor Fusion with Truth Anchors | GPU-Accelerated</p>
     </div>
 
     <div class="container">
         <div class="controls">
-            <h3 style="color: var(--accent); margin-bottom: 15px; font-size: 1rem;">Control Panel</h3>
+            <h3 style="color: var(--accent); margin-bottom: 12px; font-size: 0.9rem;">Control Panel</h3>
 
             <div class="control-group">
                 <label>IMU Update Rate (Hz)</label>
@@ -204,9 +220,15 @@
             </div>
 
             <div class="control-group">
-                <label>Truth Anchor Interval (s)</label>
+                <label>Anchor Interval (s)</label>
                 <input type="range" id="anchorInterval" min="5" max="120" value="30" step="5">
                 <div class="value-display" id="anchorIntervalVal">30 s</div>
+            </div>
+
+            <div class="control-group">
+                <label>Particle Count</label>
+                <input type="range" id="particleCount" min="100" max="5000" value="1000" step="100">
+                <div class="value-display" id="particleCountVal">1000</div>
             </div>
 
             <div class="control-group">
@@ -216,12 +238,24 @@
             </div>
 
             <button id="resetBtn">🔄 Reset Simulation</button>
-            <button id="toggleAnchor">⚓ Toggle Truth Anchors</button>
-            <button id="addWaypoint">📍 Add Waypoint</button>
+            <button id="toggleAnchor">⚓ Anchors: ON</button>
+            <button id="toggleTrail">💫 Particle Trail: ON</button>
+            <button id="toggleIMU">📱 IMU Cube: ON</button>
         </div>
 
-        <div class="simulation-area">
-            <canvas id="canvas" width="1000" height="600"></canvas>
+        <div class="main-area">
+            <div class="viewport-container">
+                <div id="viewport3D"></div>
+                <div class="view-mode">
+                    <button id="viewFollow">Follow</button>
+                    <button id="viewTop">Top</button>
+                    <button id="viewSide">Side</button>
+                    <button id="viewFree">Free</button>
+                </div>
+                <div class="info-overlay" id="infoOverlay">
+                    Roll: 0.0° | Pitch: 0.0° | Yaw: 0.0°
+                </div>
+            </div>
 
             <div class="stats">
                 <div class="stat-card">
@@ -237,116 +271,259 @@
                     <div class="stat-value" id="velocity">0.0 m/s</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-label">Altitude</div>
+                    <div class="stat-value" id="altitude">0.0 m</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-label">Runtime</div>
                     <div class="stat-value" id="runtime">0.0 s</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Anchors Used</div>
+                    <div class="stat-label">Anchors</div>
                     <div class="stat-value" id="anchors">0</div>
                 </div>
-            </div>
-
-            <div class="info-panel">
-                <h3>About Inertial Navigation</h3>
-                <p>
-                    An <strong>Inertial Navigation System (INS)</strong> uses accelerometers and gyroscopes (IMU) to calculate position,
-                    velocity, and orientation. Without corrections, sensor noise and bias cause position errors to grow quadratically
-                    over time. This simulation demonstrates how periodic <strong>truth anchors</strong> (GPS fixes, landmarks, beacons)
-                    can reset accumulated drift using sensor fusion (e.g., Kalman filtering). Watch the blue estimated path diverge
-                    from the green truth path, then snap back when anchors are applied. Yellow markers show anchor correction events.
-                </p>
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        // ===== THREE.JS SCENE SETUP =====
+        let scene, camera, renderer, controls;
+        let truePath = [], estPath = [], anchorMarkers = [];
+        let trueVehicle, estVehicle, imuCube;
+        let particleSystem;
+        let viewMode = 'follow';
 
-        // State
-        let truePath = [];
-        let estimatedPath = [];
-        let anchorPoints = [];
-        let waypoints = [];
-        let time = 0;
-        let lastAnchorTime = 0;
-        let anchorsEnabled = true;
-        let anchorCount = 0;
-
-        // IMU state
-        let truePos = { x: 100, y: 300 };
-        let trueVel = { x: 50, y: 0 };
-        let trueHeading = 0;
-        let estPos = { x: 100, y: 300 };
-        let estVel = { x: 50, y: 0 };
-        let estHeading = 0;
-        let gyroBiasCurrent = 0;
+        // Simulation state
+        let time = 0, lastAnchorTime = 0, anchorCount = 0;
+        let truePos = new THREE.Vector3(0, 0, 0);
+        let trueVel = new THREE.Vector3(20, 0, 5);
+        let trueRot = new THREE.Euler(0, 0, 0);
+        let estPos = new THREE.Vector3(0, 0, 0);
+        let estVel = new THREE.Vector3(20, 0, 5);
+        let estRot = new THREE.Euler(0, 0, 0);
+        let gyroBiasCurrent = new THREE.Vector3(0, 0, 0);
 
         // Parameters
-        let imuRate = 100;
-        let gyroNoise = 0.5;
-        let accelNoise = 0.1;
-        let gyroBias = 1.0;
-        let anchorInterval = 30;
-        let simSpeed = 1;
+        let params = {
+            imuRate: 100,
+            gyroNoise: 0.5,
+            accelNoise: 0.1,
+            gyroBias: 1.0,
+            anchorInterval: 30,
+            particleCount: 1000,
+            simSpeed: 1,
+            anchorsEnabled: true,
+            trailEnabled: true,
+            imuVisible: true
+        };
 
-        // Update controls
-        document.getElementById('imuRate').addEventListener('input', e => {
-            imuRate = parseFloat(e.target.value);
-            document.getElementById('imuRateVal').textContent = imuRate + ' Hz';
-        });
-        document.getElementById('gyroNoise').addEventListener('input', e => {
-            gyroNoise = parseFloat(e.target.value);
-            document.getElementById('gyroNoiseVal').textContent = gyroNoise.toFixed(1) + ' deg/s';
-        });
-        document.getElementById('accelNoise').addEventListener('input', e => {
-            accelNoise = parseFloat(e.target.value);
-            document.getElementById('accelNoiseVal').textContent = accelNoise.toFixed(2) + ' m/s²';
-        });
-        document.getElementById('gyroBias').addEventListener('input', e => {
-            gyroBias = parseFloat(e.target.value);
-            document.getElementById('gyroBiasVal').textContent = gyroBias.toFixed(1) + ' deg/h';
-        });
-        document.getElementById('anchorInterval').addEventListener('input', e => {
-            anchorInterval = parseFloat(e.target.value);
-            document.getElementById('anchorIntervalVal').textContent = anchorInterval + ' s';
-        });
-        document.getElementById('simSpeed').addEventListener('input', e => {
-            simSpeed = parseFloat(e.target.value);
-            document.getElementById('simSpeedVal').textContent = simSpeed.toFixed(1) + 'x';
-        });
+        function initThreeJS() {
+            const container = document.getElementById('viewport3D');
 
-        document.getElementById('resetBtn').addEventListener('click', reset);
-        document.getElementById('toggleAnchor').addEventListener('click', () => {
-            anchorsEnabled = !anchorsEnabled;
-            document.getElementById('toggleAnchor').textContent =
-                anchorsEnabled ? '⚓ Truth Anchors ON' : '⚓ Truth Anchors OFF';
-        });
-        document.getElementById('addWaypoint').addEventListener('click', () => {
-            waypoints.push({ x: Math.random() * 800 + 100, y: Math.random() * 400 + 100 });
-        });
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x080810);
+            scene.fog = new THREE.Fog(0x080810, 50, 500);
 
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-            waypoints.push({ x, y });
-        });
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 50, 100);
+            camera.lookAt(0, 0, 0);
 
-        function reset() {
-            truePath = [];
-            estimatedPath = [];
-            anchorPoints = [];
-            time = 0;
-            lastAnchorTime = 0;
-            anchorCount = 0;
-            truePos = { x: 100, y: 300 };
-            trueVel = { x: 50, y: 0 };
-            trueHeading = 0;
-            estPos = { x: 100, y: 300 };
-            estVel = { x: 50, y: 0 };
-            estHeading = 0;
-            gyroBiasCurrent = 0;
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 1);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.left = -100;
+            dirLight.shadow.camera.right = 100;
+            dirLight.shadow.camera.top = 100;
+            dirLight.shadow.camera.bottom = -100;
+            scene.add(dirLight);
+
+            // Ground grid
+            const gridHelper = new THREE.GridHelper(500, 50, 0xffcd00, 0x333333);
+            gridHelper.position.y = -5;
+            scene.add(gridHelper);
+
+            // Ground plane
+            const groundGeo = new THREE.PlaneGeometry(500, 500);
+            const groundMat = new THREE.MeshStandardMaterial({
+                color: 0x0a0a0f,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -5;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // True vehicle (green)
+            const trueGeo = new THREE.ConeGeometry(2, 6, 4);
+            const trueMat = new THREE.MeshStandardMaterial({
+                color: 0x00ff9d,
+                emissive: 0x00ff9d,
+                emissiveIntensity: 0.3
+            });
+            trueVehicle = new THREE.Mesh(trueGeo, trueMat);
+            trueVehicle.castShadow = true;
+            scene.add(trueVehicle);
+
+            // Estimated vehicle (blue)
+            const estGeo = new THREE.ConeGeometry(1.8, 5.5, 4);
+            const estMat = new THREE.MeshStandardMaterial({
+                color: 0x00aaff,
+                emissive: 0x00aaff,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.8
+            });
+            estVehicle = new THREE.Mesh(estGeo, estMat);
+            estVehicle.castShadow = true;
+            scene.add(estVehicle);
+
+            // IMU Orientation Cube
+            const imuGeo = new THREE.BoxGeometry(10, 10, 10);
+            const imuMat = new THREE.MeshStandardMaterial({
+                color: 0xffcd00,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.6
+            });
+            imuCube = new THREE.Mesh(imuGeo, imuMat);
+            imuCube.position.set(-50, 20, 50);
+            scene.add(imuCube);
+
+            // Add axes helper to IMU cube
+            const axesHelper = new THREE.AxesHelper(8);
+            imuCube.add(axesHelper);
+
+            // Particle system for trail
+            createParticleSystem();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createParticleSystem() {
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(params.particleCount * 3);
+            const colors = new Float32Array(params.particleCount * 3);
+            const sizes = new Float32Array(params.particleCount);
+
+            for (let i = 0; i < params.particleCount; i++) {
+                positions[i * 3] = 0;
+                positions[i * 3 + 1] = 0;
+                positions[i * 3 + 2] = 0;
+
+                colors[i * 3] = 0;
+                colors[i * 3 + 1] = 0.7;
+                colors[i * 3 + 2] = 1;
+
+                sizes[i] = Math.random() * 2 + 1;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+        }
+
+        function updateParticles() {
+            if (!params.trailEnabled) {
+                particleSystem.visible = false;
+                return;
+            }
+            particleSystem.visible = true;
+
+            const positions = particleSystem.geometry.attributes.position.array;
+            const colors = particleSystem.geometry.attributes.color.array;
+
+            // Shift particles back
+            for (let i = params.particleCount - 1; i > 0; i--) {
+                positions[i * 3] = positions[(i - 1) * 3];
+                positions[i * 3 + 1] = positions[(i - 1) * 3 + 1];
+                positions[i * 3 + 2] = positions[(i - 1) * 3 + 2];
+
+                // Fade color
+                colors[i * 3] = colors[(i - 1) * 3] * 0.98;
+                colors[i * 3 + 1] = colors[(i - 1) * 3 + 1] * 0.98;
+                colors[i * 3 + 2] = colors[(i - 1) * 3 + 2] * 0.98;
+            }
+
+            // Add new particle at estimated position
+            positions[0] = estPos.x;
+            positions[1] = estPos.y;
+            positions[2] = estPos.z;
+            colors[0] = 0;
+            colors[1] = 0.7;
+            colors[2] = 1;
+
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+            particleSystem.geometry.attributes.color.needsUpdate = true;
+        }
+
+        function createPathLine(color, positions = []) {
+            const geometry = new THREE.BufferGeometry();
+            const material = new THREE.LineBasicMaterial({
+                color: color,
+                linewidth: 2
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            return { line, positions };
+        }
+
+        function updatePathLine(pathObj, newPos) {
+            pathObj.positions.push(newPos.clone());
+            if (pathObj.positions.length > 500) pathObj.positions.shift();
+
+            const points = [];
+            pathObj.positions.forEach(p => points.push(p.x, p.y, p.z));
+            pathObj.line.geometry.setAttribute('position',
+                new THREE.Float32BufferAttribute(points, 3));
+        }
+
+        function createAnchorMarker(pos) {
+            const geo = new THREE.SphereGeometry(1.5, 16, 16);
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0xffcd00,
+                emissive: 0xffcd00,
+                emissiveIntensity: 0.5
+            });
+            const marker = new THREE.Mesh(geo, mat);
+            marker.position.copy(pos);
+            scene.add(marker);
+
+            // Add pulsing animation
+            marker.userData.scale = 1;
+            marker.userData.growing = true;
+
+            anchorMarkers.push(marker);
+            if (anchorMarkers.length > 20) {
+                scene.remove(anchorMarkers.shift());
+            }
         }
 
         function gaussian(mean, stdDev) {
@@ -357,162 +534,224 @@
         }
 
         function updateSimulation(dt) {
-            // Update true motion (simple sinusoidal path or waypoint following)
-            if (waypoints.length > 0) {
-                const target = waypoints[0];
-                const dx = target.x - truePos.x;
-                const dy = target.y - truePos.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist < 10) {
-                    waypoints.shift();
-                } else {
-                    trueHeading = Math.atan2(dy, dx);
-                }
-            } else {
-                trueHeading += 0.3 * dt * Math.sin(time * 0.5);
-            }
+            // Update true motion with smooth trajectory
+            trueRot.x += 0.01 * dt * Math.sin(time * 0.3);
+            trueRot.y += 0.02 * dt * Math.cos(time * 0.2);
+            trueRot.z += 0.015 * dt * Math.sin(time * 0.4);
 
-            const speed = 50;
-            trueVel.x = speed * Math.cos(trueHeading);
-            trueVel.y = speed * Math.sin(trueHeading);
-            truePos.x += trueVel.x * dt;
-            truePos.y += trueVel.y * dt;
+            const speed = 20;
+            trueVel.x = speed * Math.cos(time * 0.1) * Math.cos(trueRot.y);
+            trueVel.z = speed * Math.sin(time * 0.1) * Math.cos(trueRot.y);
+            trueVel.y = 3 * Math.sin(time * 0.15);
 
-            // Boundary wrap
-            if (truePos.x < 0) truePos.x = canvas.width;
-            if (truePos.x > canvas.width) truePos.x = 0;
-            if (truePos.y < 0) truePos.y = canvas.height;
-            if (truePos.y > canvas.height) truePos.y = 0;
+            truePos.add(trueVel.clone().multiplyScalar(dt));
 
-            truePath.push({ ...truePos });
-            if (truePath.length > 500) truePath.shift();
+            // Boundary constraints
+            const bound = 200;
+            if (Math.abs(truePos.x) > bound) trueVel.x *= -1;
+            if (Math.abs(truePos.z) > bound) trueVel.z *= -1;
+            if (truePos.y < 0) truePos.y = 0;
+            if (truePos.y > 100) trueVel.y *= -1;
 
-            // Simulate IMU measurements with noise and bias
-            gyroBiasCurrent += (gyroBias / 3600) * dt * (Math.random() - 0.5);
-            const measuredGyro = trueHeading + gaussian(0, gyroNoise * Math.PI / 180) + gyroBiasCurrent * Math.PI / 180;
-            const measuredAccelX = trueVel.x + gaussian(0, accelNoise);
-            const measuredAccelY = trueVel.y + gaussian(0, accelNoise);
+            // Simulate IMU with noise and bias
+            gyroBiasCurrent.x += (params.gyroBias / 3600) * dt * (Math.random() - 0.5) * 0.01;
+            gyroBiasCurrent.y += (params.gyroBias / 3600) * dt * (Math.random() - 0.5) * 0.01;
+            gyroBiasCurrent.z += (params.gyroBias / 3600) * dt * (Math.random() - 0.5) * 0.01;
 
-            // Dead reckoning integration
-            estHeading = measuredGyro;
-            estVel.x = measuredAccelX;
-            estVel.y = measuredAccelY;
-            estPos.x += estVel.x * dt;
-            estPos.y += estVel.y * dt;
+            const measuredRot = new THREE.Euler(
+                trueRot.x + gaussian(0, params.gyroNoise * Math.PI / 180) + gyroBiasCurrent.x,
+                trueRot.y + gaussian(0, params.gyroNoise * Math.PI / 180) + gyroBiasCurrent.y,
+                trueRot.z + gaussian(0, params.gyroNoise * Math.PI / 180) + gyroBiasCurrent.z
+            );
 
-            estimatedPath.push({ ...estPos });
-            if (estimatedPath.length > 500) estimatedPath.shift();
+            const measuredAccel = new THREE.Vector3(
+                trueVel.x + gaussian(0, params.accelNoise),
+                trueVel.y + gaussian(0, params.accelNoise),
+                trueVel.z + gaussian(0, params.accelNoise)
+            );
+
+            // Dead reckoning
+            estRot.copy(measuredRot);
+            estVel.copy(measuredAccel);
+            estPos.add(estVel.clone().multiplyScalar(dt));
 
             // Truth anchor correction
-            if (anchorsEnabled && (time - lastAnchorTime) >= anchorInterval) {
-                estPos.x = truePos.x;
-                estPos.y = truePos.y;
-                estHeading = trueHeading;
-                gyroBiasCurrent = 0;
-                anchorPoints.push({ ...truePos });
+            if (params.anchorsEnabled && (time - lastAnchorTime) >= params.anchorInterval) {
+                estPos.copy(truePos);
+                estRot.copy(trueRot);
+                gyroBiasCurrent.set(0, 0, 0);
+                createAnchorMarker(truePos);
                 lastAnchorTime = time;
                 anchorCount++;
             }
 
+            // Update vehicle meshes
+            trueVehicle.position.copy(truePos);
+            trueVehicle.rotation.copy(trueRot);
+            trueVehicle.rotation.x += Math.PI / 2; // Correct orientation
+
+            estVehicle.position.copy(estPos);
+            estVehicle.rotation.copy(estRot);
+            estVehicle.rotation.x += Math.PI / 2;
+
+            // Update IMU cube
+            if (params.imuVisible) {
+                imuCube.visible = true;
+                imuCube.rotation.copy(estRot);
+            } else {
+                imuCube.visible = false;
+            }
+
+            // Animate anchor markers
+            anchorMarkers.forEach(marker => {
+                if (marker.userData.growing) {
+                    marker.userData.scale += 0.02;
+                    if (marker.userData.scale > 1.5) marker.userData.growing = false;
+                } else {
+                    marker.userData.scale -= 0.02;
+                    if (marker.userData.scale < 1) marker.userData.growing = true;
+                }
+                marker.scale.setScalar(marker.userData.scale);
+            });
+
+            // Update particle system
+            updateParticles();
+
             time += dt;
         }
 
-        function draw() {
-            ctx.fillStyle = '#080810';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Grid
-            ctx.strokeStyle = 'rgba(255,205,0,0.05)';
-            ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 50) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
+        function updateCamera() {
+            switch(viewMode) {
+                case 'follow':
+                    camera.position.set(
+                        truePos.x - 50,
+                        truePos.y + 30,
+                        truePos.z + 50
+                    );
+                    camera.lookAt(truePos);
+                    break;
+                case 'top':
+                    camera.position.set(truePos.x, 150, truePos.z);
+                    camera.lookAt(truePos);
+                    break;
+                case 'side':
+                    camera.position.set(truePos.x + 100, truePos.y, truePos.z);
+                    camera.lookAt(truePos);
+                    break;
+                case 'free':
+                    // Camera stays where it is
+                    break;
             }
-            for (let y = 0; y < canvas.height; y += 50) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
-            }
+        }
 
-            // Waypoints
-            ctx.fillStyle = 'rgba(255,100,255,0.5)';
-            waypoints.forEach(wp => {
-                ctx.beginPath();
-                ctx.arc(wp.x, wp.y, 8, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // True path (green)
-            ctx.strokeStyle = '#00ff9d';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            truePath.forEach((p, i) => {
-                if (i === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
-            });
-            ctx.stroke();
-
-            // Estimated path (blue)
-            ctx.strokeStyle = '#00aaff';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            estimatedPath.forEach((p, i) => {
-                if (i === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
-            });
-            ctx.stroke();
-
-            // Anchor points (yellow)
-            ctx.fillStyle = '#ffcd00';
-            anchorPoints.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Current positions
-            ctx.fillStyle = '#00ff9d';
-            ctx.beginPath();
-            ctx.arc(truePos.x, truePos.y, 8, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#00aaff';
-            ctx.beginPath();
-            ctx.arc(estPos.x, estPos.y, 8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Legend
-            ctx.font = '12px Roboto';
-            ctx.fillStyle = '#00ff9d';
-            ctx.fillText('● True Path', 20, 30);
-            ctx.fillStyle = '#00aaff';
-            ctx.fillText('● Estimated (INS)', 20, 50);
-            ctx.fillStyle = '#ffcd00';
-            ctx.fillText('● Truth Anchors', 20, 70);
-
-            // Update stats
-            const posError = Math.sqrt((estPos.x - truePos.x)**2 + (estPos.y - truePos.y)**2);
-            const headError = Math.abs((estHeading - trueHeading) * 180 / Math.PI) % 360;
-            const vel = Math.sqrt(trueVel.x**2 + trueVel.y**2);
+        function updateUI() {
+            const posError = truePos.distanceTo(estPos);
+            const headError = Math.abs((estRot.y - trueRot.y) * 180 / Math.PI) % 360;
+            const vel = trueVel.length();
 
             document.getElementById('posError').textContent = posError.toFixed(1) + ' m';
             document.getElementById('headError').textContent = headError.toFixed(1) + '°';
             document.getElementById('velocity').textContent = vel.toFixed(1) + ' m/s';
+            document.getElementById('altitude').textContent = truePos.y.toFixed(1) + ' m';
             document.getElementById('runtime').textContent = time.toFixed(1) + ' s';
             document.getElementById('anchors').textContent = anchorCount;
+
+            document.getElementById('infoOverlay').textContent =
+                `Roll: ${(estRot.z * 180 / Math.PI).toFixed(1)}° | ` +
+                `Pitch: ${(estRot.x * 180 / Math.PI).toFixed(1)}° | ` +
+                `Yaw: ${(estRot.y * 180 / Math.PI).toFixed(1)}°`;
         }
 
         function animate() {
-            const dt = 0.02 * simSpeed;
-            updateSimulation(dt);
-            draw();
             requestAnimationFrame(animate);
+
+            const dt = 0.02 * params.simSpeed;
+            updateSimulation(dt);
+            updateCamera();
+            updateUI();
+
+            renderer.render(scene, camera);
         }
 
-        reset();
+        function onWindowResize() {
+            const container = document.getElementById('viewport3D');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function reset() {
+            time = 0;
+            lastAnchorTime = 0;
+            anchorCount = 0;
+            truePos.set(0, 0, 0);
+            trueVel.set(20, 0, 5);
+            trueRot.set(0, 0, 0);
+            estPos.set(0, 0, 0);
+            estVel.set(20, 0, 5);
+            estRot.set(0, 0, 0);
+            gyroBiasCurrent.set(0, 0, 0);
+
+            anchorMarkers.forEach(m => scene.remove(m));
+            anchorMarkers = [];
+        }
+
+        // Event listeners
+        document.getElementById('imuRate').addEventListener('input', e => {
+            params.imuRate = parseFloat(e.target.value);
+            document.getElementById('imuRateVal').textContent = params.imuRate + ' Hz';
+        });
+        document.getElementById('gyroNoise').addEventListener('input', e => {
+            params.gyroNoise = parseFloat(e.target.value);
+            document.getElementById('gyroNoiseVal').textContent = params.gyroNoise.toFixed(1) + ' deg/s';
+        });
+        document.getElementById('accelNoise').addEventListener('input', e => {
+            params.accelNoise = parseFloat(e.target.value);
+            document.getElementById('accelNoiseVal').textContent = params.accelNoise.toFixed(2) + ' m/s²';
+        });
+        document.getElementById('gyroBias').addEventListener('input', e => {
+            params.gyroBias = parseFloat(e.target.value);
+            document.getElementById('gyroBiasVal').textContent = params.gyroBias.toFixed(1) + ' deg/h';
+        });
+        document.getElementById('anchorInterval').addEventListener('input', e => {
+            params.anchorInterval = parseFloat(e.target.value);
+            document.getElementById('anchorIntervalVal').textContent = params.anchorInterval + ' s';
+        });
+        document.getElementById('particleCount').addEventListener('input', e => {
+            params.particleCount = parseInt(e.target.value);
+            document.getElementById('particleCountVal').textContent = params.particleCount;
+            scene.remove(particleSystem);
+            createParticleSystem();
+        });
+        document.getElementById('simSpeed').addEventListener('input', e => {
+            params.simSpeed = parseFloat(e.target.value);
+            document.getElementById('simSpeedVal').textContent = params.simSpeed.toFixed(1) + 'x';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', reset);
+        document.getElementById('toggleAnchor').addEventListener('click', () => {
+            params.anchorsEnabled = !params.anchorsEnabled;
+            document.getElementById('toggleAnchor').textContent =
+                params.anchorsEnabled ? '⚓ Anchors: ON' : '⚓ Anchors: OFF';
+        });
+        document.getElementById('toggleTrail').addEventListener('click', () => {
+            params.trailEnabled = !params.trailEnabled;
+            document.getElementById('toggleTrail').textContent =
+                params.trailEnabled ? '💫 Particle Trail: ON' : '💫 Particle Trail: OFF';
+        });
+        document.getElementById('toggleIMU').addEventListener('click', () => {
+            params.imuVisible = !params.imuVisible;
+            document.getElementById('toggleIMU').textContent =
+                params.imuVisible ? '📱 IMU Cube: ON' : '📱 IMU Cube: OFF';
+        });
+
+        document.getElementById('viewFollow').addEventListener('click', () => viewMode = 'follow');
+        document.getElementById('viewTop').addEventListener('click', () => viewMode = 'top');
+        document.getElementById('viewSide').addEventListener('click', () => viewMode = 'side');
+        document.getElementById('viewFree').addEventListener('click', () => viewMode = 'free');
+
+        // Initialize
+        initThreeJS();
         animate();
     </script>
 </body>
