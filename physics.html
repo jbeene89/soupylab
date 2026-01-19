@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verlet Physics Engine | Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        #sidebar {
+            width: 280px;
+            background: #0d0d14;
+            border-right: 1px solid #1a1a2e;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        .logo {
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            color: #aa00ff;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+        .section {
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 0.7rem;
+            color: #555;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #1a1a2e;
+            padding-bottom: 0.5rem;
+        }
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            accent-color: #aa00ff;
+        }
+        .value {
+            font-size: 0.7rem;
+            color: #aa00ff;
+            text-align: right;
+            margin-bottom: 0.75rem;
+        }
+        select, button {
+            width: 100%;
+            padding: 0.5rem;
+            background: #1a1a2e;
+            border: 1px solid #2a2a3e;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2a2a3e;
+            border-color: #aa00ff;
+        }
+        button.active {
+            background: #aa00ff;
+            color: #000;
+        }
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-row button {
+            flex: 1;
+        }
+        .stats {
+            font-size: 0.7rem;
+            color: #555;
+            line-height: 1.8;
+        }
+        .stats span {
+            color: #aa00ff;
+        }
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(180deg, #0a0a10 0%, #0f0f18 100%);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .help {
+            font-size: 0.65rem;
+            color: #444;
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+        a { color: #aa00ff; }
+        .key-hint {
+            background: #1a1a2e;
+            padding: 0.25rem 0.5rem;
+            border-radius: 2px;
+            font-size: 0.65rem;
+            color: #666;
+            display: inline-block;
+            margin: 0.1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <div class="logo">SOUPY LABS</div>
+            <h1>Verlet Physics Engine</h1>
+
+            <div class="section">
+                <div class="section-title">CREATE</div>
+                <select id="object-type">
+                    <option value="particle">Particle</option>
+                    <option value="rope">Rope</option>
+                    <option value="cloth">Cloth</option>
+                    <option value="softbody">Soft Body</option>
+                    <option value="bridge">Bridge</option>
+                    <option value="ragdoll">Ragdoll</option>
+                </select>
+                <button id="spawn">Spawn Object</button>
+                <button id="clear">Clear All</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">PHYSICS</div>
+                <label>Gravity</label>
+                <input type="range" id="gravity" min="0" max="2" step="0.05" value="0.5">
+                <div class="value" id="gravity-val">0.50</div>
+
+                <label>Damping</label>
+                <input type="range" id="damping" min="0.9" max="1" step="0.005" value="0.99">
+                <div class="value" id="damping-val">0.990</div>
+
+                <label>Constraint Iterations</label>
+                <input type="range" id="iterations" min="1" max="20" step="1" value="8">
+                <div class="value" id="iter-val">8</div>
+
+                <label>Substeps</label>
+                <input type="range" id="substeps" min="1" max="8" step="1" value="4">
+                <div class="value" id="substep-val">4</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">INTERACTION</div>
+                <div class="btn-row">
+                    <button id="tool-grab" class="active">Grab</button>
+                    <button id="tool-cut">Cut</button>
+                </div>
+                <div class="btn-row">
+                    <button id="tool-pin">Pin</button>
+                    <button id="tool-wind">Wind</button>
+                </div>
+                <label>Interaction Radius</label>
+                <input type="range" id="radius" min="10" max="100" step="5" value="30">
+                <div class="value" id="radius-val">30</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">RENDERING</div>
+                <div class="btn-row">
+                    <button id="show-points" class="active">Points</button>
+                    <button id="show-constraints">Links</button>
+                </div>
+                <div class="btn-row">
+                    <button id="show-stress">Stress</button>
+                    <button id="show-velocity">Velocity</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="btn-row">
+                    <button id="pause">Pause</button>
+                    <button id="step">Step</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">STATISTICS</div>
+                <div class="stats">
+                    Points: <span id="point-count">0</span><br>
+                    Constraints: <span id="constraint-count">0</span><br>
+                    FPS: <span id="fps">—</span><br>
+                    Solver: <span id="solver-time">—</span>
+                </div>
+            </div>
+
+            <div class="help">
+                <strong>Controls</strong><br>
+                <span class="key-hint">Left Click</span> Use tool<br>
+                <span class="key-hint">Right Click</span> Create particle<br>
+                <span class="key-hint">Space</span> Pause/Resume<br><br>
+                
+                <strong>Verlet Integration</strong><br>
+                Position-based dynamics with iterative Gauss-Seidel constraint relaxation.<br><br>
+                <a href="index.html">← Back to Modules</a>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+<script>
+// ============================================================
+// VERLET PHYSICS ENGINE
+// Position-Based Dynamics with Constraint Solving
+// Gauss-Seidel Iterative Relaxation
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Resize handling
+function resize() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Physics parameters
+let gravity = 0.5;
+let damping = 0.99;
+let iterations = 8;
+let substeps = 4;
+
+// Spatial hash for broad-phase collision
+const CELL_SIZE = 30;
+let spatialHash = new Map();
+
+// ============================================================
+// POINT (PARTICLE) CLASS
+// ============================================================
+
+class Point {
+    constructor(x, y, pinned = false, mass = 1) {
+        this.x = x;
+        this.y = y;
+        this.oldX = x;
+        this.oldY = y;
+        this.mass = mass;
+        this.invMass = pinned ? 0 : 1 / mass;
+        this.pinned = pinned;
+        this.radius = 4;
+        this.color = '#aa00ff';
+    }
+    
+    update(dt) {
+        if (this.pinned) return;
+        
+        // Verlet integration
+        const vx = (this.x - this.oldX) * damping;
+        const vy = (this.y - this.oldY) * damping;
+        
+        this.oldX = this.x;
+        this.oldY = this.y;
+        
+        // Apply velocity and gravity
+        this.x += vx;
+        this.y += vy + gravity * dt * dt;
+    }
+    
+    constrain() {
+        if (this.pinned) return;
+        
+        // Boundary constraints
+        const bounce = 0.5;
+        
+        if (this.x < this.radius) {
+            this.x = this.radius;
+            this.oldX = this.x + (this.x - this.oldX) * bounce;
+        }
+        if (this.x > canvas.width - this.radius) {
+            this.x = canvas.width - this.radius;
+            this.oldX = this.x + (this.x - this.oldX) * bounce;
+        }
+        if (this.y < this.radius) {
+            this.y = this.radius;
+            this.oldY = this.y + (this.y - this.oldY) * bounce;
+        }
+        if (this.y > canvas.height - this.radius) {
+            this.y = canvas.height - this.radius;
+            this.oldY = this.y + (this.y - this.oldY) * bounce;
+        }
+    }
+    
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.pinned ? '#ff6600' : this.color;
+        ctx.fill();
+    }
+}
+
+// ============================================================
+// CONSTRAINT CLASSES
+// ============================================================
+
+class DistanceConstraint {
+    constructor(p1, p2, restLength = null, stiffness = 1) {
+        this.p1 = p1;
+        this.p2 = p2;
+        this.restLength = restLength ?? Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        this.stiffness = stiffness;
+        this.broken = false;
+        this.breakThreshold = this.restLength * 2.5;
+    }
+    
+    solve() {
+        if (this.broken) return;
+        
+        const dx = this.p2.x - this.p1.x;
+        const dy = this.p2.y - this.p1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 0.0001) return;
+        
+        // Check for breaking
+        if (dist > this.breakThreshold) {
+            this.broken = true;
+            return;
+        }
+        
+        const diff = (this.restLength - dist) / dist;
+        const w = this.p1.invMass + this.p2.invMass;
+        
+        if (w === 0) return;
+        
+        const px = dx * diff * this.stiffness / w;
+        const py = dy * diff * this.stiffness / w;
+        
+        this.p1.x -= px * this.p1.invMass;
+        this.p1.y -= py * this.p1.invMass;
+        this.p2.x += px * this.p2.invMass;
+        this.p2.y += py * this.p2.invMass;
+    }
+    
+    getStress() {
+        const dx = this.p2.x - this.p1.x;
+        const dy = this.p2.y - this.p1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return Math.abs(dist - this.restLength) / this.restLength;
+    }
+    
+    draw(showStress = false) {
+        if (this.broken) return;
+        
+        ctx.beginPath();
+        ctx.moveTo(this.p1.x, this.p1.y);
+        ctx.lineTo(this.p2.x, this.p2.y);
+        
+        if (showStress) {
+            const stress = this.getStress();
+            const r = Math.min(255, Math.floor(stress * 500));
+            const g = Math.max(0, 255 - Math.floor(stress * 500));
+            ctx.strokeStyle = `rgb(${r},${g},100)`;
+            ctx.lineWidth = 2;
+        } else {
+            ctx.strokeStyle = 'rgba(170,0,255,0.5)';
+            ctx.lineWidth = 1;
+        }
+        ctx.stroke();
+    }
+}
+
+class AngleConstraint {
+    constructor(p1, p2, p3, angle = null, stiffness = 0.5) {
+        this.p1 = p1; // First point
+        this.p2 = p2; // Pivot point
+        this.p3 = p3; // Third point
+        this.angle = angle ?? this.getCurrentAngle();
+        this.stiffness = stiffness;
+    }
+    
+    getCurrentAngle() {
+        const a1 = Math.atan2(this.p1.y - this.p2.y, this.p1.x - this.p2.x);
+        const a2 = Math.atan2(this.p3.y - this.p2.y, this.p3.x - this.p2.x);
+        return a2 - a1;
+    }
+    
+    solve() {
+        const currentAngle = this.getCurrentAngle();
+        let diff = this.angle - currentAngle;
+        
+        // Normalize angle difference
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        
+        diff *= this.stiffness * 0.5;
+        
+        // Rotate p1 and p3 around p2
+        if (!this.p1.pinned) {
+            const cos = Math.cos(-diff);
+            const sin = Math.sin(-diff);
+            const dx = this.p1.x - this.p2.x;
+            const dy = this.p1.y - this.p2.y;
+            this.p1.x = this.p2.x + dx * cos - dy * sin;
+            this.p1.y = this.p2.y + dx * sin + dy * cos;
+        }
+        
+        if (!this.p3.pinned) {
+            const cos = Math.cos(diff);
+            const sin = Math.sin(diff);
+            const dx = this.p3.x - this.p2.x;
+            const dy = this.p3.y - this.p2.y;
+            this.p3.x = this.p2.x + dx * cos - dy * sin;
+            this.p3.y = this.p2.y + dx * sin + dy * cos;
+        }
+    }
+}
+
+// ============================================================
+// WORLD STATE
+// ============================================================
+
+let points = [];
+let constraints = [];
+let paused = false;
+let tool = 'grab';
+let showPoints = true;
+let showConstraints = true;
+let showStress = false;
+let showVelocity = false;
+let interactionRadius = 30;
+
+// Mouse state
+let mouse = { x: 0, y: 0, down: false, button: 0 };
+let selectedPoint = null;
+let windActive = false;
+
+// ============================================================
+// OBJECT FACTORIES
+// ============================================================
+
+function createRope(x, y, length = 15, segLength = 15) {
+    const newPoints = [];
+    const newConstraints = [];
+    
+    for (let i = 0; i < length; i++) {
+        const p = new Point(x, y + i * segLength, i === 0);
+        p.color = '#00aaff';
+        newPoints.push(p);
+        
+        if (i > 0) {
+            newConstraints.push(new DistanceConstraint(newPoints[i-1], newPoints[i], segLength, 1));
+        }
+    }
+    
+    points.push(...newPoints);
+    constraints.push(...newConstraints);
+}
+
+function createCloth(x, y, cols = 15, rows = 12, spacing = 15) {
+    const newPoints = [];
+    const grid = [];
+    
+    for (let j = 0; j < rows; j++) {
+        grid[j] = [];
+        for (let i = 0; i < cols; i++) {
+            const pinned = (j === 0 && (i === 0 || i === cols - 1 || i === Math.floor(cols/2)));
+            const p = new Point(x + i * spacing, y + j * spacing, pinned);
+            p.color = '#00ff88';
+            newPoints.push(p);
+            grid[j][i] = p;
+        }
+    }
+    
+    // Structural constraints
+    for (let j = 0; j < rows; j++) {
+        for (let i = 0; i < cols; i++) {
+            if (i < cols - 1) {
+                constraints.push(new DistanceConstraint(grid[j][i], grid[j][i+1], spacing, 1));
+            }
+            if (j < rows - 1) {
+                constraints.push(new DistanceConstraint(grid[j][i], grid[j+1][i], spacing, 1));
+            }
+        }
+    }
+    
+    // Shear constraints (diagonal)
+    for (let j = 0; j < rows - 1; j++) {
+        for (let i = 0; i < cols - 1; i++) {
+            constraints.push(new DistanceConstraint(grid[j][i], grid[j+1][i+1], spacing * Math.SQRT2, 0.5));
+            constraints.push(new DistanceConstraint(grid[j+1][i], grid[j][i+1], spacing * Math.SQRT2, 0.5));
+        }
+    }
+    
+    points.push(...newPoints);
+}
+
+function createSoftBody(cx, cy, radius = 50, segments = 12) {
+    const newPoints = [];
+    const center = new Point(cx, cy, false, 2);
+    center.color = '#ff6600';
+    newPoints.push(center);
+    
+    // Outer ring
+    for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const x = cx + Math.cos(angle) * radius;
+        const y = cy + Math.sin(angle) * radius;
+        const p = new Point(x, y);
+        p.color = '#ff6600';
+        newPoints.push(p);
+    }
+    
+    // Connect outer ring
+    for (let i = 1; i <= segments; i++) {
+        const next = i % segments + 1;
+        constraints.push(new DistanceConstraint(newPoints[i], newPoints[next], null, 0.8));
+        // Connect to center
+        constraints.push(new DistanceConstraint(center, newPoints[i], radius, 0.3));
+    }
+    
+    // Cross constraints for pressure simulation
+    for (let i = 1; i <= segments; i++) {
+        const opposite = ((i - 1 + segments/2) % segments) + 1;
+        constraints.push(new DistanceConstraint(newPoints[i], newPoints[opposite], radius * 2, 0.2));
+    }
+    
+    points.push(...newPoints);
+}
+
+function createBridge(x, y, length = 12, segLength = 25) {
+    const newPoints = [];
+    
+    // Top cable
+    const top = [];
+    for (let i = 0; i < length; i++) {
+        const sag = Math.sin(i / (length-1) * Math.PI) * 30;
+        const p = new Point(x + i * segLength, y - 50 + sag, i === 0 || i === length - 1);
+        p.color = '#ffaa00';
+        top.push(p);
+        newPoints.push(p);
+    }
+    
+    // Bottom deck
+    const bottom = [];
+    for (let i = 0; i < length; i++) {
+        const p = new Point(x + i * segLength, y, i === 0 || i === length - 1);
+        p.color = '#aaffaa';
+        bottom.push(p);
+        newPoints.push(p);
+    }
+    
+    // Horizontal constraints
+    for (let i = 0; i < length - 1; i++) {
+        constraints.push(new DistanceConstraint(top[i], top[i+1], segLength, 1));
+        constraints.push(new DistanceConstraint(bottom[i], bottom[i+1], segLength, 1));
+    }
+    
+    // Vertical hangers
+    for (let i = 0; i < length; i++) {
+        constraints.push(new DistanceConstraint(top[i], bottom[i], null, 1));
+    }
+    
+    // Diagonal bracing
+    for (let i = 0; i < length - 1; i++) {
+        constraints.push(new DistanceConstraint(top[i], bottom[i+1], null, 0.5));
+        constraints.push(new DistanceConstraint(bottom[i], top[i+1], null, 0.5));
+    }
+    
+    points.push(...newPoints);
+}
+
+function createRagdoll(x, y) {
+    // Head
+    const head = new Point(x, y, false, 2);
+    head.radius = 12;
+    head.color = '#ffcc99';
+    
+    // Torso points
+    const neck = new Point(x, y + 20);
+    const chest = new Point(x, y + 50);
+    const hip = new Point(x, y + 90);
+    
+    // Arms
+    const lShoulder = new Point(x - 25, y + 30);
+    const lElbow = new Point(x - 50, y + 50);
+    const lHand = new Point(x - 70, y + 70);
+    
+    const rShoulder = new Point(x + 25, y + 30);
+    const rElbow = new Point(x + 50, y + 50);
+    const rHand = new Point(x + 70, y + 70);
+    
+    // Legs
+    const lHip = new Point(x - 15, y + 95);
+    const lKnee = new Point(x - 15, y + 135);
+    const lFoot = new Point(x - 15, y + 175);
+    
+    const rHip = new Point(x + 15, y + 95);
+    const rKnee = new Point(x + 15, y + 135);
+    const rFoot = new Point(x + 15, y + 175);
+    
+    const ragdollPoints = [head, neck, chest, hip, 
+                          lShoulder, lElbow, lHand,
+                          rShoulder, rElbow, rHand,
+                          lHip, lKnee, lFoot,
+                          rHip, rKnee, rFoot];
+    
+    ragdollPoints.forEach(p => p.color = '#ffcc99');
+    points.push(...ragdollPoints);
+    
+    // Spine
+    constraints.push(new DistanceConstraint(head, neck, 20, 1));
+    constraints.push(new DistanceConstraint(neck, chest, 30, 1));
+    constraints.push(new DistanceConstraint(chest, hip, 40, 1));
+    
+    // Arms
+    constraints.push(new DistanceConstraint(neck, lShoulder, 30, 1));
+    constraints.push(new DistanceConstraint(lShoulder, lElbow, 30, 1));
+    constraints.push(new DistanceConstraint(lElbow, lHand, 25, 1));
+    
+    constraints.push(new DistanceConstraint(neck, rShoulder, 30, 1));
+    constraints.push(new DistanceConstraint(rShoulder, rElbow, 30, 1));
+    constraints.push(new DistanceConstraint(rElbow, rHand, 25, 1));
+    
+    // Legs
+    constraints.push(new DistanceConstraint(hip, lHip, 20, 1));
+    constraints.push(new DistanceConstraint(lHip, lKnee, 40, 1));
+    constraints.push(new DistanceConstraint(lKnee, lFoot, 40, 1));
+    
+    constraints.push(new DistanceConstraint(hip, rHip, 20, 1));
+    constraints.push(new DistanceConstraint(rHip, rKnee, 40, 1));
+    constraints.push(new DistanceConstraint(rKnee, rFoot, 40, 1));
+    
+    // Structural cross-constraints
+    constraints.push(new DistanceConstraint(lShoulder, rShoulder, 50, 0.8));
+    constraints.push(new DistanceConstraint(lHip, rHip, 30, 0.8));
+    constraints.push(new DistanceConstraint(lShoulder, hip, null, 0.3));
+    constraints.push(new DistanceConstraint(rShoulder, hip, null, 0.3));
+}
+
+// ============================================================
+// PHYSICS SIMULATION
+// ============================================================
+
+function simulate(dt) {
+    const subDt = dt / substeps;
+    
+    for (let s = 0; s < substeps; s++) {
+        // Update points (Verlet integration)
+        for (const point of points) {
+            point.update(subDt);
+        }
+        
+        // Apply wind
+        if (windActive) {
+            const windForce = Math.sin(Date.now() * 0.003) * 0.3;
+            for (const point of points) {
+                if (!point.pinned) {
+                    point.x += windForce;
+                }
+            }
+        }
+        
+        // Solve constraints (Gauss-Seidel iteration)
+        for (let i = 0; i < iterations; i++) {
+            for (const constraint of constraints) {
+                constraint.solve();
+            }
+            
+            // Point-point collision
+            resolveCollisions();
+        }
+        
+        // Apply boundary constraints
+        for (const point of points) {
+            point.constrain();
+        }
+    }
+    
+    // Handle mouse interaction
+    if (selectedPoint && mouse.down) {
+        selectedPoint.x = mouse.x;
+        selectedPoint.y = mouse.y;
+        selectedPoint.oldX = mouse.x;
+        selectedPoint.oldY = mouse.y;
+    }
+    
+    // Clean up broken constraints
+    constraints = constraints.filter(c => !c.broken);
+}
+
+function resolveCollisions() {
+    // Rebuild spatial hash
+    spatialHash.clear();
+    
+    for (const point of points) {
+        const cellX = Math.floor(point.x / CELL_SIZE);
+        const cellY = Math.floor(point.y / CELL_SIZE);
+        const key = `${cellX},${cellY}`;
+        
+        if (!spatialHash.has(key)) {
+            spatialHash.set(key, []);
+        }
+        spatialHash.get(key).push(point);
+    }
+    
+    // Check collisions in neighboring cells
+    for (const point of points) {
+        if (point.pinned) continue;
+        
+        const cellX = Math.floor(point.x / CELL_SIZE);
+        const cellY = Math.floor(point.y / CELL_SIZE);
+        
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const key = `${cellX + dx},${cellY + dy}`;
+                const cell = spatialHash.get(key);
+                
+                if (!cell) continue;
+                
+                for (const other of cell) {
+                    if (other === point) continue;
+                    
+                    const distX = other.x - point.x;
+                    const distY = other.y - point.y;
+                    const dist = Math.sqrt(distX * distX + distY * distY);
+                    const minDist = point.radius + other.radius;
+                    
+                    if (dist < minDist && dist > 0.001) {
+                        const overlap = (minDist - dist) * 0.5;
+                        const nx = distX / dist;
+                        const ny = distY / dist;
+                        
+                        if (!point.pinned) {
+                            point.x -= nx * overlap;
+                            point.y -= ny * overlap;
+                        }
+                        if (!other.pinned) {
+                            other.x += nx * overlap;
+                            other.y += ny * overlap;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function render() {
+    ctx.fillStyle = '#0a0a10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid
+    ctx.strokeStyle = '#151520';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Draw constraints
+    if (showConstraints) {
+        for (const constraint of constraints) {
+            if (constraint instanceof DistanceConstraint) {
+                constraint.draw(showStress);
+            }
+        }
+    }
+    
+    // Draw velocity vectors
+    if (showVelocity) {
+        ctx.strokeStyle = 'rgba(0,255,136,0.5)';
+        ctx.lineWidth = 1;
+        for (const point of points) {
+            const vx = (point.x - point.oldX) * 5;
+            const vy = (point.y - point.oldY) * 5;
+            ctx.beginPath();
+            ctx.moveTo(point.x, point.y);
+            ctx.lineTo(point.x + vx, point.y + vy);
+            ctx.stroke();
+        }
+    }
+    
+    // Draw points
+    if (showPoints) {
+        for (const point of points) {
+            point.draw();
+        }
+    }
+    
+    // Draw interaction cursor
+    if (tool === 'grab' || tool === 'cut') {
+        ctx.strokeStyle = tool === 'cut' ? 'rgba(255,0,0,0.5)' : 'rgba(170,0,255,0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(mouse.x, mouse.y, interactionRadius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    
+    // Draw wind indicator
+    if (tool === 'wind' && windActive) {
+        const windStrength = Math.sin(Date.now() * 0.003) * 30;
+        ctx.strokeStyle = 'rgba(0,170,255,0.5)';
+        ctx.lineWidth = 2;
+        for (let y = 50; y < canvas.height; y += 80) {
+            ctx.beginPath();
+            ctx.moveTo(50, y);
+            ctx.lineTo(50 + windStrength, y);
+            ctx.lineTo(50 + windStrength - 10, y - 5);
+            ctx.moveTo(50 + windStrength, y);
+            ctx.lineTo(50 + windStrength - 10, y + 5);
+            ctx.stroke();
+        }
+    }
+    
+    // Update stats
+    document.getElementById('point-count').textContent = points.length;
+    document.getElementById('constraint-count').textContent = constraints.length;
+}
+
+// ============================================================
+// USER INTERACTION
+// ============================================================
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+    mouse.down = true;
+    mouse.button = e.button;
+    
+    if (e.button === 2) {
+        // Right click: create particle
+        points.push(new Point(mouse.x, mouse.y));
+        return;
+    }
+    
+    if (tool === 'grab') {
+        // Find nearest point
+        let minDist = interactionRadius;
+        for (const point of points) {
+            const dist = Math.hypot(point.x - mouse.x, point.y - mouse.y);
+            if (dist < minDist) {
+                minDist = dist;
+                selectedPoint = point;
+            }
+        }
+    } else if (tool === 'pin') {
+        // Toggle pin on nearest point
+        let minDist = interactionRadius;
+        let nearest = null;
+        for (const point of points) {
+            const dist = Math.hypot(point.x - mouse.x, point.y - mouse.y);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = point;
+            }
+        }
+        if (nearest) {
+            nearest.pinned = !nearest.pinned;
+            nearest.invMass = nearest.pinned ? 0 : 1 / nearest.mass;
+        }
+    } else if (tool === 'wind') {
+        windActive = true;
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+    
+    if (mouse.down && tool === 'cut') {
+        // Cut constraints near mouse
+        for (const constraint of constraints) {
+            if (constraint instanceof DistanceConstraint && !constraint.broken) {
+                const mx = (constraint.p1.x + constraint.p2.x) / 2;
+                const my = (constraint.p1.y + constraint.p2.y) / 2;
+                if (Math.hypot(mx - mouse.x, my - mouse.y) < interactionRadius) {
+                    constraint.broken = true;
+                }
+            }
+        }
+    }
+});
+
+canvas.addEventListener('mouseup', () => {
+    mouse.down = false;
+    selectedPoint = null;
+    windActive = false;
+});
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        paused = !paused;
+        document.getElementById('pause').textContent = paused ? 'Resume' : 'Pause';
+        document.getElementById('pause').classList.toggle('active', paused);
+    }
+});
+
+// UI Controls
+document.getElementById('spawn').addEventListener('click', () => {
+    const type = document.getElementById('object-type').value;
+    const cx = canvas.width / 2;
+    const cy = 100;
+    
+    switch(type) {
+        case 'particle':
+            points.push(new Point(cx, cy));
+            break;
+        case 'rope':
+            createRope(cx, 50);
+            break;
+        case 'cloth':
+            createCloth(cx - 100, 50);
+            break;
+        case 'softbody':
+            createSoftBody(cx, 200);
+            break;
+        case 'bridge':
+            createBridge(100, 150);
+            break;
+        case 'ragdoll':
+            createRagdoll(cx, 50);
+            break;
+    }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+    points = [];
+    constraints = [];
+});
+
+document.getElementById('gravity').addEventListener('input', function() {
+    gravity = parseFloat(this.value);
+    document.getElementById('gravity-val').textContent = gravity.toFixed(2);
+});
+
+document.getElementById('damping').addEventListener('input', function() {
+    damping = parseFloat(this.value);
+    document.getElementById('damping-val').textContent = damping.toFixed(3);
+});
+
+document.getElementById('iterations').addEventListener('input', function() {
+    iterations = parseInt(this.value);
+    document.getElementById('iter-val').textContent = iterations;
+});
+
+document.getElementById('substeps').addEventListener('input', function() {
+    substeps = parseInt(this.value);
+    document.getElementById('substep-val').textContent = substeps;
+});
+
+document.getElementById('radius').addEventListener('input', function() {
+    interactionRadius = parseInt(this.value);
+    document.getElementById('radius-val').textContent = interactionRadius;
+});
+
+// Tool buttons
+['grab', 'cut', 'pin', 'wind'].forEach(t => {
+    document.getElementById(`tool-${t}`).addEventListener('click', function() {
+        tool = t;
+        document.querySelectorAll('.section button').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+    });
+});
+
+// Rendering toggles
+document.getElementById('show-points').addEventListener('click', function() {
+    showPoints = !showPoints;
+    this.classList.toggle('active', showPoints);
+});
+
+document.getElementById('show-constraints').addEventListener('click', function() {
+    showConstraints = !showConstraints;
+    this.classList.toggle('active', showConstraints);
+});
+
+document.getElementById('show-stress').addEventListener('click', function() {
+    showStress = !showStress;
+    this.classList.toggle('active', showStress);
+});
+
+document.getElementById('show-velocity').addEventListener('click', function() {
+    showVelocity = !showVelocity;
+    this.classList.toggle('active', showVelocity);
+});
+
+document.getElementById('pause').addEventListener('click', function() {
+    paused = !paused;
+    this.textContent = paused ? 'Resume' : 'Pause';
+    this.classList.toggle('active', paused);
+});
+
+document.getElementById('step').addEventListener('click', () => {
+    if (paused) simulate(16);
+});
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+
+let lastTime = performance.now();
+let frameCount = 0;
+let fpsTime = 0;
+
+function animate() {
+    const now = performance.now();
+    const dt = Math.min(now - lastTime, 32);
+    lastTime = now;
+    
+    if (!paused) {
+        const solverStart = performance.now();
+        simulate(dt);
+        const solverEnd = performance.now();
+        document.getElementById('solver-time').textContent = (solverEnd - solverStart).toFixed(1) + 'ms';
+    }
+    
+    render();
+    
+    // FPS counter
+    frameCount++;
+    fpsTime += dt;
+    if (fpsTime > 500) {
+        document.getElementById('fps').textContent = Math.round(frameCount / fpsTime * 1000);
+        frameCount = 0;
+        fpsTime = 0;
+    }
+    
+    requestAnimationFrame(animate);
+}
+
+// Create initial demo scene
+createCloth(canvas.width / 2 - 100, 30);
+createRope(100, 30);
+createSoftBody(canvas.width - 150, 250);
+
+animate();
+
+</script>
+</body>
+</html>

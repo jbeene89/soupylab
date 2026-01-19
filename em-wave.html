@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EM Wave Propagation | Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        #sidebar {
+            width: 280px;
+            background: #0d0d14;
+            border-right: 1px solid #1a1a2e;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        .logo {
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            color: #ff6600;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+        .section {
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 0.7rem;
+            color: #555;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #1a1a2e;
+            padding-bottom: 0.5rem;
+        }
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            accent-color: #ff6600;
+        }
+        .value {
+            font-size: 0.7rem;
+            color: #ff6600;
+            text-align: right;
+            margin-bottom: 0.75rem;
+        }
+        select, button {
+            width: 100%;
+            padding: 0.5rem;
+            background: #1a1a2e;
+            border: 1px solid #2a2a3e;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2a2a3e;
+            border-color: #ff6600;
+        }
+        button.active {
+            background: #ff6600;
+            color: #000;
+        }
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-row button {
+            flex: 1;
+        }
+        .stats {
+            font-size: 0.7rem;
+            color: #555;
+            line-height: 1.8;
+        }
+        .stats span {
+            color: #ff6600;
+        }
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .help {
+            font-size: 0.65rem;
+            color: #444;
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+        a { color: #ff6600; }
+        .equation {
+            background: #1a1a2e;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 2px;
+            font-size: 0.7rem;
+            color: #888;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <div class="logo">SOUPY LABS</div>
+            <h1>EM Wave Propagation</h1>
+
+            <div class="section">
+                <div class="section-title">SOURCE</div>
+                <select id="source-type">
+                    <option value="dipole">Dipole Antenna</option>
+                    <option value="plane">Plane Wave</option>
+                    <option value="gaussian">Gaussian Pulse</option>
+                    <option value="dual">Dual Sources</option>
+                </select>
+                
+                <label>Frequency (rel.)</label>
+                <input type="range" id="frequency" min="0.5" max="5" step="0.1" value="2">
+                <div class="value" id="freq-val">2.0</div>
+
+                <label>Amplitude</label>
+                <input type="range" id="amplitude" min="0.1" max="2" step="0.1" value="1">
+                <div class="value" id="amp-val">1.0</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">VISUALIZATION</div>
+                <select id="field-type">
+                    <option value="ez">E-field (Ez)</option>
+                    <option value="hx">H-field (Hx)</option>
+                    <option value="hy">H-field (Hy)</option>
+                    <option value="energy">Energy Density</option>
+                    <option value="poynting">Poynting Vector</option>
+                </select>
+                
+                <label>Color Scale</label>
+                <input type="range" id="scale" min="0.1" max="5" step="0.1" value="1">
+                <div class="value" id="scale-val">1.0</div>
+                
+                <label>Opacity</label>
+                <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8">
+                <div class="value" id="opacity-val">0.80</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">MEDIUM</div>
+                <label>Permittivity (εr)</label>
+                <input type="range" id="epsilon" min="1" max="10" step="0.5" value="1">
+                <div class="value" id="epsilon-val">1.0</div>
+
+                <label>Conductivity (σ)</label>
+                <input type="range" id="sigma" min="0" max="0.5" step="0.01" value="0">
+                <div class="value" id="sigma-val">0.00</div>
+                
+                <div class="btn-row">
+                    <button id="add-dielectric">Add Block</button>
+                    <button id="clear-media">Clear</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">SIMULATION</div>
+                <div class="btn-row">
+                    <button id="reset">Reset</button>
+                    <button id="pause">Pause</button>
+                </div>
+                <label>Speed</label>
+                <input type="range" id="speed" min="1" max="20" step="1" value="5">
+                <div class="value" id="speed-val">5</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">STATISTICS</div>
+                <div class="stats">
+                    Time Step: <span id="timestep">—</span><br>
+                    Max Field: <span id="maxfield">—</span><br>
+                    Grid: <span id="gridsize">—</span><br>
+                    CFL: <span id="cfl">—</span>
+                </div>
+            </div>
+
+            <div class="equation">
+                ∂E/∂t = (1/ε)∇×H − σE/ε<br>
+                ∂H/∂t = −(1/μ)∇×E
+            </div>
+
+            <div class="help">
+                <strong>FDTD Method</strong><br>
+                Yee grid with staggered E/H fields. 
+                2nd-order accurate in space and time.
+                ABC (Absorbing) boundaries.<br><br>
+                Click to place sources.<br>
+                <a href="index.html">← Back to Modules</a>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+<script>
+// ============================================================
+// FDTD ELECTROMAGNETIC WAVE SIMULATION
+// 2D TM Mode (Ez, Hx, Hy)
+// Yee Grid with Absorbing Boundary Conditions
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Grid parameters
+const NX = 400;
+const NY = 400;
+const dx = 1.0;  // Spatial step (normalized)
+const dy = 1.0;
+
+// Physical constants (normalized)
+const c0 = 1.0;           // Speed of light
+const mu0 = 1.0;          // Permeability
+const eps0 = 1.0;         // Permittivity
+const dt = 0.5 / c0;      // Time step (CFL condition: dt < dx/(c*sqrt(2)))
+
+// Field arrays (Yee grid staggering)
+// Ez at integer points, Hx at (i, j+0.5), Hy at (i+0.5, j)
+let Ez = new Float32Array(NX * NY);
+let Hx = new Float32Array(NX * NY);
+let Hy = new Float32Array(NX * NY);
+
+// Material properties at each point
+let epsilon = new Float32Array(NX * NY).fill(1.0);  // Relative permittivity
+let sigma = new Float32Array(NX * NY).fill(0.0);    // Conductivity
+
+// Coefficients for update equations (precomputed for efficiency)
+let Ca = new Float32Array(NX * NY);  // E-field coefficient
+let Cb = new Float32Array(NX * NY);  // H-curl coefficient
+let Da = new Float32Array(NX * NY);  // H-field coefficient (usually 1)
+let Db = new Float32Array(NX * NY);  // E-curl coefficient
+
+// PML (Perfectly Matched Layer) parameters - simplified ABC
+const pmlLayers = 20;
+let sigmaX = new Float32Array(NX);
+let sigmaY = new Float32Array(NY);
+
+// Simulation state
+let timeStep = 0;
+let paused = false;
+let speed = 5;
+
+// Source parameters
+let sourceType = 'dipole';
+let frequency = 2.0;
+let amplitude = 1.0;
+let sourcePos = { x: NX/2, y: NY/2 };
+
+// Visualization
+let fieldType = 'ez';
+let colorScale = 1.0;
+let fieldOpacity = 0.8;
+
+// Dielectric blocks
+let dielectricBlocks = [];
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+function initGrid() {
+    canvas.width = NX;
+    canvas.height = NY;
+    
+    // Reset fields
+    Ez.fill(0);
+    Hx.fill(0);
+    Hy.fill(0);
+    epsilon.fill(1.0);
+    sigma.fill(0.0);
+    
+    // Setup PML absorption profile (polynomial grading)
+    for (let i = 0; i < NX; i++) {
+        if (i < pmlLayers) {
+            const d = (pmlLayers - i) / pmlLayers;
+            sigmaX[i] = 0.5 * Math.pow(d, 3);
+        } else if (i >= NX - pmlLayers) {
+            const d = (i - (NX - pmlLayers)) / pmlLayers;
+            sigmaX[i] = 0.5 * Math.pow(d, 3);
+        } else {
+            sigmaX[i] = 0;
+        }
+    }
+    
+    for (let j = 0; j < NY; j++) {
+        if (j < pmlLayers) {
+            const d = (pmlLayers - j) / pmlLayers;
+            sigmaY[j] = 0.5 * Math.pow(d, 3);
+        } else if (j >= NY - pmlLayers) {
+            const d = (j - (NY - pmlLayers)) / pmlLayers;
+            sigmaY[j] = 0.5 * Math.pow(d, 3);
+        } else {
+            sigmaY[j] = 0;
+        }
+    }
+    
+    // Apply dielectric blocks
+    for (const block of dielectricBlocks) {
+        applyDielectricBlock(block);
+    }
+    
+    // Precompute update coefficients
+    updateCoefficients();
+    
+    timeStep = 0;
+    document.getElementById('gridsize').textContent = `${NX}×${NY}`;
+    document.getElementById('cfl').textContent = (c0 * dt / dx * Math.sqrt(2)).toFixed(3);
+}
+
+function updateCoefficients() {
+    for (let j = 0; j < NY; j++) {
+        for (let i = 0; i < NX; i++) {
+            const idx = j * NX + i;
+            const eps = epsilon[idx] * eps0;
+            const sig = sigma[idx] + sigmaX[i] + sigmaY[j];
+            
+            // E-field update coefficients
+            // dE/dt = (1/eps) * curl(H) - (sigma/eps) * E
+            // E^{n+1} = Ca * E^n + Cb * curl(H)
+            Ca[idx] = (1 - sig * dt / (2 * eps)) / (1 + sig * dt / (2 * eps));
+            Cb[idx] = (dt / eps) / (1 + sig * dt / (2 * eps));
+            
+            // H-field update coefficients (assuming non-magnetic)
+            Da[idx] = 1.0;
+            Db[idx] = dt / mu0;
+        }
+    }
+}
+
+function applyDielectricBlock(block) {
+    const { x, y, w, h, eps, sig } = block;
+    for (let jj = Math.max(0, y); jj < Math.min(NY, y + h); jj++) {
+        for (let ii = Math.max(0, x); ii < Math.min(NX, x + w); ii++) {
+            const idx = jj * NX + ii;
+            epsilon[idx] = eps;
+            sigma[idx] = sig;
+        }
+    }
+}
+
+// ============================================================
+// FDTD UPDATE EQUATIONS
+// ============================================================
+
+function updateH() {
+    // Update Hx: Hx^{n+1/2} = Da*Hx^{n-1/2} - Db * dEz/dy
+    for (let j = 0; j < NY - 1; j++) {
+        for (let i = 0; i < NX; i++) {
+            const idx = j * NX + i;
+            const idx_jp1 = (j + 1) * NX + i;
+            
+            Hx[idx] = Da[idx] * Hx[idx] - Db[idx] * (Ez[idx_jp1] - Ez[idx]) / dy;
+        }
+    }
+    
+    // Update Hy: Hy^{n+1/2} = Da*Hy^{n-1/2} + Db * dEz/dx
+    for (let j = 0; j < NY; j++) {
+        for (let i = 0; i < NX - 1; i++) {
+            const idx = j * NX + i;
+            const idx_ip1 = j * NX + (i + 1);
+            
+            Hy[idx] = Da[idx] * Hy[idx] + Db[idx] * (Ez[idx_ip1] - Ez[idx]) / dx;
+        }
+    }
+}
+
+function updateE() {
+    // Update Ez: Ez^{n+1} = Ca*Ez^n + Cb * (dHy/dx - dHx/dy)
+    for (let j = 1; j < NY - 1; j++) {
+        for (let i = 1; i < NX - 1; i++) {
+            const idx = j * NX + i;
+            const idx_im1 = j * NX + (i - 1);
+            const idx_jm1 = (j - 1) * NX + i;
+            
+            const curlH = (Hy[idx] - Hy[idx_im1]) / dx - (Hx[idx] - Hx[idx_jm1]) / dy;
+            Ez[idx] = Ca[idx] * Ez[idx] + Cb[idx] * curlH;
+        }
+    }
+}
+
+function addSource() {
+    const t = timeStep * dt;
+    const omega = 2 * Math.PI * frequency * 0.1;
+    
+    if (sourceType === 'dipole') {
+        // Point dipole source
+        const sx = Math.floor(sourcePos.x);
+        const sy = Math.floor(sourcePos.y);
+        if (sx > 0 && sx < NX - 1 && sy > 0 && sy < NY - 1) {
+            const idx = sy * NX + sx;
+            // Soft source with Gaussian envelope
+            const envelope = Math.exp(-Math.pow((t - 30) / 10, 2));
+            Ez[idx] += amplitude * envelope * Math.sin(omega * t);
+        }
+    } else if (sourceType === 'plane') {
+        // Plane wave from left
+        const x = pmlLayers + 10;
+        for (let j = pmlLayers; j < NY - pmlLayers; j++) {
+            const idx = j * NX + x;
+            const envelope = Math.exp(-Math.pow((t - 30) / 10, 2));
+            Ez[idx] += amplitude * envelope * Math.sin(omega * t);
+        }
+    } else if (sourceType === 'gaussian') {
+        // Gaussian pulse (broadband)
+        const sx = Math.floor(sourcePos.x);
+        const sy = Math.floor(sourcePos.y);
+        if (sx > 0 && sx < NX - 1 && sy > 0 && sy < NY - 1) {
+            const idx = sy * NX + sx;
+            const pulse = amplitude * Math.exp(-Math.pow((t - 20) / 5, 2));
+            Ez[idx] += pulse;
+        }
+    } else if (sourceType === 'dual') {
+        // Two interfering sources
+        const sep = 50;
+        const cx = NX / 2;
+        const cy = NY / 2;
+        const envelope = Math.exp(-Math.pow((t - 30) / 10, 2));
+        
+        const idx1 = Math.floor(cy) * NX + Math.floor(cx - sep/2);
+        const idx2 = Math.floor(cy) * NX + Math.floor(cx + sep/2);
+        
+        Ez[idx1] += amplitude * envelope * Math.sin(omega * t);
+        Ez[idx2] += amplitude * envelope * Math.sin(omega * t);
+    }
+}
+
+function step() {
+    updateH();
+    updateE();
+    addSource();
+    timeStep++;
+}
+
+// ============================================================
+// VISUALIZATION
+// ============================================================
+
+const imageData = ctx.createImageData(NX, NY);
+
+function render() {
+    let maxVal = 0;
+    
+    for (let j = 0; j < NY; j++) {
+        for (let i = 0; i < NX; i++) {
+            const idx = j * NX + i;
+            const pixIdx = ((NY - 1 - j) * NX + i) * 4;
+            
+            let value = 0;
+            
+            if (fieldType === 'ez') {
+                value = Ez[idx];
+            } else if (fieldType === 'hx') {
+                value = Hx[idx] * 100; // Scale H for visibility
+            } else if (fieldType === 'hy') {
+                value = Hy[idx] * 100;
+            } else if (fieldType === 'energy') {
+                // Energy density: u = (eps*E^2 + mu*H^2)/2
+                const eps = epsilon[idx];
+                const u = eps * Ez[idx] * Ez[idx] + 
+                          mu0 * (Hx[idx] * Hx[idx] + Hy[idx] * Hy[idx]);
+                value = Math.sqrt(u) * 20;
+            } else if (fieldType === 'poynting') {
+                // Poynting vector magnitude: S = E × H
+                const Sx = Ez[idx] * Hy[idx];
+                const Sy = -Ez[idx] * Hx[idx];
+                value = Math.sqrt(Sx*Sx + Sy*Sy) * 50;
+            }
+            
+            maxVal = Math.max(maxVal, Math.abs(value));
+            
+            // Color mapping
+            const scaled = value * colorScale;
+            let r, g, b;
+            
+            if (fieldType === 'energy' || fieldType === 'poynting') {
+                // Hot colormap for positive-only values
+                const t = Math.min(1, Math.abs(scaled));
+                r = Math.min(255, t * 3 * 255);
+                g = Math.min(255, Math.max(0, (t - 0.33) * 3 * 255));
+                b = Math.min(255, Math.max(0, (t - 0.66) * 3 * 255));
+            } else {
+                // Diverging colormap for signed values
+                if (scaled > 0) {
+                    const t = Math.min(1, scaled);
+                    r = 255;
+                    g = Math.floor(255 * (1 - t));
+                    b = Math.floor(100 * (1 - t));
+                } else {
+                    const t = Math.min(1, -scaled);
+                    r = Math.floor(100 * (1 - t));
+                    g = Math.floor(200 * (1 - t));
+                    b = 255;
+                }
+            }
+            
+            // Show dielectric regions
+            if (epsilon[idx] > 1.01 || sigma[idx] > 0.01) {
+                const gray = 40;
+                r = Math.floor(r * 0.7 + gray * 0.3);
+                g = Math.floor(g * 0.7 + gray * 0.3);
+                b = Math.floor(b * 0.7 + gray * 0.3);
+            }
+            
+            imageData.data[pixIdx] = r;
+            imageData.data[pixIdx + 1] = g;
+            imageData.data[pixIdx + 2] = b;
+            imageData.data[pixIdx + 3] = Math.floor(fieldOpacity * 255);
+        }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+    
+    // Draw source position
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(sourcePos.x, NY - sourcePos.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw PML boundaries
+    ctx.strokeStyle = 'rgba(255,100,0,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pmlLayers, pmlLayers, NX - 2*pmlLayers, NY - 2*pmlLayers);
+    
+    // Update stats
+    document.getElementById('timestep').textContent = timeStep;
+    document.getElementById('maxfield').textContent = maxVal.toExponential(2);
+}
+
+// ============================================================
+// USER INTERACTION
+// ============================================================
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = NX / rect.width;
+    const scaleY = NY / rect.height;
+    
+    sourcePos.x = (e.clientX - rect.left) * scaleX;
+    sourcePos.y = NY - (e.clientY - rect.top) * scaleY;
+});
+
+// Controls
+document.getElementById('source-type').addEventListener('change', function() {
+    sourceType = this.value;
+    initGrid();
+});
+
+document.getElementById('frequency').addEventListener('input', function() {
+    frequency = parseFloat(this.value);
+    document.getElementById('freq-val').textContent = frequency.toFixed(1);
+});
+
+document.getElementById('amplitude').addEventListener('input', function() {
+    amplitude = parseFloat(this.value);
+    document.getElementById('amp-val').textContent = amplitude.toFixed(1);
+});
+
+document.getElementById('field-type').addEventListener('change', function() {
+    fieldType = this.value;
+});
+
+document.getElementById('scale').addEventListener('input', function() {
+    colorScale = parseFloat(this.value);
+    document.getElementById('scale-val').textContent = colorScale.toFixed(1);
+});
+
+document.getElementById('opacity').addEventListener('input', function() {
+    fieldOpacity = parseFloat(this.value);
+    document.getElementById('opacity-val').textContent = fieldOpacity.toFixed(2);
+});
+
+document.getElementById('epsilon').addEventListener('input', function() {
+    document.getElementById('epsilon-val').textContent = this.value;
+});
+
+document.getElementById('sigma').addEventListener('input', function() {
+    document.getElementById('sigma-val').textContent = parseFloat(this.value).toFixed(2);
+});
+
+document.getElementById('speed').addEventListener('input', function() {
+    speed = parseInt(this.value);
+    document.getElementById('speed-val').textContent = speed;
+});
+
+document.getElementById('add-dielectric').addEventListener('click', function() {
+    const eps = parseFloat(document.getElementById('epsilon').value);
+    const sig = parseFloat(document.getElementById('sigma').value);
+    
+    // Add a block in the center
+    const block = {
+        x: NX/2 - 30,
+        y: NY/2 - 30,
+        w: 60,
+        h: 60,
+        eps: eps,
+        sig: sig
+    };
+    
+    dielectricBlocks.push(block);
+    applyDielectricBlock(block);
+    updateCoefficients();
+});
+
+document.getElementById('clear-media').addEventListener('click', function() {
+    dielectricBlocks = [];
+    epsilon.fill(1.0);
+    sigma.fill(0.0);
+    updateCoefficients();
+});
+
+document.getElementById('reset').addEventListener('click', function() {
+    initGrid();
+});
+
+document.getElementById('pause').addEventListener('click', function() {
+    paused = !paused;
+    this.textContent = paused ? 'Resume' : 'Pause';
+    this.classList.toggle('active', paused);
+});
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+
+function animate() {
+    if (!paused) {
+        for (let i = 0; i < speed; i++) {
+            step();
+        }
+    }
+    
+    render();
+    requestAnimationFrame(animate);
+}
+
+// Handle resize
+function resize() {
+    const container = document.getElementById('canvas-container');
+    const aspect = NX / NY;
+    let w = container.clientWidth;
+    let h = container.clientHeight;
+    
+    if (w / h > aspect) {
+        w = h * aspect;
+    } else {
+        h = w / aspect;
+    }
+    
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+}
+
+window.addEventListener('resize', resize);
+
+// Initialize and start
+initGrid();
+resize();
+animate();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagneticGPU | Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-deep: #05080a;
+            --bg-panel: rgba(8, 15, 25, 0.92);
+            --accent: #00ccff;
+            --accent-dim: #0088aa;
+            --field-hot: #ff4466;
+            --field-cold: #4488ff;
+            --text: #c0d8e8;
+            --text-dim: #506070;
+            --border: rgba(0, 200, 255, 0.15);
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-deep);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+        
+        header nav {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        header nav a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        
+        header nav a:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .sidebar {
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .panel {
+            margin-bottom: 20px;
+        }
+        
+        .panel h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .control-row {
+            margin-bottom: 10px;
+        }
+        
+        .control-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        
+        .control-row label span {
+            color: var(--accent);
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, var(--field-cold), var(--accent), var(--field-hot));
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--accent);
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .toggle-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .toggle-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 8px 6px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-dim);
+            font-family: inherit;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .toggle-btn.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            font-weight: bold;
+        }
+        
+        .toggle-btn:hover:not(.active) {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .checkbox-row input {
+            accent-color: var(--accent);
+        }
+        
+        .source-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .source-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.7rem;
+        }
+        
+        .source-item:last-child {
+            border-bottom: none;
+        }
+        
+        .source-item .name {
+            color: var(--text);
+        }
+        
+        .source-item .type {
+            color: var(--accent-dim);
+            font-size: 0.6rem;
+        }
+        
+        .source-item button {
+            background: none;
+            border: none;
+            color: var(--field-hot);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .btn-add {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            background: linear-gradient(135deg, var(--accent-dim), var(--accent));
+            border: none;
+            border-radius: 3px;
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+        
+        .btn-add:hover {
+            box-shadow: 0 0 15px var(--accent);
+        }
+        
+        .canvas-wrap {
+            position: relative;
+            background: radial-gradient(ellipse at center, #0a1520 0%, var(--bg-deep) 70%);
+            overflow: hidden;
+        }
+        
+        #glCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .hud {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            background: var(--bg-panel);
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        
+        .hud .value {
+            color: var(--accent);
+        }
+        
+        .colorbar {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 200px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+        }
+        
+        .colorbar-labels {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            color: var(--text-dim);
+        }
+        
+        /* Modal for adding sources */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90%;
+        }
+        
+        .modal-content h3 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+        
+        .modal-content .form-row {
+            margin-bottom: 12px;
+        }
+        
+        .modal-content label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        
+        .modal-content input[type="text"],
+        .modal-content input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: inherit;
+        }
+        
+        .modal-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-btns button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 3px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        
+        .modal-btns .btn-cancel {
+            background: rgba(255,255,255,0.1);
+            color: var(--text);
+        }
+        
+        .modal-btns .btn-confirm {
+            background: var(--accent);
+            color: #000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <header>
+            <h1>⚡ MAGNETIC GPU</h1>
+            <nav>
+                <a href="index.html">← BACK</a>
+                <button onclick="document.getElementById('docsModal').classList.add('active')" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:6px 12px; border-radius:3px; font-size:0.75rem; cursor:pointer;">📄 DOCS</button>
+                <span style="color: var(--text-dim); font-size: 0.7rem;">
+                    FPS: <span id="fps">60</span> | 
+                    Vectors: <span id="vectorCount">0</span>
+                </span>
+            </nav>
+        </header>
+        
+        <aside class="sidebar">
+            <div class="panel">
+                <h3>RENDER MODE</h3>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" data-mode="needle">NEEDLE</button>
+                    <button class="toggle-btn" data-mode="noodle">NOODLE</button>
+                    <button class="toggle-btn" data-mode="density">DENSITY</button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>FIELD PARAMETERS</h3>
+                <div class="control-row">
+                    <label>Field Scale <span id="scaleVal">1.0</span></label>
+                    <input type="range" id="fieldScale" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div class="control-row">
+                    <label>Vector Length <span id="lengthVal">1.0</span></label>
+                    <input type="range" id="vectorLength" min="0.2" max="3" step="0.1" value="1">
+                </div>
+                <div class="control-row">
+                    <label>Sample Density <span id="densityVal">32</span></label>
+                    <input type="range" id="sampleDensity" min="8" max="64" step="4" value="32">
+                </div>
+                <div class="control-row">
+                    <label>Step Size <span id="stepVal">0.5</span></label>
+                    <input type="range" id="stepSize" min="0.1" max="2" step="0.1" value="0.5">
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>COLORMAP</h3>
+                <select id="colormap">
+                    <option value="coolwarm">Cool → Warm</option>
+                    <option value="inferno">Inferno</option>
+                    <option value="viridis">Viridis</option>
+                    <option value="plasma">Plasma</option>
+                    <option value="mono">Monochrome</option>
+                </select>
+            </div>
+            
+            <div class="panel">
+                <h3>ANIMATION</h3>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="fieldDancing" checked>
+                    <label for="fieldDancing">Field Dancing</label>
+                </div>
+                <div class="control-row">
+                    <label>Dance Amplitude <span id="danceVal">0.3</span></label>
+                    <input type="range" id="danceAmp" min="0" max="1" step="0.05" value="0.3">
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="autoRotate">
+                    <label for="autoRotate">Auto Rotate</label>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>FIELD SOURCES</h3>
+                <div class="source-list" id="sourceList">
+                    <div class="source-item">
+                        <div>
+                            <div class="name">Dipole (0,0,0)</div>
+                            <div class="type">MAGNETIC DIPOLE</div>
+                        </div>
+                        <button onclick="removeSource(0)">×</button>
+                    </div>
+                    <div class="source-item">
+                        <div>
+                            <div class="name">Toroid (0,1,0)</div>
+                            <div class="type">TOROIDAL COIL</div>
+                        </div>
+                        <button onclick="removeSource(1)">×</button>
+                    </div>
+                </div>
+                <button class="btn-add" onclick="openAddModal()">+ ADD SOURCE</button>
+            </div>
+            
+            <div class="panel">
+                <h3>VIEW</h3>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showSources" checked>
+                    <label for="showSources">Show Sources</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showGrid">
+                    <label for="showGrid">Show Grid</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showAxes" checked>
+                    <label for="showAxes">Show Axes</label>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>DRAGGABLE PROBE</h3>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="probeEnabled" checked>
+                    <label for="probeEnabled">Enable Probe</label>
+                </div>
+                <div class="control-row">
+                    <label>Probe Strength <span id="probeStrengthVal">1.5</span></label>
+                    <input type="range" id="probeStrength" min="0.1" max="5" step="0.1" value="1.5">
+                </div>
+                <div class="control-row">
+                    <label>Probe Type</label>
+                    <select id="probeType">
+                        <option value="dipole">Dipole</option>
+                        <option value="toroid">Toroid</option>
+                        <option value="wire">Wire</option>
+                    </select>
+                </div>
+                <button class="btn-add" onclick="resetProbe()" style="background: linear-gradient(135deg, #aa00ff, #ff00aa);">Reset Probe Position</button>
+                <div style="margin-top: 10px; font-size: 0.65rem; color: var(--text-dim);">
+                    <strong>Controls:</strong><br>
+                    • Left-drag probe to move it<br>
+                    • Right-drag or Shift+drag to pan<br>
+                    • Scroll to zoom
+                </div>
+            </div>
+        </aside>
+        
+        <main class="canvas-wrap">
+            <canvas id="glCanvas"></canvas>
+            <div class="hud">
+                |B|<sub>max</sub>: <span class="value" id="bMax">0.00</span> T | 
+                Sources: <span class="value" id="sourceCount">2</span> |
+                Probe: <span class="value" id="probePos">(0, 0, 0)</span>
+            </div>
+            <div class="colorbar" id="colorbar"></div>
+            <div class="colorbar-labels">
+                <span id="cbMax">1.0 T</span>
+                <span>0.5</span>
+                <span id="cbMin">0.0</span>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Add Source Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <h3>Add Field Source</h3>
+            <div class="form-row">
+                <label>Source Type</label>
+                <select id="newSourceType">
+                    <option value="dipole">Magnetic Dipole</option>
+                    <option value="coil">Current Loop/Coil</option>
+                    <option value="toroid">Toroidal Coil</option>
+                    <option value="solenoid">Solenoid</option>
+                    <option value="wire">Straight Wire</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Position X</label>
+                <input type="number" id="newPosX" value="0" step="0.5">
+            </div>
+            <div class="form-row">
+                <label>Position Y</label>
+                <input type="number" id="newPosY" value="0" step="0.5">
+            </div>
+            <div class="form-row">
+                <label>Position Z</label>
+                <input type="number" id="newPosZ" value="0" step="0.5">
+            </div>
+            <div class="form-row">
+                <label>Strength</label>
+                <input type="number" id="newStrength" value="1" step="0.1" min="0.1">
+            </div>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+                <button class="btn-confirm" onclick="addSource()">Add Source</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Physics Documentation Modal -->
+    <div class="modal" id="docsModal">
+        <div class="modal-content" style="max-width:700px; max-height:80vh; overflow-y:auto;">
+            <h3>MagneticGPU - Technical Documentation</h3>
+            
+            <h4 style="color:var(--accent); margin-top:16px;">Overview</h4>
+            <p style="font-size:0.8rem; color:var(--text-dim); line-height:1.6;">
+                GPU-accelerated magnetic field visualization using WebGL2. Renders vector fields from analytic magnetic sources using a 5-point compass sampling method for accurate local gradient computation.
+            </p>
+            
+            <h4 style="color:var(--accent); margin-top:16px;">Field Sources</h4>
+            <ul style="font-size:0.75rem; color:var(--text-dim); line-height:1.8;">
+                <li><strong>Dipole:</strong> B = (μ₀/4π) · (3(m·r̂)r̂ - m) / r³</li>
+                <li><strong>Toroid:</strong> Approximate azimuthal field B_φ = μ₀NI / 2πr</li>
+                <li><strong>Solenoid:</strong> Uniform interior field B = μ₀nI along axis</li>
+                <li><strong>Wire:</strong> Biot-Savart B = μ₀I / 2πρ (azimuthal)</li>
+            </ul>
+            
+            <h4 style="color:var(--accent); margin-top:16px;">5-Point Compass Sampling</h4>
+            <p style="font-size:0.8rem; color:var(--text-dim); line-height:1.6;">
+                Each vector glyph samples B at: center, +X, -X, +Y, -Y offsets. The averaged direction provides smoothed field orientation while capturing local gradients. This mimics iron filings aligning to field lines.
+            </p>
+            
+            <h4 style="color:var(--accent); margin-top:16px;">Render Modes</h4>
+            <ul style="font-size:0.75rem; color:var(--text-dim); line-height:1.8;">
+                <li><strong>Needle:</strong> Short arrows showing field direction and magnitude</li>
+                <li><strong>Noodle:</strong> Curved hairlines for smoother field line appearance</li>
+                <li><strong>Density:</strong> Volumetric rendering where brightness = |B|</li>
+            </ul>
+            
+            <h4 style="color:var(--accent); margin-top:16px;">Controls</h4>
+            <ul style="font-size:0.75rem; color:var(--text-dim); line-height:1.8;">
+                <li><strong>Left-drag:</strong> Orbit camera</li>
+                <li><strong>Right-drag / Shift+drag:</strong> Pan camera</li>
+                <li><strong>Scroll:</strong> Zoom</li>
+                <li><strong>Drag purple probe:</strong> Move through field interactively</li>
+            </ul>
+            
+            <h4 style="color:var(--accent); margin-top:16px;">API Integration</h4>
+            <pre style="font-size:0.7rem; background:rgba(0,0,0,0.3); padding:12px; border-radius:4px; overflow-x:auto;">
+const mag = new MagneticGPU(canvas, options);
+mag.addFieldSource({ type: 'dipole', position: [0,0,0], strength: 1.0 });
+mag.setFieldSource((x,y,z) => [Bx, By, Bz]); // custom function
+mag.update(dt);
+mag.render();</pre>
+            
+            <div style="margin-top:20px; text-align:right;">
+                <button class="btn-cancel" onclick="document.getElementById('docsModal').classList.remove('active')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============================================
+    // MAGNETICGPU MODULE
+    // GPU-Accelerated Magnetic Field Visualization
+    // ============================================
+    
+    class MagneticGPU {
+        constructor(canvas, options = {}) {
+            this.canvas = canvas;
+            this.gl = canvas.getContext('webgl2');
+            if (!this.gl) {
+                console.error('WebGL2 not supported, falling back to WebGL1');
+                this.gl = canvas.getContext('webgl');
+            }
+            
+            this.options = {
+                fieldScale: options.fieldScale || 1.0,
+                vectorLength: options.vectorLength || 1.0,
+                sampleDensity: options.sampleDensity || 32,
+                stepSize: options.stepSize || 0.5,
+                colormap: options.colormap || 'coolwarm',
+                renderMode: options.renderMode || 'needle',
+                fieldDancing: options.fieldDancing !== false,
+                danceAmplitude: options.danceAmplitude || 0.3,
+                showSources: options.showSources !== false,
+                showGrid: options.showGrid || false,
+                showAxes: options.showAxes !== false,
+                ...options
+            };
+            
+            this.sources = [];
+            this.customFieldFn = null;
+            this.time = 0;
+            this.maxB = 1.0;
+            
+            // Camera
+            this.camera = {
+                distance: 8,
+                theta: 0.5,
+                phi: 0.8,
+                target: [0, 0, 0],
+                autoRotate: false
+            };
+            
+            // Mouse interaction
+            this.mouse = { down: false, lastX: 0, lastY: 0, button: 0 };
+            
+            // Draggable probe
+            this.probe = {
+                enabled: true,
+                position: [0, 0, 0],
+                dragging: false,
+                strength: 1.5,
+                type: 'dipole'
+            };
+            
+            this.init();
+        }
+        
+        init() {
+            this.resize();
+            this.createShaders();
+            this.createBuffers();
+            this.setupInteraction();
+            
+            // Default demo sources
+            this.addFieldSource({ type: 'dipole', position: [0, 0, 0], strength: 1.0, moment: [0, 1, 0] });
+            this.addFieldSource({ type: 'toroid', position: [0, 1.5, 0], strength: 0.8, radius: 1.0, tubeRadius: 0.3 });
+        }
+        
+        resize() {
+            const rect = this.canvas.parentElement.getBoundingClientRect();
+            this.canvas.width = rect.width * window.devicePixelRatio;
+            this.canvas.height = rect.height * window.devicePixelRatio;
+            this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        }
+        
+        // ============================================
+        // SHADER PROGRAMS
+        // ============================================
+        
+        createShaders() {
+            const gl = this.gl;
+            
+            // Vector/Needle shader
+            const vectorVS = `#version 300 es
+                precision highp float;
+                
+                in vec3 aPosition;
+                in vec3 aDirection;
+                in float aMagnitude;
+                in float aIndex;
+                
+                uniform mat4 uProjection;
+                uniform mat4 uView;
+                uniform float uVectorLength;
+                uniform float uFieldScale;
+                uniform float uTime;
+                uniform float uDanceAmp;
+                uniform int uRenderMode;
+                
+                out vec3 vColor;
+                out float vAlpha;
+                
+                // Colormaps
+                vec3 coolwarm(float t) {
+                    vec3 cool = vec3(0.2, 0.4, 0.9);
+                    vec3 mid = vec3(0.9, 0.9, 0.9);
+                    vec3 warm = vec3(0.9, 0.2, 0.2);
+                    if (t < 0.5) return mix(cool, mid, t * 2.0);
+                    return mix(mid, warm, (t - 0.5) * 2.0);
+                }
+                
+                vec3 inferno(float t) {
+                    vec3 c0 = vec3(0.0, 0.0, 0.05);
+                    vec3 c1 = vec3(0.5, 0.0, 0.5);
+                    vec3 c2 = vec3(0.9, 0.3, 0.0);
+                    vec3 c3 = vec3(1.0, 1.0, 0.6);
+                    if (t < 0.33) return mix(c0, c1, t * 3.0);
+                    if (t < 0.66) return mix(c1, c2, (t - 0.33) * 3.0);
+                    return mix(c2, c3, (t - 0.66) * 3.0);
+                }
+                
+                vec3 viridis(float t) {
+                    vec3 c0 = vec3(0.27, 0.0, 0.33);
+                    vec3 c1 = vec3(0.13, 0.57, 0.55);
+                    vec3 c2 = vec3(0.99, 0.91, 0.15);
+                    if (t < 0.5) return mix(c0, c1, t * 2.0);
+                    return mix(c1, c2, (t - 0.5) * 2.0);
+                }
+                
+                void main() {
+                    float mag = aMagnitude * uFieldScale;
+                    float normMag = clamp(mag, 0.0, 1.0);
+                    
+                    // Color based on magnitude
+                    vColor = coolwarm(normMag);
+                    vAlpha = 0.6 + normMag * 0.4;
+                    
+                    // Compute vertex position
+                    vec3 pos = aPosition;
+                    
+                    // Field dancing animation
+                    float dance = sin(uTime * 3.0 + aIndex * 0.1) * uDanceAmp * 0.1;
+                    
+                    if (aDirection.x != 0.0 || aDirection.y != 0.0 || aDirection.z != 0.0) {
+                        vec3 dir = normalize(aDirection);
+                        float len = uVectorLength * (0.3 + normMag * 0.7);
+                        
+                        // Offset along direction for tip
+                        if (mod(aIndex, 2.0) > 0.5) {
+                            pos += dir * len * (1.0 + dance);
+                        }
+                    }
+                    
+                    gl_Position = uProjection * uView * vec4(pos, 1.0);
+                    gl_PointSize = 3.0;
+                }
+            `;
+            
+            const vectorFS = `#version 300 es
+                precision highp float;
+                
+                in vec3 vColor;
+                in float vAlpha;
+                
+                out vec4 fragColor;
+                
+                void main() {
+                    fragColor = vec4(vColor, vAlpha);
+                }
+            `;
+            
+            // Grid/Axes shader
+            const gridVS = `#version 300 es
+                precision highp float;
+                
+                in vec3 aPosition;
+                in vec3 aColor;
+                
+                uniform mat4 uProjection;
+                uniform mat4 uView;
+                
+                out vec3 vColor;
+                
+                void main() {
+                    vColor = aColor;
+                    gl_Position = uProjection * uView * vec4(aPosition, 1.0);
+                }
+            `;
+            
+            const gridFS = `#version 300 es
+                precision highp float;
+                
+                in vec3 vColor;
+                out vec4 fragColor;
+                
+                void main() {
+                    fragColor = vec4(vColor, 0.5);
+                }
+            `;
+            
+            // Source visualization shader
+            const sourceVS = `#version 300 es
+                precision highp float;
+                
+                in vec3 aPosition;
+                
+                uniform mat4 uProjection;
+                uniform mat4 uView;
+                uniform mat4 uModel;
+                uniform vec3 uColor;
+                
+                out vec3 vColor;
+                
+                void main() {
+                    vColor = uColor;
+                    gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
+                }
+            `;
+            
+            const sourceFS = `#version 300 es
+                precision highp float;
+                
+                in vec3 vColor;
+                out vec4 fragColor;
+                
+                void main() {
+                    fragColor = vec4(vColor, 0.8);
+                }
+            `;
+            
+            // Density mode shader (fullscreen quad with raymarching)
+            const densityVS = `#version 300 es
+                precision highp float;
+                
+                in vec2 aPosition;
+                out vec2 vUV;
+                
+                void main() {
+                    vUV = aPosition * 0.5 + 0.5;
+                    gl_Position = vec4(aPosition, 0.0, 1.0);
+                }
+            `;
+            
+            const densityFS = `#version 300 es
+                precision highp float;
+                
+                in vec2 vUV;
+                out vec4 fragColor;
+                
+                uniform vec3 uCameraPos;
+                uniform mat4 uInvViewProj;
+                uniform float uFieldScale;
+                uniform int uSourceCount;
+                uniform vec4 uSources[16]; // xyz = position, w = strength
+                uniform vec4 uSourceParams[16]; // type-specific params
+                
+                vec3 dipoleField(vec3 p, vec3 pos, vec3 moment, float strength) {
+                    vec3 r = p - pos;
+                    float rMag = length(r);
+                    if (rMag < 0.1) return vec3(0.0);
+                    vec3 rHat = r / rMag;
+                    float r3 = rMag * rMag * rMag;
+                    return strength * (3.0 * dot(moment, rHat) * rHat - moment) / r3;
+                }
+                
+                vec3 sampleField(vec3 p) {
+                    vec3 B = vec3(0.0);
+                    for (int i = 0; i < 16; i++) {
+                        if (i >= uSourceCount) break;
+                        vec3 sPos = uSources[i].xyz;
+                        float strength = uSources[i].w;
+                        B += dipoleField(p, sPos, vec3(0.0, 1.0, 0.0), strength);
+                    }
+                    return B;
+                }
+                
+                void main() {
+                    // Ray direction from UV
+                    vec4 clipPos = vec4(vUV * 2.0 - 1.0, 1.0, 1.0);
+                    vec4 worldPos = uInvViewProj * clipPos;
+                    vec3 rayDir = normalize(worldPos.xyz / worldPos.w - uCameraPos);
+                    
+                    // Raymarch through field
+                    vec3 color = vec3(0.0);
+                    float totalDensity = 0.0;
+                    
+                    vec3 p = uCameraPos;
+                    for (int i = 0; i < 64; i++) {
+                        p += rayDir * 0.15;
+                        if (length(p) > 10.0) break;
+                        
+                        vec3 B = sampleField(p);
+                        float mag = length(B) * uFieldScale;
+                        totalDensity += mag * 0.02;
+                    }
+                    
+                    totalDensity = clamp(totalDensity, 0.0, 1.0);
+                    
+                    // Colormap
+                    vec3 cool = vec3(0.1, 0.2, 0.4);
+                    vec3 hot = vec3(1.0, 0.4, 0.2);
+                    color = mix(cool, hot, totalDensity);
+                    
+                    fragColor = vec4(color, totalDensity * 0.8 + 0.1);
+                }
+            `;
+            
+            this.vectorProgram = this.createProgram(vectorVS, vectorFS);
+            this.gridProgram = this.createProgram(gridVS, gridFS);
+            this.sourceProgram = this.createProgram(sourceVS, sourceFS);
+            this.densityProgram = this.createProgram(densityVS, densityFS);
+        }
+        
+        createProgram(vsSource, fsSource) {
+            const gl = this.gl;
+            
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, vsSource);
+            gl.compileShader(vs);
+            if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+                console.error('VS:', gl.getShaderInfoLog(vs));
+            }
+            
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, fsSource);
+            gl.compileShader(fs);
+            if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+                console.error('FS:', gl.getShaderInfoLog(fs));
+            }
+            
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program:', gl.getProgramInfoLog(program));
+            }
+            
+            return program;
+        }
+        
+        // ============================================
+        // BUFFER CREATION
+        // ============================================
+        
+        createBuffers() {
+            const gl = this.gl;
+            
+            // Create vector field buffer (will be updated each frame)
+            this.vectorVAO = gl.createVertexArray();
+            this.vectorPositionBuffer = gl.createBuffer();
+            this.vectorDirectionBuffer = gl.createBuffer();
+            this.vectorMagnitudeBuffer = gl.createBuffer();
+            this.vectorIndexBuffer = gl.createBuffer();
+            
+            // Grid buffer
+            this.createGridBuffer();
+            
+            // Axes buffer
+            this.createAxesBuffer();
+            
+            // Source visualization buffers
+            this.createSourceBuffers();
+            
+            // Fullscreen quad for density mode
+            this.quadVAO = gl.createVertexArray();
+            gl.bindVertexArray(this.quadVAO);
+            const quadBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1, 1, -1, -1, 1,
+                -1, 1, 1, -1, 1, 1
+            ]), gl.STATIC_DRAW);
+            const posLoc = gl.getAttribLocation(this.densityProgram, 'aPosition');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+            gl.bindVertexArray(null);
+        }
+        
+        createGridBuffer() {
+            const gl = this.gl;
+            const vertices = [];
+            const colors = [];
+            const size = 5;
+            const step = 1;
+            
+            for (let i = -size; i <= size; i += step) {
+                // X lines
+                vertices.push(-size, 0, i, size, 0, i);
+                colors.push(0.2, 0.2, 0.3, 0.2, 0.2, 0.3);
+                // Z lines
+                vertices.push(i, 0, -size, i, 0, size);
+                colors.push(0.2, 0.2, 0.3, 0.2, 0.2, 0.3);
+            }
+            
+            this.gridVAO = gl.createVertexArray();
+            gl.bindVertexArray(this.gridVAO);
+            
+            const posBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+            const posLoc = gl.getAttribLocation(this.gridProgram, 'aPosition');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            const colBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+            const colLoc = gl.getAttribLocation(this.gridProgram, 'aColor');
+            gl.enableVertexAttribArray(colLoc);
+            gl.vertexAttribPointer(colLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            this.gridVertexCount = vertices.length / 3;
+            gl.bindVertexArray(null);
+        }
+        
+        createAxesBuffer() {
+            const gl = this.gl;
+            const len = 3;
+            const vertices = [
+                0, 0, 0, len, 0, 0,  // X
+                0, 0, 0, 0, len, 0,  // Y
+                0, 0, 0, 0, 0, len   // Z
+            ];
+            const colors = [
+                1, 0.2, 0.2, 1, 0.2, 0.2,  // X = red
+                0.2, 1, 0.2, 0.2, 1, 0.2,  // Y = green
+                0.2, 0.2, 1, 0.2, 0.2, 1   // Z = blue
+            ];
+            
+            this.axesVAO = gl.createVertexArray();
+            gl.bindVertexArray(this.axesVAO);
+            
+            const posBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+            const posLoc = gl.getAttribLocation(this.gridProgram, 'aPosition');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            const colBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+            const colLoc = gl.getAttribLocation(this.gridProgram, 'aColor');
+            gl.enableVertexAttribArray(colLoc);
+            gl.vertexAttribPointer(colLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            gl.bindVertexArray(null);
+        }
+        
+        createSourceBuffers() {
+            const gl = this.gl;
+            
+            // Sphere for dipoles
+            const sphereVerts = [];
+            const segments = 16;
+            for (let i = 0; i < segments; i++) {
+                const theta1 = (i / segments) * Math.PI * 2;
+                const theta2 = ((i + 1) / segments) * Math.PI * 2;
+                for (let j = 0; j < segments / 2; j++) {
+                    const phi1 = (j / (segments / 2)) * Math.PI;
+                    const phi2 = ((j + 1) / (segments / 2)) * Math.PI;
+                    
+                    const p1 = [Math.sin(phi1) * Math.cos(theta1), Math.cos(phi1), Math.sin(phi1) * Math.sin(theta1)];
+                    const p2 = [Math.sin(phi1) * Math.cos(theta2), Math.cos(phi1), Math.sin(phi1) * Math.sin(theta2)];
+                    const p3 = [Math.sin(phi2) * Math.cos(theta1), Math.cos(phi2), Math.sin(phi2) * Math.sin(theta1)];
+                    const p4 = [Math.sin(phi2) * Math.cos(theta2), Math.cos(phi2), Math.sin(phi2) * Math.sin(theta2)];
+                    
+                    sphereVerts.push(...p1, ...p2, ...p3);
+                    sphereVerts.push(...p2, ...p4, ...p3);
+                }
+            }
+            
+            this.sphereVAO = gl.createVertexArray();
+            gl.bindVertexArray(this.sphereVAO);
+            
+            const sphereBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, sphereBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVerts), gl.STATIC_DRAW);
+            const posLoc = gl.getAttribLocation(this.sourceProgram, 'aPosition');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            this.sphereVertexCount = sphereVerts.length / 3;
+            gl.bindVertexArray(null);
+            
+            // Torus for toroids
+            const torusVerts = [];
+            const R = 1.0, r = 0.3;
+            for (let i = 0; i < segments; i++) {
+                const theta1 = (i / segments) * Math.PI * 2;
+                const theta2 = ((i + 1) / segments) * Math.PI * 2;
+                for (let j = 0; j < segments; j++) {
+                    const phi1 = (j / segments) * Math.PI * 2;
+                    const phi2 = ((j + 1) / segments) * Math.PI * 2;
+                    
+                    const getPoint = (t, p) => [
+                        (R + r * Math.cos(p)) * Math.cos(t),
+                        r * Math.sin(p),
+                        (R + r * Math.cos(p)) * Math.sin(t)
+                    ];
+                    
+                    const p1 = getPoint(theta1, phi1);
+                    const p2 = getPoint(theta2, phi1);
+                    const p3 = getPoint(theta1, phi2);
+                    const p4 = getPoint(theta2, phi2);
+                    
+                    torusVerts.push(...p1, ...p2, ...p3);
+                    torusVerts.push(...p2, ...p4, ...p3);
+                }
+            }
+            
+            this.torusVAO = gl.createVertexArray();
+            gl.bindVertexArray(this.torusVAO);
+            
+            const torusBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, torusBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(torusVerts), gl.STATIC_DRAW);
+            const posLoc2 = gl.getAttribLocation(this.sourceProgram, 'aPosition');
+            gl.enableVertexAttribArray(posLoc2);
+            gl.vertexAttribPointer(posLoc2, 3, gl.FLOAT, false, 0, 0);
+            
+            this.torusVertexCount = torusVerts.length / 3;
+            gl.bindVertexArray(null);
+        }
+        
+        // ============================================
+        // FIELD SOURCES
+        // ============================================
+        
+        addFieldSource(source) {
+            this.sources.push({
+                type: source.type || 'dipole',
+                position: source.position || [0, 0, 0],
+                strength: source.strength || 1.0,
+                moment: source.moment || [0, 1, 0],
+                radius: source.radius || 1.0,
+                tubeRadius: source.tubeRadius || 0.3,
+                direction: source.direction || [0, 1, 0]
+            });
+            this.updateSourceList();
+        }
+        
+        removeFieldSource(index) {
+            this.sources.splice(index, 1);
+            this.updateSourceList();
+        }
+        
+        setFieldSource(fn) {
+            // Allow custom field function: fn(x, y, z) => [Bx, By, Bz]
+            this.customFieldFn = fn;
+        }
+        
+        updateSourceList() {
+            document.getElementById('sourceCount').textContent = this.sources.length;
+        }
+        
+        // ============================================
+        // FIELD COMPUTATION
+        // ============================================
+        
+        computeField(x, y, z) {
+            if (this.customFieldFn) {
+                return this.customFieldFn(x, y, z);
+            }
+            
+            let Bx = 0, By = 0, Bz = 0;
+            
+            // Include probe as dynamic source
+            const allSources = [...this.sources];
+            if (this.probe.enabled) {
+                allSources.push({
+                    type: this.probe.type,
+                    position: this.probe.position,
+                    strength: this.probe.strength,
+                    moment: [0, 1, 0],
+                    radius: 1.0
+                });
+            }
+            
+            for (const source of allSources) {
+                const [sx, sy, sz] = source.position;
+                const dx = x - sx, dy = y - sy, dz = z - sz;
+                const r = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                
+                if (r < 0.1) continue;
+                
+                let bx = 0, by = 0, bz = 0;
+                
+                switch (source.type) {
+                    case 'dipole': {
+                        const [mx, my, mz] = source.moment;
+                        const r3 = r * r * r;
+                        const r5 = r3 * r * r;
+                        const mdotr = mx * dx + my * dy + mz * dz;
+                        bx = source.strength * (3 * mdotr * dx / r5 - mx / r3);
+                        by = source.strength * (3 * mdotr * dy / r5 - my / r3);
+                        bz = source.strength * (3 * mdotr * dz / r5 - mz / r3);
+                        break;
+                    }
+                    
+                    case 'coil':
+                    case 'toroid': {
+                        // Approximate toroid field
+                        const R = source.radius;
+                        const rho = Math.sqrt(dx*dx + dz*dz);
+                        const dist = Math.sqrt((rho - R)**2 + dy*dy);
+                        if (dist > 0.05) {
+                            const B0 = source.strength / (dist + 0.5);
+                            // Azimuthal direction
+                            const phi = Math.atan2(dz, dx);
+                            bx = -B0 * Math.sin(phi) * 0.5;
+                            bz = B0 * Math.cos(phi) * 0.5;
+                            by = B0 * (1 - rho / R) * 0.3;
+                        }
+                        break;
+                    }
+                    
+                    case 'solenoid': {
+                        const [dirx, diry, dirz] = source.direction;
+                        const along = dx * dirx + dy * diry + dz * dirz;
+                        const perpSq = r*r - along*along;
+                        if (perpSq < source.radius * source.radius) {
+                            bx = source.strength * dirx;
+                            by = source.strength * diry;
+                            bz = source.strength * dirz;
+                        }
+                        break;
+                    }
+                    
+                    case 'wire': {
+                        // Biot-Savart for infinite wire along Y
+                        const rho = Math.sqrt(dx*dx + dz*dz);
+                        if (rho > 0.1) {
+                            const B0 = source.strength / rho;
+                            bx = -B0 * dz / rho;
+                            bz = B0 * dx / rho;
+                        }
+                        break;
+                    }
+                }
+                
+                Bx += bx;
+                By += by;
+                Bz += bz;
+            }
+            
+            return [Bx, By, Bz];
+        }
+        
+        // ============================================
+        // VECTOR FIELD GENERATION
+        // ============================================
+        
+        generateVectorField() {
+            const gl = this.gl;
+            const density = this.options.sampleDensity;
+            const step = this.options.stepSize;
+            const halfSize = (density * step) / 2;
+            
+            const positions = [];
+            const directions = [];
+            const magnitudes = [];
+            const indices = [];
+            
+            let maxB = 0;
+            let idx = 0;
+            
+            // 3D grid of sample points
+            for (let xi = 0; xi < density; xi++) {
+                for (let yi = 0; yi < density; yi++) {
+                    for (let zi = 0; zi < density; zi++) {
+                        const x = (xi - density/2) * step;
+                        const y = (yi - density/2) * step;
+                        const z = (zi - density/2) * step;
+                        
+                        const [Bx, By, Bz] = this.computeField(x, y, z);
+                        const mag = Math.sqrt(Bx*Bx + By*By + Bz*Bz);
+                        
+                        if (mag > maxB) maxB = mag;
+                        
+                        // 5-point compass: center + 4 cardinal samples
+                        const dx = step * 0.2;
+                        const samples = [
+                            [x, y, z],
+                            [x + dx, y, z],
+                            [x - dx, y, z],
+                            [x, y + dx, z],
+                            [x, y - dx, z]
+                        ];
+                        
+                        // Average direction from 5 samples
+                        let avgBx = 0, avgBy = 0, avgBz = 0;
+                        for (const [sx, sy, sz] of samples) {
+                            const [bx, by, bz] = this.computeField(sx, sy, sz);
+                            avgBx += bx;
+                            avgBy += by;
+                            avgBz += bz;
+                        }
+                        avgBx /= 5;
+                        avgBy /= 5;
+                        avgBz /= 5;
+                        
+                        // Base vertex
+                        positions.push(x, y, z);
+                        directions.push(avgBx, avgBy, avgBz);
+                        magnitudes.push(mag);
+                        indices.push(idx++);
+                        
+                        // Tip vertex
+                        positions.push(x, y, z);
+                        directions.push(avgBx, avgBy, avgBz);
+                        magnitudes.push(mag);
+                        indices.push(idx++);
+                    }
+                }
+            }
+            
+            this.maxB = maxB || 1;
+            this.vectorCount = indices.length / 2;
+            
+            // Update buffers
+            gl.bindVertexArray(this.vectorVAO);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vectorPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+            const posLoc = gl.getAttribLocation(this.vectorProgram, 'aPosition');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vectorDirectionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(directions), gl.DYNAMIC_DRAW);
+            const dirLoc = gl.getAttribLocation(this.vectorProgram, 'aDirection');
+            gl.enableVertexAttribArray(dirLoc);
+            gl.vertexAttribPointer(dirLoc, 3, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vectorMagnitudeBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(magnitudes), gl.DYNAMIC_DRAW);
+            const magLoc = gl.getAttribLocation(this.vectorProgram, 'aMagnitude');
+            gl.enableVertexAttribArray(magLoc);
+            gl.vertexAttribPointer(magLoc, 1, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vectorIndexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(indices), gl.DYNAMIC_DRAW);
+            const idxLoc = gl.getAttribLocation(this.vectorProgram, 'aIndex');
+            gl.enableVertexAttribArray(idxLoc);
+            gl.vertexAttribPointer(idxLoc, 1, gl.FLOAT, false, 0, 0);
+            
+            gl.bindVertexArray(null);
+            
+            // Update HUD
+            document.getElementById('bMax').textContent = maxB.toFixed(2);
+            document.getElementById('vectorCount').textContent = this.vectorCount;
+            document.getElementById('cbMax').textContent = maxB.toFixed(1) + ' T';
+        }
+        
+        // ============================================
+        // CAMERA & MATRICES
+        // ============================================
+        
+        getViewMatrix() {
+            const { distance, theta, phi, target } = this.camera;
+            
+            const eye = [
+                target[0] + distance * Math.sin(phi) * Math.cos(theta),
+                target[1] + distance * Math.cos(phi),
+                target[2] + distance * Math.sin(phi) * Math.sin(theta)
+            ];
+            
+            return this.lookAt(eye, target, [0, 1, 0]);
+        }
+        
+        getProjectionMatrix() {
+            const aspect = this.canvas.width / this.canvas.height;
+            return this.perspective(Math.PI / 4, aspect, 0.1, 100);
+        }
+        
+        lookAt(eye, target, up) {
+            const z = this.normalize([eye[0]-target[0], eye[1]-target[1], eye[2]-target[2]]);
+            const x = this.normalize(this.cross(up, z));
+            const y = this.cross(z, x);
+            
+            return new Float32Array([
+                x[0], y[0], z[0], 0,
+                x[1], y[1], z[1], 0,
+                x[2], y[2], z[2], 0,
+                -this.dot(x, eye), -this.dot(y, eye), -this.dot(z, eye), 1
+            ]);
+        }
+        
+        perspective(fov, aspect, near, far) {
+            const f = 1 / Math.tan(fov / 2);
+            const nf = 1 / (near - far);
+            
+            return new Float32Array([
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (far + near) * nf, -1,
+                0, 0, 2 * far * near * nf, 0
+            ]);
+        }
+        
+        translate(x, y, z) {
+            return new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                x, y, z, 1
+            ]);
+        }
+        
+        scale(s) {
+            return new Float32Array([
+                s, 0, 0, 0,
+                0, s, 0, 0,
+                0, 0, s, 0,
+                0, 0, 0, 1
+            ]);
+        }
+        
+        multiply(a, b) {
+            const result = new Float32Array(16);
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    result[i * 4 + j] = 
+                        a[i * 4 + 0] * b[0 * 4 + j] +
+                        a[i * 4 + 1] * b[1 * 4 + j] +
+                        a[i * 4 + 2] * b[2 * 4 + j] +
+                        a[i * 4 + 3] * b[3 * 4 + j];
+                }
+            }
+            return result;
+        }
+        
+        normalize(v) {
+            const len = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+            return [v[0]/len, v[1]/len, v[2]/len];
+        }
+        
+        cross(a, b) {
+            return [
+                a[1]*b[2] - a[2]*b[1],
+                a[2]*b[0] - a[0]*b[2],
+                a[0]*b[1] - a[1]*b[0]
+            ];
+        }
+        
+        dot(a, b) {
+            return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+        }
+        
+        // ============================================
+        // INTERACTION
+        // ============================================
+        
+        setupInteraction() {
+            this.canvas.addEventListener('mousedown', e => {
+                this.mouse.down = true;
+                this.mouse.button = e.button;
+                this.mouse.lastX = e.clientX;
+                this.mouse.lastY = e.clientY;
+                
+                // Check if clicking on probe (simple screen-space check)
+                if (e.button === 0 && this.probe.enabled) {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const mouseX = (e.clientX - rect.left) / rect.width * 2 - 1;
+                    const mouseY = -((e.clientY - rect.top) / rect.height * 2 - 1);
+                    
+                    // Project probe position to screen
+                    const probeScreen = this.projectToScreen(this.probe.position);
+                    const dist = Math.sqrt((mouseX - probeScreen[0])**2 + (mouseY - probeScreen[1])**2);
+                    
+                    if (dist < 0.15) {
+                        this.probe.dragging = true;
+                        e.preventDefault();
+                    }
+                }
+            });
+            
+            window.addEventListener('mouseup', () => {
+                this.mouse.down = false;
+                this.probe.dragging = false;
+            });
+            
+            this.canvas.addEventListener('mousemove', e => {
+                if (!this.mouse.down) return;
+                
+                const dx = e.clientX - this.mouse.lastX;
+                const dy = e.clientY - this.mouse.lastY;
+                
+                if (this.probe.dragging) {
+                    // Move probe in camera plane
+                    const speed = 0.02 * this.camera.distance;
+                    
+                    // Get camera right and up vectors
+                    const theta = this.camera.theta;
+                    const phi = this.camera.phi;
+                    
+                    const right = [Math.sin(theta + Math.PI/2), 0, Math.cos(theta + Math.PI/2)];
+                    const up = [
+                        -Math.cos(phi) * Math.cos(theta),
+                        Math.sin(phi),
+                        -Math.cos(phi) * Math.sin(theta)
+                    ];
+                    
+                    this.probe.position[0] += right[0] * dx * speed - up[0] * dy * speed;
+                    this.probe.position[1] += right[1] * dx * speed - up[1] * dy * speed;
+                    this.probe.position[2] += right[2] * dx * speed - up[2] * dy * speed;
+                    
+                    // Clamp probe position
+                    for (let i = 0; i < 3; i++) {
+                        this.probe.position[i] = Math.max(-5, Math.min(5, this.probe.position[i]));
+                    }
+                    
+                    // Regenerate field with probe as dynamic source
+                    this.needsFieldUpdate = true;
+                    
+                } else if (this.mouse.button === 2 || e.shiftKey) {
+                    // Right-click or shift+drag = PAN
+                    const panSpeed = 0.01 * this.camera.distance;
+                    
+                    const theta = this.camera.theta;
+                    const right = [Math.sin(theta + Math.PI/2), 0, Math.cos(theta + Math.PI/2)];
+                    
+                    this.camera.target[0] -= right[0] * dx * panSpeed;
+                    this.camera.target[2] -= right[2] * dx * panSpeed;
+                    this.camera.target[1] += dy * panSpeed;
+                    
+                } else if (this.mouse.button === 0) {
+                    // Left-click = ORBIT
+                    this.camera.theta += dx * 0.01;
+                    this.camera.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.camera.phi + dy * 0.01));
+                }
+                
+                this.mouse.lastX = e.clientX;
+                this.mouse.lastY = e.clientY;
+            });
+            
+            this.canvas.addEventListener('wheel', e => {
+                e.preventDefault();
+                this.camera.distance = Math.max(2, Math.min(20, this.camera.distance + e.deltaY * 0.01));
+            });
+            
+            // Prevent context menu on right-click
+            this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+            
+            window.addEventListener('resize', () => this.resize());
+        }
+        
+        projectToScreen(worldPos) {
+            const view = this.getViewMatrix();
+            const proj = this.getProjectionMatrix();
+            const mvp = this.multiply(proj, view);
+            
+            // Transform world position
+            const x = worldPos[0], y = worldPos[1], z = worldPos[2];
+            const clipX = mvp[0]*x + mvp[4]*y + mvp[8]*z + mvp[12];
+            const clipY = mvp[1]*x + mvp[5]*y + mvp[9]*z + mvp[13];
+            const clipW = mvp[3]*x + mvp[7]*y + mvp[11]*z + mvp[15];
+            
+            return [clipX / clipW, clipY / clipW];
+        }
+        
+        // ============================================
+        // UPDATE & RENDER
+        // ============================================
+        
+        update(dt) {
+            this.time += dt;
+            
+            if (this.camera.autoRotate) {
+                this.camera.theta += dt * 0.3;
+            }
+            
+            // Regenerate field when probe moves (throttled)
+            if (this.needsFieldUpdate) {
+                this.fieldUpdateTimer = (this.fieldUpdateTimer || 0) + dt;
+                if (this.fieldUpdateTimer > 0.05) { // 20 updates/sec max
+                    this.generateVectorField();
+                    this.fieldUpdateTimer = 0;
+                    this.needsFieldUpdate = false;
+                }
+            }
+        }
+        
+        render() {
+            const gl = this.gl;
+            
+            gl.clearColor(0.02, 0.03, 0.04, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.DEPTH_TEST);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            
+            const view = this.getViewMatrix();
+            const proj = this.getProjectionMatrix();
+            
+            // Grid
+            if (this.options.showGrid) {
+                gl.useProgram(this.gridProgram);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.gridProgram, 'uView'), false, view);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.gridProgram, 'uProjection'), false, proj);
+                gl.bindVertexArray(this.gridVAO);
+                gl.drawArrays(gl.LINES, 0, this.gridVertexCount);
+            }
+            
+            // Axes
+            if (this.options.showAxes) {
+                gl.useProgram(this.gridProgram);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.gridProgram, 'uView'), false, view);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.gridProgram, 'uProjection'), false, proj);
+                gl.bindVertexArray(this.axesVAO);
+                gl.lineWidth(2);
+                gl.drawArrays(gl.LINES, 0, 6);
+            }
+            
+            // Sources
+            if (this.options.showSources) {
+                gl.useProgram(this.sourceProgram);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.sourceProgram, 'uView'), false, view);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.sourceProgram, 'uProjection'), false, proj);
+                
+                for (const source of this.sources) {
+                    const [x, y, z] = source.position;
+                    const model = this.multiply(this.translate(x, y, z), this.scale(0.15));
+                    gl.uniformMatrix4fv(gl.getUniformLocation(this.sourceProgram, 'uModel'), false, model);
+                    
+                    if (source.type === 'toroid' || source.type === 'coil') {
+                        gl.uniform3f(gl.getUniformLocation(this.sourceProgram, 'uColor'), 1, 0.5, 0);
+                        const torusModel = this.multiply(this.translate(x, y, z), this.scale(source.radius || 0.5));
+                        gl.uniformMatrix4fv(gl.getUniformLocation(this.sourceProgram, 'uModel'), false, torusModel);
+                        gl.bindVertexArray(this.torusVAO);
+                        gl.drawArrays(gl.TRIANGLES, 0, this.torusVertexCount);
+                    } else {
+                        gl.uniform3f(gl.getUniformLocation(this.sourceProgram, 'uColor'), 0, 0.8, 1);
+                        gl.bindVertexArray(this.sphereVAO);
+                        gl.drawArrays(gl.TRIANGLES, 0, this.sphereVertexCount);
+                    }
+                }
+                
+                // Draw draggable probe (highlighted)
+                if (this.probe.enabled) {
+                    const [px, py, pz] = this.probe.position;
+                    const probeScale = this.probe.dragging ? 0.25 : 0.2;
+                    const probeModel = this.multiply(this.translate(px, py, pz), this.scale(probeScale));
+                    gl.uniformMatrix4fv(gl.getUniformLocation(this.sourceProgram, 'uModel'), false, probeModel);
+                    
+                    // Pulsing color when dragging
+                    const pulse = Math.sin(this.time * 5) * 0.3 + 0.7;
+                    if (this.probe.dragging) {
+                        gl.uniform3f(gl.getUniformLocation(this.sourceProgram, 'uColor'), 1, pulse, 0);
+                    } else {
+                        gl.uniform3f(gl.getUniformLocation(this.sourceProgram, 'uColor'), 1, 0.2, 0.8);
+                    }
+                    gl.bindVertexArray(this.sphereVAO);
+                    gl.drawArrays(gl.TRIANGLES, 0, this.sphereVertexCount);
+                }
+            }
+            
+            // Vector field
+            if (this.options.renderMode !== 'density') {
+                gl.useProgram(this.vectorProgram);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.vectorProgram, 'uView'), false, view);
+                gl.uniformMatrix4fv(gl.getUniformLocation(this.vectorProgram, 'uProjection'), false, proj);
+                gl.uniform1f(gl.getUniformLocation(this.vectorProgram, 'uVectorLength'), this.options.vectorLength);
+                gl.uniform1f(gl.getUniformLocation(this.vectorProgram, 'uFieldScale'), this.options.fieldScale / this.maxB);
+                gl.uniform1f(gl.getUniformLocation(this.vectorProgram, 'uTime'), this.time);
+                gl.uniform1f(gl.getUniformLocation(this.vectorProgram, 'uDanceAmp'), this.options.fieldDancing ? this.options.danceAmplitude : 0);
+                gl.uniform1i(gl.getUniformLocation(this.vectorProgram, 'uRenderMode'), 
+                    this.options.renderMode === 'needle' ? 0 : 1);
+                
+                gl.bindVertexArray(this.vectorVAO);
+                gl.drawArrays(gl.LINES, 0, this.vectorCount * 2);
+            }
+            
+            gl.bindVertexArray(null);
+        }
+    }
+    
+    // ============================================
+    // APPLICATION SETUP
+    // ============================================
+    
+    const canvas = document.getElementById('glCanvas');
+    const magneticGPU = new MagneticGPU(canvas);
+    
+    // Generate initial field
+    magneticGPU.generateVectorField();
+    
+    // Update colorbar gradient
+    function updateColorbar() {
+        const colorbar = document.getElementById('colorbar');
+        const map = magneticGPU.options.colormap;
+        
+        const gradients = {
+            coolwarm: 'linear-gradient(to top, #3366cc, #ffffff, #cc3333)',
+            inferno: 'linear-gradient(to top, #000010, #800080, #e65000, #ffff99)',
+            viridis: 'linear-gradient(to top, #440055, #208888, #fce51c)',
+            plasma: 'linear-gradient(to top, #0c0786, #9b179e, #ec7853, #eff821)',
+            mono: 'linear-gradient(to top, #111111, #00ccff)'
+        };
+        
+        colorbar.style.background = gradients[map] || gradients.coolwarm;
+    }
+    updateColorbar();
+    
+    // Controls
+    document.querySelectorAll('.toggle-btn[data-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.toggle-btn[data-mode]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            magneticGPU.options.renderMode = btn.dataset.mode;
+        });
+    });
+    
+    document.getElementById('fieldScale').addEventListener('input', e => {
+        magneticGPU.options.fieldScale = parseFloat(e.target.value);
+        document.getElementById('scaleVal').textContent = e.target.value;
+    });
+    
+    document.getElementById('vectorLength').addEventListener('input', e => {
+        magneticGPU.options.vectorLength = parseFloat(e.target.value);
+        document.getElementById('lengthVal').textContent = e.target.value;
+    });
+    
+    document.getElementById('sampleDensity').addEventListener('input', e => {
+        magneticGPU.options.sampleDensity = parseInt(e.target.value);
+        document.getElementById('densityVal').textContent = e.target.value;
+        magneticGPU.generateVectorField();
+    });
+    
+    document.getElementById('stepSize').addEventListener('input', e => {
+        magneticGPU.options.stepSize = parseFloat(e.target.value);
+        document.getElementById('stepVal').textContent = e.target.value;
+        magneticGPU.generateVectorField();
+    });
+    
+    document.getElementById('colormap').addEventListener('change', e => {
+        magneticGPU.options.colormap = e.target.value;
+        updateColorbar();
+    });
+    
+    document.getElementById('fieldDancing').addEventListener('change', e => {
+        magneticGPU.options.fieldDancing = e.target.checked;
+    });
+    
+    document.getElementById('danceAmp').addEventListener('input', e => {
+        magneticGPU.options.danceAmplitude = parseFloat(e.target.value);
+        document.getElementById('danceVal').textContent = e.target.value;
+    });
+    
+    document.getElementById('autoRotate').addEventListener('change', e => {
+        magneticGPU.camera.autoRotate = e.target.checked;
+    });
+    
+    document.getElementById('showSources').addEventListener('change', e => {
+        magneticGPU.options.showSources = e.target.checked;
+    });
+    
+    document.getElementById('showGrid').addEventListener('change', e => {
+        magneticGPU.options.showGrid = e.target.checked;
+    });
+    
+    document.getElementById('showAxes').addEventListener('change', e => {
+        magneticGPU.options.showAxes = e.target.checked;
+    });
+    
+    // Probe controls
+    document.getElementById('probeEnabled').addEventListener('change', e => {
+        magneticGPU.probe.enabled = e.target.checked;
+        magneticGPU.generateVectorField();
+    });
+    
+    document.getElementById('probeStrength').addEventListener('input', e => {
+        magneticGPU.probe.strength = parseFloat(e.target.value);
+        document.getElementById('probeStrengthVal').textContent = e.target.value;
+        magneticGPU.generateVectorField();
+    });
+    
+    document.getElementById('probeType').addEventListener('change', e => {
+        magneticGPU.probe.type = e.target.value;
+        magneticGPU.generateVectorField();
+    });
+    
+    window.resetProbe = function() {
+        magneticGPU.probe.position = [0, 0, 0];
+        magneticGPU.generateVectorField();
+    };
+    
+    // Source management
+    function updateSourceListUI() {
+        const list = document.getElementById('sourceList');
+        list.innerHTML = '';
+        
+        magneticGPU.sources.forEach((src, i) => {
+            const pos = src.position.map(v => v.toFixed(1)).join(', ');
+            const item = document.createElement('div');
+            item.className = 'source-item';
+            item.innerHTML = `
+                <div>
+                    <div class="name">${src.type} (${pos})</div>
+                    <div class="type">${src.type.toUpperCase()}</div>
+                </div>
+                <button onclick="removeSource(${i})">×</button>
+            `;
+            list.appendChild(item);
+        });
+    }
+    
+    window.removeSource = function(index) {
+        magneticGPU.removeFieldSource(index);
+        updateSourceListUI();
+        magneticGPU.generateVectorField();
+    };
+    
+    window.openAddModal = function() {
+        document.getElementById('addModal').classList.add('active');
+    };
+    
+    window.closeAddModal = function() {
+        document.getElementById('addModal').classList.remove('active');
+    };
+    
+    window.addSource = function() {
+        const type = document.getElementById('newSourceType').value;
+        const x = parseFloat(document.getElementById('newPosX').value);
+        const y = parseFloat(document.getElementById('newPosY').value);
+        const z = parseFloat(document.getElementById('newPosZ').value);
+        const strength = parseFloat(document.getElementById('newStrength').value);
+        
+        magneticGPU.addFieldSource({
+            type: type,
+            position: [x, y, z],
+            strength: strength,
+            moment: [0, 1, 0],
+            radius: 1.0
+        });
+        
+        updateSourceListUI();
+        magneticGPU.generateVectorField();
+        closeAddModal();
+    };
+    
+    updateSourceListUI();
+    
+    // Main loop
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fpsTime = 0;
+    
+    function loop() {
+        const now = performance.now();
+        const dt = (now - lastTime) / 1000;
+        lastTime = now;
+        
+        // FPS counter
+        frameCount++;
+        fpsTime += dt;
+        if (fpsTime >= 1) {
+            document.getElementById('fps').textContent = frameCount;
+            frameCount = 0;
+            fpsTime = 0;
+        }
+        
+        magneticGPU.update(dt);
+        magneticGPU.render();
+        
+        // Update probe position display
+        const p = magneticGPU.probe.position;
+        document.getElementById('probePos').textContent = 
+            `(${p[0].toFixed(1)}, ${p[1].toFixed(1)}, ${p[2].toFixed(1)})`;
+        
+        requestAnimationFrame(loop);
+    }
+    
+    loop();
+    </script>
+</body>
+</html>

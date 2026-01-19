@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOUPY LABS - Physics Simulation Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --card: #12121a;
+            --accent: #00ff9d;
+            --plasma: #ff6b35;
+            --fusion: #ffcc33;
+            --magnetic: #00aaff;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(0,255,157,0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(255,107,53,0.03) 0%, transparent 50%);
+        }
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            border-bottom: 1px solid rgba(0,255,157,0.1);
+        }
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--accent);
+            text-shadow: 0 0 30px rgba(0,255,157,0.3);
+            margin-bottom: 8px;
+        }
+        .header p { color: var(--dim); font-size: 0.9rem; }
+        .header .subtitle { color: #444; font-size: 0.75rem; margin-top: 8px; }
+        
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--accent);
+            padding: 20px 40px 10px;
+            border-bottom: 1px solid rgba(0,255,157,0.1);
+            margin-top: 20px;
+        }
+        .section-title.fusion { color: var(--fusion); border-color: rgba(255,200,50,0.2); }
+        .section-title.plasma { color: var(--plasma); border-color: rgba(255,107,53,0.2); }
+        .section-title.magnetic { color: var(--magnetic); border-color: rgba(0,170,255,0.2); }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            padding: 16px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 40px rgba(0,255,157,0.1);
+        }
+        .card.fusion:hover { border-color: var(--fusion); box-shadow: 0 10px 40px rgba(255,200,50,0.1); }
+        .card.plasma:hover { border-color: var(--plasma); box-shadow: 0 10px 40px rgba(255,107,53,0.1); }
+        .card.magnetic:hover { border-color: var(--magnetic); box-shadow: 0 10px 40px rgba(0,170,255,0.1); }
+        
+        .card-preview {
+            height: 100px;
+            background: linear-gradient(135deg, rgba(0,255,157,0.1) 0%, rgba(255,107,53,0.05) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            position: relative;
+        }
+        .card.fusion .card-preview { background: linear-gradient(135deg, rgba(255,200,50,0.15) 0%, rgba(255,100,50,0.05) 100%); }
+        .card.plasma .card-preview { background: linear-gradient(135deg, rgba(255,107,53,0.15) 0%, rgba(255,50,100,0.05) 100%); }
+        .card.magnetic .card-preview { background: linear-gradient(135deg, rgba(0,170,255,0.15) 0%, rgba(100,50,255,0.05) 100%); }
+        
+        .card-content { padding: 14px; }
+        .card-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+        .card.fusion .card-title { color: var(--fusion); }
+        .card.plasma .card-title { color: var(--plasma); }
+        .card.magnetic .card-title { color: var(--magnetic); }
+        
+        .card-desc { font-size: 0.7rem; color: var(--dim); line-height: 1.4; }
+        .card-tags { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+        .tag {
+            font-size: 0.55rem;
+            padding: 2px 6px;
+            background: rgba(0,255,157,0.1);
+            color: var(--accent);
+            border-radius: 8px;
+        }
+        .card.fusion .tag { background: rgba(255,200,50,0.1); color: var(--fusion); }
+        .card.plasma .tag { background: rgba(255,107,53,0.1); color: var(--plasma); }
+        .card.magnetic .tag { background: rgba(0,170,255,0.1); color: var(--magnetic); }
+        
+        .badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--plasma);
+            color: #000;
+            font-size: 0.5rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .badge.ai { background: #00ff9d; }
+        .badge.gpu { background: var(--magnetic); }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 40px;
+            color: var(--dim);
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SOUPY LABS</h1>
+        <p>Technical Physics Simulation Modules</p>
+        <p class="subtitle">14 interactive simulations • Fusion reactors • Plasma physics • GPU visualization • Gemini AI assistant</p>
+    </div>
+    
+    <div class="section-title fusion">☢️ FUSION & REACTOR CONCEPTS</div>
+    <div class="grid">
+        <a href="ultra-magnetic-sun.html" class="card fusion">
+            <div class="card-preview">⚛️<span class="badge">FLAGSHIP</span></div>
+            <div class="card-content">
+                <div class="card-title">Ultra Magnetic Sun</div>
+                <div class="card-desc">Novel spherical confinement with spring-mounted coils & CME capture loops</div>
+                <div class="card-tags"><span class="tag">MHD</span><span class="tag">Springs</span><span class="tag">ΨΦ</span></div>
+            </div>
+        </a>
+        <a href="tokamak.html" class="card fusion">
+            <div class="card-preview">🔵<span class="badge ai">+ AI</span></div>
+            <div class="card-content">
+                <div class="card-title">Tokamak Simulator</div>
+                <div class="card-desc">Full ITER-like tokamak with grouped parameter controls & Gemini AI assistant</div>
+                <div class="card-tags"><span class="tag">ITER</span><span class="tag">IPB98</span><span class="tag">D-shape</span></div>
+            </div>
+        </a>
+        <a href="stellarator.html" class="card fusion">
+            <div class="card-preview">🌀<span class="badge ai">+ AI</span></div>
+            <div class="card-content">
+                <div class="card-title">Stellarator Simulator</div>
+                <div class="card-desc">W7-X style stellarator with twisted coils & Gemini AI assistant</div>
+                <div class="card-tags"><span class="tag">W7-X</span><span class="tag">ISS04</span><span class="tag">3D</span></div>
+            </div>
+        </a>
+        <a href="fusion-compare.html" class="card fusion">
+            <div class="card-preview">⚖️</div>
+            <div class="card-content">
+                <div class="card-title">Tokamak vs Stellarator</div>
+                <div class="card-desc">Side-by-side comparison with grouped sliders</div>
+                <div class="card-tags"><span class="tag">Compare</span><span class="tag">Q</span><span class="tag">Lawson</span></div>
+            </div>
+        </a>
+        <a href="fusion-xsec.html" class="card fusion">
+            <div class="card-preview">📊</div>
+            <div class="card-content">
+                <div class="card-title">Fusion Cross Sections</div>
+                <div class="card-desc">D-T, D-D, D-He³, p-B¹¹ reactivity curves</div>
+                <div class="card-tags"><span class="tag">⟨σv⟩</span><span class="tag">Bosch-Hale</span></div>
+            </div>
+        </a>
+        <a href="accelerator.html" class="card fusion">
+            <div class="card-preview">🔬</div>
+            <div class="card-content">
+                <div class="card-title">Particle Accelerator</div>
+                <div class="card-desc">Cyclotron, synchrotron & linac simulation</div>
+                <div class="card-tags"><span class="tag">RF</span><span class="tag">Magnets</span></div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="section-title plasma">🌀 PLASMA PHYSICS</div>
+    <div class="grid">
+        <a href="instability.html" class="card plasma">
+            <div class="card-preview">🌀</div>
+            <div class="card-content">
+                <div class="card-title">MHD Instabilities</div>
+                <div class="card-desc">Kink, sausage, ballooning, tearing, R-T, ELM modes</div>
+                <div class="card-tags"><span class="tag">Kink</span><span class="tag">ELM</span><span class="tag">β</span></div>
+            </div>
+        </a>
+        <a href="pic.html" class="card plasma">
+            <div class="card-preview">⚡</div>
+            <div class="card-content">
+                <div class="card-title">Particle-in-Cell</div>
+                <div class="card-desc">Boris pusher, gyration, mirrors, E×B drift</div>
+                <div class="card-tags"><span class="tag">Boris</span><span class="tag">Gyro</span></div>
+            </div>
+        </a>
+        <a href="debye.html" class="card plasma">
+            <div class="card-preview">🔮</div>
+            <div class="card-content">
+                <div class="card-title">Debye Shielding</div>
+                <div class="card-desc">Drop charges, watch screening clouds form</div>
+                <div class="card-tags"><span class="tag">λ_D</span><span class="tag">ω_p</span></div>
+            </div>
+        </a>
+        <a href="reconnection.html" class="card plasma">
+            <div class="card-preview">✨</div>
+            <div class="card-content">
+                <div class="card-title">Magnetic Reconnection</div>
+                <div class="card-desc">X-point topology, energy release, jets</div>
+                <div class="card-tags"><span class="tag">X-point</span><span class="tag">Flares</span></div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="section-title magnetic">⚡ FIELDS & SIMULATION</div>
+    <div class="grid">
+        <a href="magnetic-gpu.html" class="card magnetic">
+            <div class="card-preview">🧲<span class="badge gpu">GPU</span></div>
+            <div class="card-content">
+                <div class="card-title">MagneticGPU</div>
+                <div class="card-desc">WebGL2 vector fields with draggable probe</div>
+                <div class="card-tags"><span class="tag">WebGL2</span><span class="tag">Vector</span></div>
+            </div>
+        </a>
+        <a href="em-wave.html" class="card magnetic">
+            <div class="card-preview">〰️</div>
+            <div class="card-content">
+                <div class="card-title">EM Wave (FDTD)</div>
+                <div class="card-desc">Yee grid with PML boundaries</div>
+                <div class="card-tags"><span class="tag">FDTD</span><span class="tag">PML</span></div>
+            </div>
+        </a>
+        <a href="fluid.html" class="card magnetic">
+            <div class="card-preview">🌊</div>
+            <div class="card-content">
+                <div class="card-title">Lattice-Boltzmann</div>
+                <div class="card-desc">D2Q9 CFD, velocity & vorticity</div>
+                <div class="card-tags"><span class="tag">LBM</span><span class="tag">CFD</span></div>
+            </div>
+        </a>
+        <a href="physics.html" class="card magnetic">
+            <div class="card-preview">⚙️</div>
+            <div class="card-content">
+                <div class="card-title">Verlet Physics</div>
+                <div class="card-desc">Soft bodies, cloth, rope, constraints</div>
+                <div class="card-tags"><span class="tag">Verlet</span><span class="tag">PBD</span></div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="footer">
+        SOUPY LABS © 2024 | Glen St. Mary, FL | Created by John Beene<br>
+        <span style="color: #444; font-size: 0.65rem;">Physics simulation suite for fusion reactor concepts, plasma physics, and field visualization</span>
+    </div>
+</body>
+</html>

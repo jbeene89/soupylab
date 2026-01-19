@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debye Shielding - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(180deg, rgba(0,255,157,0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(0,255,157,0.2);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.1rem; color: #00ff9d; }
+        header a {
+            color: #00ff9d;
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid rgba(0,255,157,0.3);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .container { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 56px); }
+        .controls { background: #12121a; padding: 16px; overflow-y: auto; }
+        .section { margin-bottom: 20px; }
+        .section h3 { font-size: 0.75rem; color: #00ff9d; margin-bottom: 10px; border-bottom: 1px solid rgba(0,255,157,0.2); padding-bottom: 6px; }
+        .slider-row { margin-bottom: 12px; }
+        .slider-row label { display: flex; justify-content: space-between; font-size: 0.7rem; color: #606080; margin-bottom: 4px; }
+        .slider-row label span { color: #00ff9d; font-family: monospace; }
+        .slider-row input[type="range"] { width: 100%; height: 4px; -webkit-appearance: none; background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .slider-row input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #00ff9d; border-radius: 50%; cursor: pointer; }
+        .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer; margin-bottom: 8px; font-size: 0.8rem; }
+        .btn-pos { background: linear-gradient(135deg, #ff6644, #cc4400); }
+        .btn-neg { background: linear-gradient(135deg, #4488ff, #2244aa); }
+        .btn-reset { background: linear-gradient(135deg, #333, #555); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-box { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center; }
+        .stat-box .label { font-size: 0.55rem; color: #606080; }
+        .stat-box .value { font-size: 0.8rem; font-family: monospace; color: #00ff9d; }
+        .info { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; font-size: 0.65rem; line-height: 1.5; color: #707080; margin-top: 12px; }
+        canvas { width: 100%; height: 100%; display: block; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔮 DEBYE SHIELDING</h1>
+        <a href="index.html">← BACK</a>
+    </header>
+    <div class="container">
+        <div class="controls">
+            <div class="section">
+                <h3>DROP TEST CHARGE</h3>
+                <button class="btn btn-pos" onclick="dropCharge(1)">+ Positive</button>
+                <button class="btn btn-neg" onclick="dropCharge(-1)">− Negative</button>
+                <button class="btn btn-reset" onclick="reset()">Reset</button>
+            </div>
+            <div class="section">
+                <h3>PLASMA</h3>
+                <div class="slider-row">
+                    <label>Density <span id="nVal">1.0</span>×10¹⁸ m⁻³</label>
+                    <input type="range" id="density" min="0.1" max="5" step="0.1" value="1" oninput="update()">
+                </div>
+                <div class="slider-row">
+                    <label>Temperature <span id="tVal">10</span> eV</label>
+                    <input type="range" id="temp" min="1" max="100" value="10" oninput="update()">
+                </div>
+                <div class="slider-row">
+                    <label>Electrons <span id="eVal">800</span></label>
+                    <input type="range" id="count" min="100" max="2000" step="100" value="800" oninput="update()">
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-box"><div class="label">λ_D</div><div class="value" id="lambdaD">--</div></div>
+                <div class="stat-box"><div class="label">ω_p</div><div class="value" id="omegaP">--</div></div>
+                <div class="stat-box"><div class="label">N_D</div><div class="value" id="ND">--</div></div>
+                <div class="stat-box"><div class="label">τ_shield</div><div class="value" id="tau">--</div></div>
+            </div>
+            <div class="info">
+                <strong>Click anywhere</strong> to drop a test charge. Watch electrons rearrange to shield it within the Debye length (dashed circle).
+                <br><br>
+                λ_D = √(ε₀kT/ne²) — characteristic screening distance<br>
+                ω_p = √(ne²/ε₀m) — plasma oscillation frequency
+            </div>
+        </div>
+        <canvas id="c"></canvas>
+    </div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const e = 1.6e-19, me = 9.1e-31, eps0 = 8.85e-12, kB = 1.38e-23;
+        
+        let electrons = [], testCharges = [];
+        let params = { n: 1, T: 10, count: 800 };
+        
+        function calcLambdaD() { return Math.sqrt(eps0 * kB * params.T * 11604 / (params.n * 1e18 * e * e)); }
+        function calcOmegaP() { return Math.sqrt(params.n * 1e18 * e * e / (eps0 * me)); }
+        
+        function init() {
+            electrons = [];
+            testCharges = [];
+            for (let i = 0; i < params.count; i++) {
+                electrons.push({
+                    x: 50 + Math.random() * (canvas.width - 100),
+                    y: 50 + Math.random() * (canvas.height - 100),
+                    vx: 0, vy: 0
+                });
+            }
+        }
+        
+        function dropCharge(sign) {
+            testCharges.push({ x: canvas.width/2, y: canvas.height/2, q: sign * 10 * e });
+        }
+        
+        function reset() { init(); }
+        
+        function update() {
+            params.n = +document.getElementById('density').value;
+            params.T = +document.getElementById('temp').value;
+            params.count = +document.getElementById('count').value;
+            document.getElementById('nVal').textContent = params.n.toFixed(1);
+            document.getElementById('tVal').textContent = params.T;
+            document.getElementById('eVal').textContent = params.count;
+            
+            const lD = calcLambdaD(), wP = calcOmegaP();
+            const ND = (4/3) * Math.PI * Math.pow(lD, 3) * params.n * 1e18;
+            document.getElementById('lambdaD').textContent = (lD * 1e6).toFixed(1) + 'μm';
+            document.getElementById('omegaP').textContent = (wP / 1e9).toFixed(1) + 'GHz';
+            document.getElementById('ND').textContent = ND.toFixed(0);
+            document.getElementById('tau').textContent = (1e12 / wP).toFixed(1) + 'ps';
+        }
+        
+        function resize() { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; init(); }
+        
+        canvas.onclick = e => {
+            const r = canvas.getBoundingClientRect();
+            testCharges.push({ x: e.clientX - r.left, y: e.clientY - r.top, q: 10 * 1.6e-19 });
+        };
+        
+        function render() {
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const scale = canvas.width / 1e-4;
+            const lambdaPx = calcLambdaD() * scale * 1e4;
+            
+            // Update electrons
+            for (const el of electrons) {
+                let ax = 0, ay = 0;
+                for (const tc of testCharges) {
+                    const dx = tc.x - el.x, dy = tc.y - el.y;
+                    const r2 = dx*dx + dy*dy + 100;
+                    const F = (-e * tc.q) / (4 * Math.PI * eps0 * r2) * 1e-20;
+                    ax += F * dx / Math.sqrt(r2) / me;
+                    ay += F * dy / Math.sqrt(r2) / me;
+                }
+                el.vx = el.vx * 0.98 + ax * 1e-13;
+                el.vy = el.vy * 0.98 + ay * 1e-13;
+                el.x += el.vx * 1e-13 * scale;
+                el.y += el.vy * 1e-13 * scale;
+                el.x = Math.max(5, Math.min(canvas.width - 5, el.x));
+                el.y = Math.max(5, Math.min(canvas.height - 5, el.y));
+            }
+            
+            // Draw Debye spheres
+            for (const tc of testCharges) {
+                ctx.beginPath();
+                ctx.arc(tc.x, tc.y, lambdaPx, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(0,255,157,0.4)';
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                for (let i = 3; i >= 1; i--) {
+                    ctx.beginPath();
+                    ctx.arc(tc.x, tc.y, lambdaPx * i * 0.4, 0, Math.PI * 2);
+                    ctx.strokeStyle = tc.q > 0 ? `rgba(255,100,68,${0.1*i})` : `rgba(68,136,255,${0.1*i})`;
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw electrons
+            ctx.fillStyle = '#4488ff';
+            for (const el of electrons) {
+                ctx.beginPath();
+                ctx.arc(el.x, el.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw test charges
+            for (const tc of testCharges) {
+                ctx.beginPath();
+                ctx.arc(tc.x, tc.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = tc.q > 0 ? '#ff4422' : '#2266ff';
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(tc.q > 0 ? '+' : '−', tc.x, tc.y);
+            }
+            
+            requestAnimationFrame(render);
+        }
+        
+        window.onresize = resize;
+        resize();
+        update();
+        render();
+    </script>
+</body>
+</html>

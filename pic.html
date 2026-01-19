@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIC Plasma Simulator - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #00ff9d;
+            --electron: #00aaff;
+            --ion: #ff6644;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(180deg, rgba(0,170,255,0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(0,170,255,0.2);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.2rem; color: var(--electron); }
+        header a {
+            color: var(--accent);
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid rgba(0,255,157,0.3);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            height: calc(100vh - 56px);
+        }
+        .controls {
+            background: var(--panel);
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .section { margin-bottom: 20px; }
+        .section h3 {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0,255,157,0.2);
+        }
+        .slider-row { margin-bottom: 12px; }
+        .slider-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 4px;
+        }
+        .slider-row label span { color: var(--accent); font-family: monospace; }
+        .slider-row input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        .slider-row input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.75rem;
+        }
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .preset-btn {
+            padding: 10px 6px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 0.65rem;
+            cursor: pointer;
+        }
+        .preset-btn:hover { border-color: var(--electron); }
+        .preset-btn.active { border-color: var(--electron); background: rgba(0,170,255,0.2); }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-box .label { font-size: 0.6rem; color: var(--dim); }
+        .stat-box .value { font-size: 0.85rem; font-family: monospace; color: var(--accent); }
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 0.7rem;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .electron-dot { background: var(--electron); }
+        .ion-dot { background: var(--ion); }
+        canvas { width: 100%; height: 100%; display: block; }
+        .btn-action {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, var(--electron), #0066cc);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>⚡ PARTICLE-IN-CELL PLASMA</h1>
+        <a href="index.html">← BACK TO LAB</a>
+    </header>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="section">
+                <h3>CONFIGURATION</h3>
+                <div class="preset-buttons">
+                    <button class="preset-btn active" onclick="setPreset('gyration')">Gyration</button>
+                    <button class="preset-btn" onclick="setPreset('mirror')">Mirror Trap</button>
+                    <button class="preset-btn" onclick="setPreset('drift')">E×B Drift</button>
+                    <button class="preset-btn" onclick="setPreset('plasma')">Thermal</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>PARTICLES</h3>
+                <div class="slider-row">
+                    <label>Electrons <span id="neVal">100</span></label>
+                    <input type="range" id="ne" min="1" max="1000" value="100" oninput="updateParams()">
+                </div>
+                <div class="slider-row">
+                    <label>Ions <span id="niVal">20</span></label>
+                    <input type="range" id="ni" min="0" max="200" value="20" oninput="updateParams()">
+                </div>
+                <div class="slider-row">
+                    <label>Temperature (eV) <span id="tempVal">10</span></label>
+                    <input type="range" id="temp" min="1" max="100" value="10" oninput="updateParams()">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>FIELDS</h3>
+                <div class="slider-row">
+                    <label>B-field (T) <span id="bVal">1.0</span></label>
+                    <input type="range" id="bfield" min="0" max="5" step="0.1" value="1" oninput="updateParams()">
+                </div>
+                <div class="slider-row">
+                    <label>E-field (kV/m) <span id="eVal">0</span></label>
+                    <input type="range" id="efield" min="-30" max="30" value="0" oninput="updateParams()">
+                </div>
+                <div class="slider-row">
+                    <label>Mirror Ratio <span id="mirrorVal">1.0</span></label>
+                    <input type="range" id="mirror" min="1" max="4" step="0.1" value="1" oninput="updateParams()">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>DISPLAY</h3>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showTrails" checked onchange="updateParams()">
+                    <label for="showTrails">Show Trails</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="showField" checked onchange="updateParams()">
+                    <label for="showField">Show B-Field</label>
+                </div>
+            </div>
+            
+            <button class="btn-action" onclick="resetSim()">↺ RESET</button>
+            
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot electron-dot"></div> e⁻</div>
+                <div class="legend-item"><div class="legend-dot ion-dot"></div> ions</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="label">Gyro Radius</div>
+                    <div class="value" id="gyroR">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Gyro Freq</div>
+                    <div class="value" id="gyroF">--</div>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const e = 1.6e-19, me = 9.1e-31, mi = 1.67e-27;
+        let particles = [];
+        
+        const params = {
+            ne: 100, ni: 20, temp: 10,
+            B: 1.0, E: 0, mirror: 1.0,
+            showTrails: true, showField: true
+        };
+        
+        class Particle {
+            constructor(type, x, y, vx, vy, vz) {
+                this.type = type;
+                this.x = x; this.y = y; this.z = 0;
+                this.vx = vx; this.vy = vy; this.vz = vz || 0;
+                this.q = type === 'electron' ? -e : e;
+                this.m = type === 'electron' ? me : mi;
+                this.color = type === 'electron' ? '#00aaff' : '#ff6644';
+                this.size = type === 'electron' ? 2 : 4;
+                this.trail = [];
+            }
+            
+            push(dt, Ex, Ey, Ez, Bx, By, Bz) {
+                const qm = this.q / this.m;
+                const h = dt * 0.5;
+                
+                let vxm = this.vx + qm * Ex * h;
+                let vym = this.vy + qm * Ey * h;
+                let vzm = this.vz + qm * Ez * h;
+                
+                const tx = qm * Bx * h, ty = qm * By * h, tz = qm * Bz * h;
+                const t2 = tx*tx + ty*ty + tz*tz;
+                const sx = 2*tx/(1+t2), sy = 2*ty/(1+t2), sz = 2*tz/(1+t2);
+                
+                const vpx = vxm + vym*tz - vzm*ty;
+                const vpy = vym + vzm*tx - vxm*tz;
+                const vpz = vzm + vxm*ty - vym*tx;
+                
+                const vxp = vxm + vpy*sz - vpz*sy;
+                const vyp = vym + vpz*sx - vpx*sz;
+                const vzp = vzm + vpx*sy - vpy*sx;
+                
+                this.vx = vxp + qm * Ex * h;
+                this.vy = vyp + qm * Ey * h;
+                this.vz = vzp + qm * Ez * h;
+                
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                
+                if (params.showTrails) {
+                    this.trail.push({x: this.x, y: this.y});
+                    if (this.trail.length > 80) this.trail.shift();
+                }
+            }
+        }
+        
+        function getField(x, y) {
+            const cx = canvas.width/2, cy = canvas.height/2;
+            const nx = (x - cx) / cx;
+            let Bz = params.B * (1 + (params.mirror - 1) * nx * nx);
+            return { Ex: params.E * 1000, Ey: 0, Ez: 0, Bx: 0, By: 0, Bz };
+        }
+        
+        function initParticles() {
+            particles = [];
+            const cx = canvas.width/2, cy = canvas.height/2;
+            const vth_e = Math.sqrt(2 * params.temp * e / me) * 1e-4;
+            const vth_i = Math.sqrt(2 * params.temp * e / mi) * 1e-4;
+            
+            for (let i = 0; i < params.ne; i++) {
+                particles.push(new Particle('electron',
+                    cx + (Math.random()-0.5)*canvas.width*0.5,
+                    cy + (Math.random()-0.5)*canvas.height*0.5,
+                    (Math.random()-0.5)*vth_e,
+                    (Math.random()-0.5)*vth_e,
+                    (Math.random()-0.5)*vth_e
+                ));
+            }
+            for (let i = 0; i < params.ni; i++) {
+                particles.push(new Particle('ion',
+                    cx + (Math.random()-0.5)*canvas.width*0.5,
+                    cy + (Math.random()-0.5)*canvas.height*0.5,
+                    (Math.random()-0.5)*vth_i,
+                    (Math.random()-0.5)*vth_i,
+                    0
+                ));
+            }
+        }
+        
+        function setPreset(name) {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const cx = canvas.width/2, cy = canvas.height/2;
+            particles = [];
+            
+            if (name === 'gyration') {
+                params.ne = 1; params.ni = 0; params.B = 2; params.E = 0; params.mirror = 1;
+                particles.push(new Particle('electron', cx, cy, 5e4, 0, 0));
+            } else if (name === 'mirror') {
+                params.ne = 50; params.ni = 5; params.B = 2; params.E = 0; params.mirror = 3;
+                initParticles();
+            } else if (name === 'drift') {
+                params.ne = 100; params.ni = 20; params.B = 2; params.E = 15; params.mirror = 1;
+                initParticles();
+            } else if (name === 'plasma') {
+                params.ne = 500; params.ni = 100; params.B = 1; params.E = 0; params.mirror = 1;
+                initParticles();
+            }
+            updateSliders();
+        }
+        
+        function updateSliders() {
+            document.getElementById('ne').value = params.ne;
+            document.getElementById('ni').value = params.ni;
+            document.getElementById('bfield').value = params.B;
+            document.getElementById('efield').value = params.E;
+            document.getElementById('mirror').value = params.mirror;
+            updateParams();
+        }
+        
+        function updateParams() {
+            params.ne = +document.getElementById('ne').value;
+            params.ni = +document.getElementById('ni').value;
+            params.temp = +document.getElementById('temp').value;
+            params.B = +document.getElementById('bfield').value;
+            params.E = +document.getElementById('efield').value;
+            params.mirror = +document.getElementById('mirror').value;
+            params.showTrails = document.getElementById('showTrails').checked;
+            params.showField = document.getElementById('showField').checked;
+            
+            document.getElementById('neVal').textContent = params.ne;
+            document.getElementById('niVal').textContent = params.ni;
+            document.getElementById('tempVal').textContent = params.temp;
+            document.getElementById('bVal').textContent = params.B.toFixed(1);
+            document.getElementById('eVal').textContent = params.E;
+            document.getElementById('mirrorVal').textContent = params.mirror.toFixed(1);
+            
+            const vth = Math.sqrt(2 * params.temp * e / me);
+            const rL = params.B > 0 ? (me * vth) / (e * params.B) : 0;
+            const wc = params.B > 0 ? (e * params.B) / me : 0;
+            document.getElementById('gyroR').textContent = (rL * 1e6).toFixed(1) + 'μm';
+            document.getElementById('gyroF').textContent = (wc / 1e9).toFixed(1) + 'GHz';
+        }
+        
+        function resetSim() { initParticles(); }
+        
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        
+        function render() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Field visualization
+            if (params.showField && params.B > 0) {
+                for (let x = 30; x < canvas.width; x += 50) {
+                    for (let y = 30; y < canvas.height; y += 50) {
+                        const f = getField(x, y);
+                        const strength = Math.min(1, f.Bz / 3);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 3, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(100, 150, 255, ${strength * 0.5})`;
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            // Mirror regions
+            if (params.mirror > 1) {
+                const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+                grad.addColorStop(0, 'rgba(100,50,150,0.2)');
+                grad.addColorStop(0.3, 'rgba(100,50,150,0)');
+                grad.addColorStop(0.7, 'rgba(100,50,150,0)');
+                grad.addColorStop(1, 'rgba(100,50,150,0.2)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            const dt = 1e-11;
+            
+            for (const p of particles) {
+                const f = getField(p.x, p.y);
+                p.push(dt, f.Ex, f.Ey, f.Ez, f.Bx, f.By, f.Bz);
+                
+                // Boundaries
+                if (p.x < 0) { p.x = 0; p.vx *= -1; }
+                if (p.x > canvas.width) { p.x = canvas.width; p.vx *= -1; }
+                if (p.y < 0) { p.y = 0; p.vy *= -1; }
+                if (p.y > canvas.height) { p.y = canvas.height; p.vy *= -1; }
+                
+                // Trail
+                if (params.showTrails && p.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                    for (const pt of p.trail) ctx.lineTo(pt.x, pt.y);
+                    ctx.strokeStyle = p.type === 'electron' ? 'rgba(0,170,255,0.3)' : 'rgba(255,102,68,0.3)';
+                    ctx.stroke();
+                }
+                
+                // Particle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            }
+            
+            requestAnimationFrame(render);
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+        updateParams();
+        setPreset('gyration');
+        render();
+    </script>
+</body>
+</html>

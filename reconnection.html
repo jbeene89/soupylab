@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnetic Reconnection - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #050510;
+            --panel: #0a0a18;
+            --accent: #ff6600;
+            --accent2: #00aaff;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            background: var(--panel);
+            padding: 16px;
+            overflow-y: auto;
+            border-right: 1px solid #222;
+        }
+        
+        h1 {
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+        
+        .subtitle {
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 16px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: var(--dim);
+            text-decoration: none;
+            font-size: 0.75rem;
+            margin-bottom: 12px;
+            padding: 4px 8px;
+            border: 1px solid #333;
+            border-radius: 3px;
+        }
+        
+        .back-link:hover { border-color: var(--accent); color: var(--accent); }
+        
+        h2 {
+            font-size: 0.75rem;
+            color: var(--accent2);
+            margin: 16px 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group {
+            margin-bottom: 10px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 3px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+        
+        .control-group select {
+            width: 100%;
+            background: #1a1a24;
+            border: 1px solid #333;
+            color: var(--text);
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        
+        .value {
+            float: right;
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 0.7rem;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin: 4px 0;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-trigger {
+            background: linear-gradient(135deg, #ff4400, #ff8800);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .btn-trigger:hover { box-shadow: 0 0 20px rgba(255,100,0,0.5); }
+        
+        .btn-reset {
+            background: #333;
+            color: #aaa;
+        }
+        
+        .stats-box {
+            background: #0f0f1a;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin: 4px 0;
+        }
+        
+        .stat-row .label { color: var(--dim); }
+        .stat-row .val { color: var(--accent); font-family: monospace; }
+        
+        canvas {
+            display: block;
+        }
+        
+        .info-box {
+            background: rgba(0,170,255,0.1);
+            border: 1px solid rgba(0,170,255,0.3);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 16px;
+            font-size: 0.65rem;
+            line-height: 1.5;
+            color: var(--dim);
+        }
+        
+        .info-box strong { color: var(--accent2); }
+        
+        .phase-indicator {
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+        
+        .phase-buildup { background: #004488; color: #88ccff; }
+        .phase-reconnecting { background: #884400; color: #ffaa44; animation: pulse 0.5s infinite; }
+        .phase-ejection { background: #448800; color: #aaffaa; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <a href="index.html" class="back-link">← Back to Labs</a>
+            <h1>🌟 MAGNETIC RECONNECTION</h1>
+            <p class="subtitle">The mechanism behind solar flares & tokamak disruptions</p>
+            
+            <div class="phase-indicator phase-buildup" id="phaseIndicator">FIELD BUILDUP</div>
+            
+            <h2>Configuration</h2>
+            
+            <div class="control-group">
+                <label>Inflow Velocity <span class="value" id="inflowVal">0.10 vA</span></label>
+                <input type="range" id="inflowVel" min="0.01" max="0.5" step="0.01" value="0.1">
+            </div>
+            
+            <div class="control-group">
+                <label>Resistivity (η) <span class="value" id="resistivityVal">0.01</span></label>
+                <input type="range" id="resistivity" min="0.001" max="0.1" step="0.001" value="0.01">
+            </div>
+            
+            <div class="control-group">
+                <label>Guide Field (Bz) <span class="value" id="guideVal">0.0</span></label>
+                <input type="range" id="guideField" min="0" max="2" step="0.1" value="0">
+            </div>
+            
+            <div class="control-group">
+                <label>Particle Count <span class="value" id="particleVal">2000</span></label>
+                <input type="range" id="particleCount" min="500" max="5000" step="100" value="2000">
+            </div>
+            
+            <button class="btn btn-trigger" onclick="triggerReconnection()">⚡ TRIGGER RECONNECTION</button>
+            <button class="btn btn-reset" onclick="resetSimulation()">Reset</button>
+            
+            <h2>Reconnection Stats</h2>
+            <div class="stats-box">
+                <div class="stat-row">
+                    <span class="label">Reconnection Rate</span>
+                    <span class="val" id="reconnRate">0.00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">Energy Released</span>
+                    <span class="val" id="energyReleased">0.0 J</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">Peak |J|</span>
+                    <span class="val" id="peakCurrent">0.0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">Jet Velocity</span>
+                    <span class="val" id="jetVel">0.0 vA</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">X-Point Location</span>
+                    <span class="val" id="xPoint">(0, 0)</span>
+                </div>
+            </div>
+            
+            <h2>Visualization</h2>
+            <div class="control-group">
+                <label>Display Mode</label>
+                <select id="displayMode">
+                    <option value="fieldlines">Field Lines + Particles</option>
+                    <option value="current">Current Density |J|</option>
+                    <option value="pressure">Magnetic Pressure</option>
+                    <option value="flow">Plasma Flow</option>
+                </select>
+            </div>
+            
+            <div class="info-box">
+                <strong>What is Reconnection?</strong><br>
+                When opposing magnetic field lines are pushed together, they can "break" and reconnect in a new configuration, explosively releasing stored magnetic energy as heat and kinetic energy.
+                <br><br>
+                <strong>Where it matters:</strong><br>
+                • Solar flares & CMEs<br>
+                • Tokamak disruptions<br>
+                • Earth's magnetotail<br>
+                • Astrophysical jets
+            </div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth || window.innerWidth - 260;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Simulation state
+        let state = {
+            phase: 'buildup', // buildup, reconnecting, ejection
+            time: 0,
+            reconnectionTriggered: false,
+            reconnectionProgress: 0,
+            energyReleased: 0,
+            peakCurrent: 0,
+            jetVelocity: 0
+        };
+        
+        // Particles for visualization
+        let particles = [];
+        
+        // Field parameters
+        let params = {
+            inflowVel: 0.1,
+            resistivity: 0.01,
+            guideField: 0,
+            particleCount: 2000
+        };
+        
+        // Initialize particles
+        function initParticles() {
+            particles = [];
+            const count = params.particleCount;
+            
+            for (let i = 0; i < count; i++) {
+                // Distribute in two regions (top and bottom)
+                const region = Math.random() < 0.5 ? -1 : 1;
+                
+                particles.push({
+                    x: (Math.random() - 0.5) * canvas.width * 0.8,
+                    y: region * (50 + Math.random() * canvas.height * 0.35),
+                    vx: 0,
+                    vy: 0,
+                    region: region,
+                    trail: [],
+                    energy: 0.5 + Math.random() * 0.5
+                });
+            }
+        }
+        
+        // Magnetic field at point (Harris current sheet model)
+        function getField(x, y) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const px = x - cx;
+            const py = y - cy;
+            
+            // Harris sheet width
+            const L = 30 + (1 - state.reconnectionProgress) * 50;
+            
+            // Base field: Bx = B0 * tanh(y/L)
+            const B0 = 1.0;
+            let Bx = B0 * Math.tanh(py / L);
+            let By = 0;
+            
+            // During reconnection, add perturbation
+            if (state.reconnectionTriggered) {
+                const perturbStrength = state.reconnectionProgress * 0.5;
+                const kx = 0.02;
+                
+                // Tearing mode perturbation
+                By += perturbStrength * Math.sin(kx * px) * Math.exp(-py*py / (L*L*4));
+                Bx -= perturbStrength * kx * L * Math.cos(kx * px) * (py/L) * Math.exp(-py*py / (L*L*4));
+                
+                // X-point formation
+                if (state.reconnectionProgress > 0.3) {
+                    const xpointStrength = (state.reconnectionProgress - 0.3) * 2;
+                    const r = Math.sqrt(px*px + py*py);
+                    if (r < 100) {
+                        const factor = xpointStrength * (1 - r/100);
+                        By += factor * px * 0.01;
+                        Bx += factor * py * 0.01;
+                    }
+                }
+            }
+            
+            // Guide field (out of plane)
+            const Bz = params.guideField;
+            
+            return { Bx, By, Bz };
+        }
+        
+        // Current density (curl of B, simplified to z-component)
+        function getCurrent(x, y) {
+            const h = 5;
+            const B1 = getField(x + h, y);
+            const B2 = getField(x - h, y);
+            const B3 = getField(x, y + h);
+            const B4 = getField(x, y - h);
+            
+            // Jz = dBy/dx - dBx/dy
+            const Jz = (B1.By - B2.By) / (2*h) - (B3.Bx - B4.Bx) / (2*h);
+            
+            return Jz;
+        }
+        
+        // Update particles
+        function updateParticles(dt) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            particles.forEach(p => {
+                const B = getField(p.x + cx, p.y + cy);
+                
+                // Base inflow toward current sheet
+                let inflowForce = -Math.sign(p.y) * params.inflowVel * 50;
+                
+                // During reconnection, add outflow jets
+                if (state.reconnectionTriggered && state.reconnectionProgress > 0.2) {
+                    const distFromCenter = Math.sqrt(p.x*p.x + p.y*p.y);
+                    
+                    if (distFromCenter < 80 && Math.abs(p.y) < 40) {
+                        // In diffusion region - accelerate outward
+                        const jetStrength = state.reconnectionProgress * 200;
+                        p.vx += Math.sign(p.x) * jetStrength * dt;
+                        p.energy += state.reconnectionProgress * dt * 2;
+                    }
+                }
+                
+                // E×B drift (simplified)
+                p.vx += B.By * 20 * dt;
+                p.vy += inflowForce * dt - B.Bx * 20 * dt;
+                
+                // Damping
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                
+                // Update position
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                
+                // Store trail
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > 20) p.trail.shift();
+                
+                // Boundary wrap
+                if (Math.abs(p.x) > canvas.width * 0.45) {
+                    p.x = -Math.sign(p.x) * canvas.width * 0.4;
+                    p.trail = [];
+                }
+                if (Math.abs(p.y) > canvas.height * 0.45) {
+                    p.y = p.region * (50 + Math.random() * 100);
+                    p.x = (Math.random() - 0.5) * canvas.width * 0.6;
+                    p.vx = 0;
+                    p.vy = 0;
+                    p.trail = [];
+                }
+            });
+        }
+        
+        // Trigger reconnection event
+        function triggerReconnection() {
+            if (state.reconnectionTriggered) return;
+            
+            state.reconnectionTriggered = true;
+            state.phase = 'reconnecting';
+            state.energyReleased = 0;
+            
+            updatePhaseIndicator();
+        }
+        
+        // Reset simulation
+        function resetSimulation() {
+            state = {
+                phase: 'buildup',
+                time: 0,
+                reconnectionTriggered: false,
+                reconnectionProgress: 0,
+                energyReleased: 0,
+                peakCurrent: 0,
+                jetVelocity: 0
+            };
+            initParticles();
+            updatePhaseIndicator();
+        }
+        
+        // Update phase indicator
+        function updatePhaseIndicator() {
+            const el = document.getElementById('phaseIndicator');
+            el.className = 'phase-indicator phase-' + state.phase;
+            
+            const labels = {
+                buildup: 'FIELD BUILDUP',
+                reconnecting: '⚡ RECONNECTING ⚡',
+                ejection: 'PLASMA EJECTION'
+            };
+            el.textContent = labels[state.phase];
+        }
+        
+        // Draw field lines
+        function drawFieldLines(ctx) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            ctx.strokeStyle = '#00aaff44';
+            ctx.lineWidth = 1;
+            
+            // Trace field lines from left edge
+            for (let startY = -canvas.height/2 + 20; startY < canvas.height/2; startY += 30) {
+                ctx.beginPath();
+                
+                let x = -canvas.width/2 + 20;
+                let y = startY;
+                
+                ctx.moveTo(x + cx, y + cy);
+                
+                for (let step = 0; step < 500; step++) {
+                    const B = getField(x + cx, y + cy);
+                    const Bmag = Math.sqrt(B.Bx*B.Bx + B.By*B.By) + 0.01;
+                    
+                    x += (B.Bx / Bmag) * 8;
+                    y += (B.By / Bmag) * 8;
+                    
+                    if (Math.abs(x) > canvas.width/2 - 10 || Math.abs(y) > canvas.height/2 - 10) break;
+                    
+                    ctx.lineTo(x + cx, y + cy);
+                }
+                
+                ctx.stroke();
+            }
+        }
+        
+        // Draw current density
+        function drawCurrentDensity(ctx) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const resolution = 10;
+            
+            for (let x = 0; x < canvas.width; x += resolution) {
+                for (let y = 0; y < canvas.height; y += resolution) {
+                    const J = getCurrent(x, y);
+                    const intensity = Math.min(1, Math.abs(J) * 5);
+                    
+                    if (intensity > 0.05) {
+                        const hue = J > 0 ? 30 : 200; // Orange for positive, blue for negative
+                        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.8})`;
+                        ctx.fillRect(x, y, resolution, resolution);
+                    }
+                }
+            }
+        }
+        
+        // Draw particles
+        function drawParticles(ctx) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            particles.forEach(p => {
+                // Trail
+                if (p.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = p.region > 0 ? '#ff660033' : '#00aaff33';
+                    ctx.lineWidth = 1;
+                    
+                    for (let i = 0; i < p.trail.length; i++) {
+                        const t = p.trail[i];
+                        if (i === 0) ctx.moveTo(t.x + cx, t.y + cy);
+                        else ctx.lineTo(t.x + cx, t.y + cy);
+                    }
+                    ctx.stroke();
+                }
+                
+                // Particle
+                const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                const energyColor = Math.min(255, p.energy * 200);
+                
+                let color;
+                if (p.energy > 1.5) {
+                    // High energy - white/yellow
+                    color = `rgb(255, ${200 + energyColor/5}, ${150})`;
+                } else {
+                    color = p.region > 0 ? `rgb(255, ${100 + energyColor/2}, 0)` : `rgb(0, ${150 + energyColor/3}, 255)`;
+                }
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(p.x + cx, p.y + cy, 2 + p.energy, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Draw X-point marker
+        function drawXPoint(ctx) {
+            if (!state.reconnectionTriggered || state.reconnectionProgress < 0.3) return;
+            
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            // Pulsing X marker
+            const pulse = Math.sin(state.time * 10) * 0.3 + 0.7;
+            
+            ctx.strokeStyle = `rgba(255, 255, 0, ${pulse})`;
+            ctx.lineWidth = 2;
+            
+            const size = 15;
+            ctx.beginPath();
+            ctx.moveTo(cx - size, cy - size);
+            ctx.lineTo(cx + size, cy + size);
+            ctx.moveTo(cx + size, cy - size);
+            ctx.lineTo(cx - size, cy + size);
+            ctx.stroke();
+            
+            // Label
+            ctx.fillStyle = '#ffff00';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('X-POINT', cx, cy - 25);
+        }
+        
+        // Draw outflow jets
+        function drawJets(ctx) {
+            if (!state.reconnectionTriggered || state.reconnectionProgress < 0.4) return;
+            
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const jetLength = state.reconnectionProgress * 150;
+            
+            // Left jet
+            const gradL = ctx.createLinearGradient(cx, cy, cx - jetLength, cy);
+            gradL.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
+            gradL.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            
+            ctx.fillStyle = gradL;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 20);
+            ctx.lineTo(cx - jetLength, cy);
+            ctx.lineTo(cx, cy + 20);
+            ctx.fill();
+            
+            // Right jet
+            const gradR = ctx.createLinearGradient(cx, cy, cx + jetLength, cy);
+            gradR.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
+            gradR.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            
+            ctx.fillStyle = gradR;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 20);
+            ctx.lineTo(cx + jetLength, cy);
+            ctx.lineTo(cx, cy + 20);
+            ctx.fill();
+        }
+        
+        // Update stats display
+        function updateStats() {
+            document.getElementById('reconnRate').textContent = (state.reconnectionProgress * params.resistivity * 10).toFixed(3);
+            document.getElementById('energyReleased').textContent = state.energyReleased.toFixed(1) + ' J';
+            document.getElementById('peakCurrent').textContent = state.peakCurrent.toFixed(2);
+            document.getElementById('jetVel').textContent = state.jetVelocity.toFixed(2) + ' vA';
+            document.getElementById('xPoint').textContent = state.reconnectionTriggered ? '(0, 0)' : 'N/A';
+        }
+        
+        // Input handlers
+        document.getElementById('inflowVel').addEventListener('input', e => {
+            params.inflowVel = parseFloat(e.target.value);
+            document.getElementById('inflowVal').textContent = params.inflowVel.toFixed(2) + ' vA';
+        });
+        
+        document.getElementById('resistivity').addEventListener('input', e => {
+            params.resistivity = parseFloat(e.target.value);
+            document.getElementById('resistivityVal').textContent = params.resistivity.toFixed(3);
+        });
+        
+        document.getElementById('guideField').addEventListener('input', e => {
+            params.guideField = parseFloat(e.target.value);
+            document.getElementById('guideVal').textContent = params.guideField.toFixed(1);
+        });
+        
+        document.getElementById('particleCount').addEventListener('input', e => {
+            params.particleCount = parseInt(e.target.value);
+            document.getElementById('particleVal').textContent = params.particleCount;
+            initParticles();
+        });
+        
+        // Main loop
+        let lastTime = 0;
+        
+        function loop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+            state.time += dt;
+            
+            // Update reconnection progress
+            if (state.reconnectionTriggered) {
+                if (state.reconnectionProgress < 1) {
+                    state.reconnectionProgress += dt * 0.5;
+                    state.energyReleased += state.reconnectionProgress * dt * 100;
+                    state.peakCurrent = Math.max(state.peakCurrent, getCurrent(canvas.width/2, canvas.height/2));
+                    state.jetVelocity = state.reconnectionProgress * 0.8;
+                    
+                    if (state.reconnectionProgress > 0.6 && state.phase !== 'ejection') {
+                        state.phase = 'ejection';
+                        updatePhaseIndicator();
+                    }
+                }
+            }
+            
+            // Update particles
+            updateParticles(dt);
+            
+            // Clear
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw based on mode
+            const mode = document.getElementById('displayMode').value;
+            
+            if (mode === 'current') {
+                drawCurrentDensity(ctx);
+            }
+            
+            drawFieldLines(ctx);
+            drawJets(ctx);
+            drawParticles(ctx);
+            drawXPoint(ctx);
+            
+            // Current sheet indicator
+            ctx.strokeStyle = '#ffffff22';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height/2);
+            ctx.lineTo(canvas.width, canvas.height/2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.fillStyle = '#666';
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('INFLOW', canvas.width/2, 30);
+            ctx.fillText('INFLOW', canvas.width/2, canvas.height - 20);
+            ctx.fillText('← OUTFLOW', 80, canvas.height/2 + 4);
+            ctx.fillText('OUTFLOW →', canvas.width - 80, canvas.height/2 + 4);
+            
+            updateStats();
+            
+            requestAnimationFrame(loop);
+        }
+        
+        // Initialize
+        initParticles();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

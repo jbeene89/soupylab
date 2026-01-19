@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fusion Cross Sections - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; height: 100vh; overflow: hidden; }
+        header { background: linear-gradient(180deg, rgba(255,200,50,0.1) 0%, transparent 100%); border-bottom: 1px solid rgba(255,200,50,0.3); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 1.1rem; color: #ffcc33; }
+        header a { color: #00ff9d; text-decoration: none; padding: 6px 12px; border: 1px solid rgba(0,255,157,0.3); border-radius: 4px; font-size: 0.8rem; }
+        .container { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 56px); }
+        .controls { background: #12121a; padding: 16px; overflow-y: auto; }
+        .section { margin-bottom: 20px; }
+        .section h3 { font-size: 0.75rem; color: #ffcc33; margin-bottom: 10px; border-bottom: 1px solid rgba(255,200,50,0.2); padding-bottom: 6px; }
+        .reaction-btn { width: 100%; padding: 10px; margin-bottom: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #e0e0e0; text-align: left; cursor: pointer; font-size: 0.75rem; }
+        .reaction-btn:hover { border-color: #ffcc33; }
+        .reaction-btn.active { border-color: #ffcc33; background: rgba(255,200,50,0.15); }
+        .reaction-btn .name { font-weight: 600; color: #ffcc33; }
+        .reaction-btn .eq { font-family: monospace; font-size: 0.7rem; color: #888; margin-top: 2px; }
+        .slider-row { margin-bottom: 14px; }
+        .slider-row label { display: flex; justify-content: space-between; font-size: 0.7rem; color: #606080; margin-bottom: 4px; }
+        .slider-row label span { color: #00ff9d; font-family: monospace; }
+        .slider-row input[type="range"] { width: 100%; height: 4px; -webkit-appearance: none; background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .slider-row input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #ffcc33; border-radius: 50%; cursor: pointer; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+        .stat-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; text-align: center; }
+        .stat-box .label { font-size: 0.55rem; color: #606080; text-transform: uppercase; }
+        .stat-box .value { font-size: 0.85rem; font-family: monospace; color: #00ff9d; margin-top: 2px; }
+        .stat-box.highlight .value { color: #ffcc33; }
+        .info { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; font-size: 0.65rem; line-height: 1.6; color: #707080; margin-top: 12px; }
+        .canvas-wrap { position: relative; }
+        canvas { width: 100%; height: 100%; display: block; }
+        .legend { position: absolute; top: 16px; right: 16px; background: rgba(0,0,0,0.8); padding: 12px; border-radius: 6px; font-size: 0.7rem; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .legend-item:last-child { margin-bottom: 0; }
+        .legend-color { width: 20px; height: 3px; border-radius: 2px; }
+        .crosshair { position: absolute; pointer-events: none; display: none; }
+        .crosshair-v { position: absolute; width: 1px; height: 100%; background: rgba(255,255,255,0.3); }
+        .crosshair-h { position: absolute; width: 100%; height: 1px; background: rgba(255,255,255,0.3); }
+        .tooltip { position: absolute; background: rgba(0,0,0,0.9); padding: 8px 12px; border-radius: 4px; font-size: 0.7rem; pointer-events: none; display: none; border: 1px solid #ffcc33; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>☢️ FUSION CROSS SECTIONS & REACTIVITY</h1>
+        <a href="index.html">← BACK TO LAB</a>
+    </header>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="section">
+                <h3>FUSION REACTIONS</h3>
+                <button class="reaction-btn active" onclick="setReaction('DT')">
+                    <div class="name">D-T (Deuterium-Tritium)</div>
+                    <div class="eq">D + T → He⁴ (3.5 MeV) + n (14.1 MeV)</div>
+                </button>
+                <button class="reaction-btn" onclick="setReaction('DD')">
+                    <div class="name">D-D (Deuterium-Deuterium)</div>
+                    <div class="eq">D + D → He³ + n / T + p</div>
+                </button>
+                <button class="reaction-btn" onclick="setReaction('DHe3')">
+                    <div class="name">D-He³ (Aneutronic)</div>
+                    <div class="eq">D + He³ → He⁴ + p (18.3 MeV)</div>
+                </button>
+                <button class="reaction-btn" onclick="setReaction('pB11')">
+                    <div class="name">p-B¹¹ (Aneutronic)</div>
+                    <div class="eq">p + B¹¹ → 3 He⁴ (8.7 MeV)</div>
+                </button>
+            </div>
+            
+            <div class="section">
+                <h3>PLASMA CONDITIONS</h3>
+                <div class="slider-row">
+                    <label>Temperature <span id="tempVal">10</span> keV</label>
+                    <input type="range" id="temp" min="1" max="200" value="10" oninput="updateTemp()">
+                </div>
+                <div class="slider-row">
+                    <label>Density <span id="densVal">1.0</span> ×10²⁰ m⁻³</label>
+                    <input type="range" id="density" min="0.1" max="5" step="0.1" value="1" oninput="updateDensity()">
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-box highlight">
+                    <div class="label">⟨σv⟩ Reactivity</div>
+                    <div class="value" id="reactivity">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Peak Temp</div>
+                    <div class="value" id="peakTemp">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Energy Yield</div>
+                    <div class="value" id="energy">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Lawson nτ</div>
+                    <div class="value" id="lawson">--</div>
+                </div>
+            </div>
+            
+            <div class="stats-grid" style="margin-top: 8px;">
+                <div class="stat-box">
+                    <div class="label">Fusion Power</div>
+                    <div class="value" id="power">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Neutron Flux</div>
+                    <div class="value" id="neutrons">--</div>
+                </div>
+            </div>
+            
+            <div class="info">
+                <strong>Cross Section σ(E):</strong> Probability of fusion at energy E (in barns, 10⁻²⁸ m²)<br><br>
+                <strong>Reactivity ⟨σv⟩:</strong> Thermal average over Maxwellian distribution<br><br>
+                <strong>Lawson Criterion:</strong> nτT > 3×10²¹ keV·s/m³ for D-T ignition
+            </div>
+        </div>
+        
+        <div class="canvas-wrap">
+            <canvas id="canvas"></canvas>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background: #ff6644;"></div> D-T</div>
+                <div class="legend-item"><div class="legend-color" style="background: #44ff66;"></div> D-D</div>
+                <div class="legend-item"><div class="legend-color" style="background: #4466ff;"></div> D-He³</div>
+                <div class="legend-item"><div class="legend-color" style="background: #ff44ff;"></div> p-B¹¹</div>
+            </div>
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        
+        let currentReaction = 'DT';
+        let currentTemp = 10;
+        let currentDensity = 1.0;
+        
+        // Reactivity data (⟨σv⟩ in m³/s) - parametric fits
+        const reactions = {
+            DT: {
+                name: 'D-T',
+                color: '#ff6644',
+                energy: 17.6,  // MeV total
+                neutronFrac: 0.8,  // 14.1/17.6
+                peakTemp: 64,  // keV
+                // Bosch-Hale parametrization
+                reactivity: T => {
+                    if (T < 0.2) return 1e-30;
+                    const theta = T / (1 - T*(5.14e-3 + T*(1.51e-4 - T*1.07e-6)) / (1 + T*(-1.84e-2 + T*1.37e-4)));
+                    const xi = Math.pow(19.94 * 19.94 / theta, 1/3);
+                    return 1e-6 * 6.27e-21 * Math.exp(-xi) / Math.pow(T, 2/3); // m³/s
+                }
+            },
+            DD: {
+                name: 'D-D',
+                color: '#44ff66',
+                energy: 3.65,  // MeV average
+                neutronFrac: 0.5,
+                peakTemp: 100,
+                reactivity: T => {
+                    if (T < 0.2) return 1e-30;
+                    const theta = T / (1 - T*(5.65e-3 + T*(-3.41e-5)) / (1 + T*(-1.80e-2)));
+                    const xi = Math.pow(18.76 * 18.76 / theta, 1/3);
+                    return 1e-6 * 3.72e-22 * Math.exp(-xi) / Math.pow(T, 2/3);
+                }
+            },
+            DHe3: {
+                name: 'D-He³',
+                color: '#4466ff',
+                energy: 18.3,
+                neutronFrac: 0.05,  // Side reactions
+                peakTemp: 120,
+                reactivity: T => {
+                    if (T < 0.5) return 1e-30;
+                    const theta = T / (1 - T*(3.04e-3 + T*(1.07e-5)) / (1 + T*(-9.15e-3)));
+                    const xi = Math.pow(25.32 * 25.32 / theta, 1/3);
+                    return 1e-6 * 5.51e-22 * Math.exp(-xi) / Math.pow(T, 2/3);
+                }
+            },
+            pB11: {
+                name: 'p-B¹¹',
+                color: '#ff44ff',
+                energy: 8.7,
+                neutronFrac: 0.001,  // Nearly aneutronic
+                peakTemp: 300,
+                reactivity: T => {
+                    if (T < 5) return 1e-32;
+                    // Simplified fit for p-B11
+                    const peak = 5e-22;
+                    const Tpeak = 300;
+                    return peak * Math.exp(-Math.pow((T - Tpeak) / 150, 2)) * (1 - Math.exp(-T/20));
+                }
+            }
+        };
+        
+        function setReaction(r) {
+            currentReaction = r;
+            document.querySelectorAll('.reaction-btn').forEach(b => b.classList.remove('active'));
+            event.target.closest('.reaction-btn').classList.add('active');
+            updateStats();
+            render();
+        }
+        
+        function updateTemp() {
+            currentTemp = parseFloat(document.getElementById('temp').value);
+            document.getElementById('tempVal').textContent = currentTemp;
+            updateStats();
+            render();
+        }
+        
+        function updateDensity() {
+            currentDensity = parseFloat(document.getElementById('density').value);
+            document.getElementById('densVal').textContent = currentDensity.toFixed(1);
+            updateStats();
+        }
+        
+        function updateStats() {
+            const rx = reactions[currentReaction];
+            const sv = rx.reactivity(currentTemp);
+            
+            // Format reactivity
+            const svExp = Math.floor(Math.log10(Math.max(sv, 1e-30)));
+            const svMant = sv / Math.pow(10, svExp);
+            document.getElementById('reactivity').textContent = svMant.toFixed(1) + '×10' + svExp.toString().sup();
+            
+            document.getElementById('peakTemp').textContent = rx.peakTemp + ' keV';
+            document.getElementById('energy').textContent = rx.energy.toFixed(1) + ' MeV';
+            
+            // Lawson criterion: nτ needed for ignition (simplified)
+            const n = currentDensity * 1e20;
+            const lawsonNeed = 3e21 / currentTemp;  // Rough estimate
+            document.getElementById('lawson').textContent = (lawsonNeed / 1e20).toFixed(1) + '×10²⁰ s/m³';
+            
+            // Fusion power density: P = n² ⟨σv⟩ E / 4
+            const Pfus = 0.25 * n * n * sv * rx.energy * 1.6e-13;  // W/m³
+            if (Pfus > 1e6) {
+                document.getElementById('power').textContent = (Pfus / 1e6).toFixed(1) + ' MW/m³';
+            } else if (Pfus > 1e3) {
+                document.getElementById('power').textContent = (Pfus / 1e3).toFixed(1) + ' kW/m³';
+            } else {
+                document.getElementById('power').textContent = Pfus.toFixed(1) + ' W/m³';
+            }
+            
+            // Neutron production
+            const neutronRate = 0.25 * n * n * sv * rx.neutronFrac;
+            if (rx.neutronFrac < 0.01) {
+                document.getElementById('neutrons').textContent = 'Aneutronic';
+            } else {
+                document.getElementById('neutrons').textContent = (rx.neutronFrac * 100).toFixed(0) + '%';
+            }
+        }
+        
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            render();
+        }
+        
+        function render() {
+            const W = canvas.width, H = canvas.height;
+            const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+            const plotW = W - margin.left - margin.right;
+            const plotH = H - margin.top - margin.bottom;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, W, H);
+            
+            // Log scale for temperature (1 to 500 keV)
+            const Tmin = 1, Tmax = 500;
+            const logTmin = Math.log10(Tmin), logTmax = Math.log10(Tmax);
+            
+            // Log scale for reactivity (1e-26 to 1e-20 m³/s)
+            const svMin = 1e-26, svMax = 1e-20;
+            const logSvMin = Math.log10(svMin), logSvMax = Math.log10(svMax);
+            
+            function xScale(T) {
+                return margin.left + plotW * (Math.log10(T) - logTmin) / (logTmax - logTmin);
+            }
+            
+            function yScale(sv) {
+                const logSv = Math.log10(Math.max(sv, svMin));
+                return margin.top + plotH * (1 - (logSv - logSvMin) / (logSvMax - logSvMin));
+            }
+            
+            // Grid lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            
+            // Vertical grid (temperature)
+            [1, 2, 5, 10, 20, 50, 100, 200, 500].forEach(T => {
+                const x = xScale(T);
+                ctx.beginPath();
+                ctx.moveTo(x, margin.top);
+                ctx.lineTo(x, H - margin.bottom);
+                ctx.stroke();
+            });
+            
+            // Horizontal grid (reactivity)
+            for (let exp = -26; exp <= -20; exp++) {
+                const y = yScale(Math.pow(10, exp));
+                ctx.beginPath();
+                ctx.moveTo(margin.left, y);
+                ctx.lineTo(W - margin.right, y);
+                ctx.stroke();
+            }
+            
+            // Draw all reactions
+            Object.values(reactions).forEach(rx => {
+                ctx.strokeStyle = rx.color;
+                ctx.lineWidth = rx.name === reactions[currentReaction].name ? 3 : 1.5;
+                ctx.globalAlpha = rx.name === reactions[currentReaction].name ? 1 : 0.5;
+                
+                ctx.beginPath();
+                let first = true;
+                for (let T = Tmin; T <= Tmax; T *= 1.05) {
+                    const sv = rx.reactivity(T);
+                    const x = xScale(T);
+                    const y = yScale(sv);
+                    
+                    if (first) {
+                        ctx.moveTo(x, y);
+                        first = false;
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            });
+            
+            // Current temperature marker
+            const rx = reactions[currentReaction];
+            const markerX = xScale(currentTemp);
+            const markerY = yScale(rx.reactivity(currentTemp));
+            
+            ctx.strokeStyle = '#fff';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(markerX, margin.top);
+            ctx.lineTo(markerX, H - margin.bottom);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Marker dot
+            ctx.beginPath();
+            ctx.arc(markerX, markerY, 8, 0, Math.PI * 2);
+            ctx.fillStyle = rx.color;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Axes labels
+            ctx.fillStyle = '#888';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            
+            // X-axis
+            ctx.fillText('Temperature (keV)', W / 2, H - 15);
+            [1, 2, 5, 10, 20, 50, 100, 200, 500].forEach(T => {
+                ctx.fillText(T.toString(), xScale(T), H - margin.bottom + 20);
+            });
+            
+            // Y-axis
+            ctx.save();
+            ctx.translate(20, H / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('⟨σv⟩ Reactivity (m³/s)', 0, 0);
+            ctx.restore();
+            
+            ctx.textAlign = 'right';
+            for (let exp = -26; exp <= -20; exp += 2) {
+                ctx.fillText('10' + exp.toString().sup(), margin.left - 10, yScale(Math.pow(10, exp)) + 4);
+            }
+            
+            // Title
+            ctx.fillStyle = '#ffcc33';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Fusion Reactivity vs Temperature', margin.left, 25);
+            
+            // Ignition region indicator
+            ctx.fillStyle = 'rgba(0, 255, 100, 0.1)';
+            const ignitionSv = 1e-22;  // Rough ignition threshold for D-T
+            ctx.fillRect(margin.left, margin.top, plotW, yScale(ignitionSv) - margin.top);
+            ctx.fillStyle = 'rgba(0, 255, 100, 0.5)';
+            ctx.font = '11px sans-serif';
+            ctx.fillText('Ignition regime', margin.left + 10, margin.top + 20);
+        }
+        
+        // Superscript helper
+        String.prototype.sup = function() {
+            const sups = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+            return this.split('').map(c => sups[c] || c).join('');
+        };
+        
+        // Mouse interaction
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const margin = { left: 80, right: 40, top: 40, bottom: 60 };
+            const plotW = canvas.width - margin.left - margin.right;
+            
+            if (x > margin.left && x < canvas.width - margin.right) {
+                const logT = 0 + (x - margin.left) / plotW * (Math.log10(500) - 0);
+                const T = Math.pow(10, logT);
+                
+                let html = `<strong>T = ${T.toFixed(1)} keV</strong><br>`;
+                Object.entries(reactions).forEach(([key, rx]) => {
+                    const sv = rx.reactivity(T);
+                    const exp = Math.floor(Math.log10(Math.max(sv, 1e-30)));
+                    const mant = sv / Math.pow(10, exp);
+                    html += `<span style="color:${rx.color}">${rx.name}: ${mant.toFixed(2)}×10${exp.toString().sup()}</span><br>`;
+                });
+                
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+                tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+            } else {
+                tooltip.style.display = 'none';
+            }
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
+        
+        window.addEventListener('resize', resize);
+        resize();
+        updateStats();
+    </script>
+</body>
+</html>

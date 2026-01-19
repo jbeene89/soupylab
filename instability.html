@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MHD Instability Sandbox - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #00ff9d;
+            --plasma: #ff6b35;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(180deg, rgba(255,107,53,0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255,107,53,0.2);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.2rem; color: var(--plasma); }
+        header a {
+            color: var(--accent);
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid rgba(0,255,157,0.3);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: calc(100vh - 56px);
+        }
+        .controls {
+            background: var(--panel);
+            padding: 16px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0,255,157,0.2);
+        }
+        .mode-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .mode-btn {
+            padding: 12px 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn:hover { border-color: var(--plasma); }
+        .mode-btn.active {
+            border-color: var(--plasma);
+            background: rgba(255,107,53,0.2);
+            color: var(--plasma);
+        }
+        .slider-row {
+            margin-bottom: 12px;
+        }
+        .slider-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 4px;
+        }
+        .slider-row label span { color: var(--accent); font-family: monospace; }
+        .slider-row input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+        .slider-row input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--plasma);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .info-box {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            line-height: 1.6;
+            color: var(--dim);
+            margin-top: 12px;
+        }
+        .info-box h4 {
+            color: var(--plasma);
+            margin-bottom: 6px;
+        }
+        .status-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .status-item {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .status-item .label {
+            font-size: 0.6rem;
+            color: var(--dim);
+        }
+        .status-item .value {
+            font-size: 0.9rem;
+            font-family: monospace;
+            color: var(--accent);
+        }
+        .status-item.danger .value { color: #ff4444; }
+        .status-item.warning .value { color: #ffaa00; }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .btn-action {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--plasma), #ff3366);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        .btn-action:hover { opacity: 0.9; }
+        .btn-reset {
+            background: linear-gradient(135deg, #333, #444);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🌀 MHD INSTABILITY SANDBOX</h1>
+        <a href="index.html">← BACK TO LAB</a>
+    </header>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="section">
+                <h3>INSTABILITY MODE</h3>
+                <div class="mode-buttons">
+                    <button class="mode-btn active" data-mode="kink" onclick="setMode('kink')">
+                        <strong>KINK</strong><br>m=1 helical
+                    </button>
+                    <button class="mode-btn" data-mode="sausage" onclick="setMode('sausage')">
+                        <strong>SAUSAGE</strong><br>m=0 pinch
+                    </button>
+                    <button class="mode-btn" data-mode="ballooning" onclick="setMode('ballooning')">
+                        <strong>BALLOONING</strong><br>pressure driven
+                    </button>
+                    <button class="mode-btn" data-mode="tearing" onclick="setMode('tearing')">
+                        <strong>TEARING</strong><br>magnetic islands
+                    </button>
+                    <button class="mode-btn" data-mode="rayleigh" onclick="setMode('rayleigh')">
+                        <strong>R-T</strong><br>Rayleigh-Taylor
+                    </button>
+                    <button class="mode-btn" data-mode="elm" onclick="setMode('elm')">
+                        <strong>ELM</strong><br>edge localized
+                    </button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>PLASMA PARAMETERS</h3>
+                <div class="slider-row">
+                    <label>Plasma Beta (β) <span id="betaVal">5</span>%</label>
+                    <input type="range" id="beta" min="0.5" max="15" step="0.5" value="5" oninput="updateParam()">
+                </div>
+                <div class="slider-row">
+                    <label>Safety Factor (q) <span id="qVal">2.0</span></label>
+                    <input type="range" id="q" min="0.5" max="5" step="0.1" value="2" oninput="updateParam()">
+                </div>
+                <div class="slider-row">
+                    <label>Pressure Gradient <span id="gradVal">0.5</span></label>
+                    <input type="range" id="grad" min="0" max="1" step="0.05" value="0.5" oninput="updateParam()">
+                </div>
+                <div class="slider-row">
+                    <label>Shear (dq/dr) <span id="shearVal">0.3</span></label>
+                    <input type="range" id="shear" min="0" max="1" step="0.05" value="0.3" oninput="updateParam()">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>PERTURBATION</h3>
+                <div class="slider-row">
+                    <label>Amplitude <span id="ampVal">0.1</span></label>
+                    <input type="range" id="amp" min="0.01" max="0.5" step="0.01" value="0.1" oninput="updateParam()">
+                </div>
+                <div class="slider-row">
+                    <label>Mode Number (m) <span id="mVal">1</span></label>
+                    <input type="range" id="m" min="0" max="5" step="1" value="1" oninput="updateParam()">
+                </div>
+                <div class="slider-row">
+                    <label>Growth Rate Multiplier <span id="gammaVal">1.0</span>×</label>
+                    <input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1" oninput="updateParam()">
+                </div>
+            </div>
+            
+            <button class="btn-action" onclick="triggerInstability()">⚡ TRIGGER INSTABILITY</button>
+            <button class="btn-action btn-reset" onclick="resetPlasma()">↺ RESET PLASMA</button>
+            
+            <div class="status-panel">
+                <div class="status-item" id="stabilityStatus">
+                    <div class="label">STABILITY</div>
+                    <div class="value">MARGINAL</div>
+                </div>
+                <div class="status-item" id="growthStatus">
+                    <div class="label">GROWTH RATE</div>
+                    <div class="value">γ = 0.12</div>
+                </div>
+                <div class="status-item" id="energyStatus">
+                    <div class="label">ENERGY</div>
+                    <div class="value">1.00</div>
+                </div>
+                <div class="status-item" id="disruptStatus">
+                    <div class="label">DISRUPTION</div>
+                    <div class="value">23%</div>
+                </div>
+            </div>
+            
+            <div class="info-box" id="modeInfo">
+                <h4>KINK INSTABILITY (m=1)</h4>
+                <p>Helical deformation of plasma column. Occurs when q &lt; 1 (Kruskal-Shafranov limit). Current-driven instability that can lead to major disruptions.</p>
+            </div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl2');
+        
+        let currentMode = 'kink';
+        let time = 0;
+        let instabilityActive = false;
+        let instabilityTime = 0;
+        let instabilityEnergy = 1.0;
+        
+        const params = {
+            beta: 5,
+            q: 2.0,
+            grad: 0.5,
+            shear: 0.3,
+            amp: 0.1,
+            m: 1,
+            gamma: 1.0
+        };
+        
+        const modeInfo = {
+            kink: {
+                title: 'KINK INSTABILITY (m=1)',
+                desc: 'Helical deformation of plasma column. Occurs when q < 1 (Kruskal-Shafranov limit). Current-driven instability that can lead to major disruptions in tokamaks.'
+            },
+            sausage: {
+                title: 'SAUSAGE INSTABILITY (m=0)',
+                desc: 'Axisymmetric pinch instability. Plasma necks and bulges like a sausage. Stabilized by axial magnetic field (Bz > Bθ). Common in Z-pinch devices.'
+            },
+            ballooning: {
+                title: 'BALLOONING MODE',
+                desc: 'Pressure-driven instability on bad curvature side. Plasma bulges outward where field lines curve away from plasma. Sets β limit in tokamaks.'
+            },
+            tearing: {
+                title: 'TEARING MODE',
+                desc: 'Resistive instability creating magnetic islands. Field lines reconnect and form O-points and X-points. Degrades confinement, can trigger NTMs.'
+            },
+            rayleigh: {
+                title: 'RAYLEIGH-TAYLOR INSTABILITY',
+                desc: 'Occurs when heavy fluid supported by light fluid (or strong field). Fingers of plasma penetrate supporting field. Important in ICF implosions.'
+            },
+            elm: {
+                title: 'EDGE LOCALIZED MODE (ELM)',
+                desc: 'Periodic instability at plasma edge in H-mode. Releases 5-15% of stored energy in milliseconds. Major concern for ITER divertor erosion.'
+            }
+        };
+        
+        // Shader sources
+        const vsSource = `#version 300 es
+            in vec2 aPosition;
+            void main() {
+                gl_Position = vec4(aPosition, 0.0, 1.0);
+            }
+        `;
+        
+        const fsSource = `#version 300 es
+            precision highp float;
+            
+            uniform float uTime;
+            uniform float uInstabilityTime;
+            uniform float uInstabilityActive;
+            uniform int uMode;
+            uniform float uBeta;
+            uniform float uQ;
+            uniform float uGrad;
+            uniform float uShear;
+            uniform float uAmp;
+            uniform float uM;
+            uniform float uGamma;
+            uniform vec2 uResolution;
+            
+            out vec4 fragColor;
+            
+            #define PI 3.14159265359
+            
+            vec3 plasmaColor(float t, float temp) {
+                vec3 cool = vec3(0.1, 0.2, 0.8);
+                vec3 warm = vec3(1.0, 0.4, 0.1);
+                vec3 hot = vec3(1.0, 1.0, 0.8);
+                
+                if (temp < 0.5) {
+                    return mix(cool, warm, temp * 2.0);
+                } else {
+                    return mix(warm, hot, (temp - 0.5) * 2.0);
+                }
+            }
+            
+            float noise(vec2 p) {
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            
+            void main() {
+                vec2 uv = gl_FragCoord.xy / uResolution;
+                vec2 p = (uv - 0.5) * 2.0;
+                p.x *= uResolution.x / uResolution.y;
+                
+                float r = length(p);
+                float theta = atan(p.y, p.x);
+                
+                // Base plasma column
+                float plasmaRadius = 0.6;
+                float edge = smoothstep(plasmaRadius + 0.1, plasmaRadius - 0.05, r);
+                
+                // Temperature profile (peaked in center)
+                float temp = pow(max(0.0, 1.0 - r / plasmaRadius), 0.5) * (0.5 + uBeta / 20.0);
+                
+                // Instability perturbation
+                float perturbation = 0.0;
+                float growthFactor = uInstabilityActive > 0.5 ? 
+                    exp(uGamma * uInstabilityTime * 2.0) - 1.0 : 0.0;
+                growthFactor = min(growthFactor, 5.0);
+                
+                float m = uM;
+                float phase = uTime * 0.5;
+                
+                if (uMode == 0) { // Kink
+                    // Helical displacement
+                    float kinkAmp = uAmp * growthFactor;
+                    float displacement = kinkAmp * cos(m * theta - phase);
+                    plasmaRadius += displacement * (1.0 - uQ / 3.0);
+                    
+                    // Add helical structure
+                    perturbation = sin(m * theta + r * 5.0 - phase * 2.0) * kinkAmp;
+                    
+                } else if (uMode == 1) { // Sausage
+                    // m=0 axisymmetric pinch
+                    float z = p.y * 3.0 + phase;
+                    float sausageAmp = uAmp * growthFactor;
+                    plasmaRadius *= 1.0 + sausageAmp * sin(z * PI);
+                    
+                    perturbation = sin(z * PI) * sausageAmp * 0.5;
+                    
+                } else if (uMode == 2) { // Ballooning
+                    // Outward bulge on bad curvature side
+                    float balloonAmp = uAmp * growthFactor * uGrad * 2.0;
+                    float badSide = max(0.0, cos(theta)); // Outside of torus
+                    plasmaRadius += balloonAmp * badSide * (1.0 + sin(theta * 5.0 + phase) * 0.3);
+                    
+                    perturbation = badSide * balloonAmp;
+                    
+                } else if (uMode == 3) { // Tearing
+                    // Magnetic island formation
+                    float islandWidth = uAmp * growthFactor * 2.0;
+                    float resonantSurface = 0.4;
+                    float islandPhase = m * theta - phase;
+                    
+                    float dr = r - resonantSurface;
+                    float island = islandWidth * cos(islandPhase) * exp(-dr * dr * 20.0);
+                    
+                    perturbation = island;
+                    temp *= 1.0 - abs(island) * 0.5; // Islands flatten temperature
+                    
+                } else if (uMode == 4) { // Rayleigh-Taylor
+                    // Finger-like structures
+                    float rtAmp = uAmp * growthFactor;
+                    float fingers = 0.0;
+                    for (float i = 1.0; i < 6.0; i++) {
+                        float k = i * 2.0;
+                        float growth = exp(sqrt(k * uGrad) * uInstabilityTime * uGamma);
+                        fingers += sin(theta * k + noise(vec2(i, 0.0)) * 6.28) * rtAmp / i * min(growth, 3.0);
+                    }
+                    plasmaRadius += fingers * 0.3;
+                    perturbation = fingers;
+                    
+                } else if (uMode == 5) { // ELM
+                    // Edge localized burst
+                    float elmPhase = mod(uInstabilityTime * 3.0, 1.0);
+                    float elmBurst = elmPhase < 0.3 ? sin(elmPhase * PI / 0.3) : 0.0;
+                    
+                    float elmAmp = uAmp * growthFactor * elmBurst;
+                    float edgeRegion = smoothstep(plasmaRadius - 0.15, plasmaRadius, r);
+                    
+                    // Filamentary structure
+                    float filaments = sin(theta * 8.0 - phase * 5.0) * sin(theta * 12.0 + phase * 3.0);
+                    perturbation = elmAmp * edgeRegion * (1.0 + filaments);
+                    
+                    // ELMs eject hot plasma
+                    if (r > plasmaRadius && r < plasmaRadius + elmAmp * 2.0) {
+                        temp = 0.3 * elmBurst * (1.0 + filaments * 0.5);
+                    }
+                }
+                
+                // Recompute edge with perturbation
+                edge = smoothstep(plasmaRadius + 0.1, plasmaRadius - 0.05, r);
+                
+                // Base color
+                vec3 col = vec3(0.02, 0.02, 0.05);
+                
+                // Plasma core
+                if (r < plasmaRadius + 0.15) {
+                    vec3 plasmaCol = plasmaColor(0.0, temp);
+                    
+                    // Add perturbation coloring
+                    plasmaCol += vec3(perturbation * 0.5, 0.0, -perturbation * 0.3);
+                    
+                    // Magnetic field line hints
+                    float fieldLines = sin(theta * 10.0 / max(0.5, uQ) + r * 15.0 - uTime) * 0.5 + 0.5;
+                    plasmaCol += vec3(0.0, 0.1, 0.2) * fieldLines * 0.2 * edge;
+                    
+                    col = mix(col, plasmaCol, edge);
+                }
+                
+                // Instability visualization
+                if (uInstabilityActive > 0.5 && perturbation > 0.02) {
+                    col += vec3(1.0, 0.3, 0.0) * perturbation * 0.5;
+                }
+                
+                // Vessel wall
+                float wall = smoothstep(0.02, 0.0, abs(r - 0.75));
+                col = mix(col, vec3(0.2, 0.2, 0.25), wall);
+                
+                // Grid overlay
+                float grid = 0.0;
+                grid += smoothstep(0.02, 0.0, abs(mod(r, 0.2) - 0.1)) * 0.1;
+                grid += smoothstep(0.02, 0.0, abs(mod(theta, PI/6.0) - PI/12.0)) * 0.1 * step(r, 0.7);
+                col += vec3(grid) * 0.3;
+                
+                fragColor = vec4(col, 1.0);
+            }
+        `;
+        
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                return null;
+            }
+            return shader;
+        }
+        
+        function createProgram(gl, vs, fs) {
+            const program = gl.createProgram();
+            gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs));
+            gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs));
+            gl.linkProgram(program);
+            return program;
+        }
+        
+        const program = createProgram(gl, vsSource, fsSource);
+        
+        // Fullscreen quad
+        const positions = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+        
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+        const posLoc = gl.getAttribLocation(program, 'aPosition');
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+        
+        // Uniform locations
+        const uniforms = {};
+        ['uTime', 'uInstabilityTime', 'uInstabilityActive', 'uMode', 'uBeta', 'uQ', 
+         'uGrad', 'uShear', 'uAmp', 'uM', 'uGamma', 'uResolution'].forEach(name => {
+            uniforms[name] = gl.getUniformLocation(program, name);
+        });
+        
+        const modeIndex = { kink: 0, sausage: 1, ballooning: 2, tearing: 3, rayleigh: 4, elm: 5 };
+        
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            
+            // Update info box
+            const info = modeInfo[mode];
+            document.getElementById('modeInfo').innerHTML = `<h4>${info.title}</h4><p>${info.desc}</p>`;
+            
+            // Set appropriate m value
+            if (mode === 'sausage') {
+                document.getElementById('m').value = 0;
+                params.m = 0;
+            } else if (mode === 'kink') {
+                document.getElementById('m').value = 1;
+                params.m = 1;
+            }
+            document.getElementById('mVal').textContent = params.m;
+            
+            resetPlasma();
+        }
+        
+        function updateParam() {
+            params.beta = parseFloat(document.getElementById('beta').value);
+            params.q = parseFloat(document.getElementById('q').value);
+            params.grad = parseFloat(document.getElementById('grad').value);
+            params.shear = parseFloat(document.getElementById('shear').value);
+            params.amp = parseFloat(document.getElementById('amp').value);
+            params.m = parseFloat(document.getElementById('m').value);
+            params.gamma = parseFloat(document.getElementById('gamma').value);
+            
+            document.getElementById('betaVal').textContent = params.beta;
+            document.getElementById('qVal').textContent = params.q.toFixed(1);
+            document.getElementById('gradVal').textContent = params.grad.toFixed(2);
+            document.getElementById('shearVal').textContent = params.shear.toFixed(2);
+            document.getElementById('ampVal').textContent = params.amp.toFixed(2);
+            document.getElementById('mVal').textContent = params.m;
+            document.getElementById('gammaVal').textContent = params.gamma.toFixed(1);
+            
+            updateStatus();
+        }
+        
+        function updateStatus() {
+            // Calculate stability metrics
+            let growthRate = 0;
+            let stable = true;
+            
+            if (currentMode === 'kink') {
+                // Kruskal-Shafranov: unstable if q < 1
+                growthRate = Math.max(0, (1 - params.q) * params.gamma);
+                stable = params.q > 1;
+            } else if (currentMode === 'sausage') {
+                // Bennett relation
+                growthRate = Math.max(0, (params.beta / 10 - params.shear) * params.gamma);
+                stable = params.shear > params.beta / 10;
+            } else if (currentMode === 'ballooning') {
+                // Troyon limit
+                growthRate = Math.max(0, (params.beta - 3 * params.q) * params.grad * params.gamma / 10);
+                stable = params.beta < 3 * params.q;
+            } else if (currentMode === 'tearing') {
+                growthRate = (1 - params.shear) * params.gamma * 0.5;
+                stable = params.shear > 0.5;
+            } else if (currentMode === 'rayleigh') {
+                growthRate = Math.sqrt(params.grad) * params.gamma;
+                stable = params.grad < 0.1;
+            } else if (currentMode === 'elm') {
+                growthRate = params.grad * params.beta / 5 * params.gamma;
+                stable = params.grad * params.beta < 2;
+            }
+            
+            // Update status display
+            const stabilityEl = document.getElementById('stabilityStatus');
+            stabilityEl.querySelector('.value').textContent = stable ? 'STABLE' : 'UNSTABLE';
+            stabilityEl.className = 'status-item ' + (stable ? '' : 'danger');
+            
+            document.getElementById('growthStatus').querySelector('.value').textContent = 
+                'γ = ' + growthRate.toFixed(2);
+            
+            // Disruption probability
+            const disruptProb = Math.min(100, growthRate * 50 + (instabilityActive ? instabilityEnergy * 20 : 0));
+            const disruptEl = document.getElementById('disruptStatus');
+            disruptEl.querySelector('.value').textContent = disruptProb.toFixed(0) + '%';
+            disruptEl.className = 'status-item ' + (disruptProb > 50 ? 'danger' : disruptProb > 25 ? 'warning' : '');
+        }
+        
+        function triggerInstability() {
+            instabilityActive = true;
+            instabilityTime = 0;
+            instabilityEnergy = 1.0;
+        }
+        
+        function resetPlasma() {
+            instabilityActive = false;
+            instabilityTime = 0;
+            instabilityEnergy = 1.0;
+            updateStatus();
+        }
+        
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        
+        function render() {
+            time += 0.016;
+            if (instabilityActive) {
+                instabilityTime += 0.016;
+                instabilityEnergy = Math.min(5, 1 + instabilityTime * params.gamma);
+            }
+            
+            gl.useProgram(program);
+            gl.bindVertexArray(vao);
+            
+            gl.uniform1f(uniforms.uTime, time);
+            gl.uniform1f(uniforms.uInstabilityTime, instabilityTime);
+            gl.uniform1f(uniforms.uInstabilityActive, instabilityActive ? 1.0 : 0.0);
+            gl.uniform1i(uniforms.uMode, modeIndex[currentMode]);
+            gl.uniform1f(uniforms.uBeta, params.beta);
+            gl.uniform1f(uniforms.uQ, params.q);
+            gl.uniform1f(uniforms.uGrad, params.grad);
+            gl.uniform1f(uniforms.uShear, params.shear);
+            gl.uniform1f(uniforms.uAmp, params.amp);
+            gl.uniform1f(uniforms.uM, params.m);
+            gl.uniform1f(uniforms.uGamma, params.gamma);
+            gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
+            
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            
+            // Update energy display
+            document.getElementById('energyStatus').querySelector('.value').textContent = 
+                instabilityEnergy.toFixed(2);
+            
+            updateStatus();
+            requestAnimationFrame(render);
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+        updateParam();
+        render();
+    </script>
+</body>
+</html>

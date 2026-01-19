@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Accelerator - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #00d4ff;
+            --accent2: #ff00aa;
+            --accent3: #00ff88;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            height: 100vh;
+            gap: 0;
+        }
+        
+        .sidebar {
+            background: var(--panel);
+            padding: 16px;
+            overflow-y: auto;
+            border-right: 1px solid #222;
+        }
+        
+        .sidebar.right {
+            border-right: none;
+            border-left: 1px solid #222;
+        }
+        
+        h1 {
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        h2 {
+            font-size: 0.8rem;
+            color: var(--accent2);
+            margin: 16px 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: var(--dim);
+            text-decoration: none;
+            font-size: 0.75rem;
+            margin-bottom: 12px;
+            padding: 4px 8px;
+            border: 1px solid #333;
+            border-radius: 3px;
+        }
+        
+        .back-link:hover { border-color: var(--accent); color: var(--accent); }
+        
+        canvas {
+            display: block;
+            background: #000;
+        }
+        
+        .control-group {
+            margin-bottom: 12px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 4px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+        
+        .control-group select, .control-group input[type="number"] {
+            width: 100%;
+            background: #1a1a24;
+            border: 1px solid #333;
+            color: var(--text);
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .value {
+            float: right;
+            color: var(--accent);
+            font-family: monospace;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 10px;
+            margin: 4px 0;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-fire {
+            background: linear-gradient(135deg, #ff4400, #ff0066);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .btn-fire:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(255,0,100,0.5); }
+        
+        .btn-inject {
+            background: linear-gradient(135deg, #0066ff, #00ccff);
+            color: white;
+        }
+        
+        .btn-clear {
+            background: #333;
+            color: #888;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .stat-box {
+            background: #1a1a24;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-box .label {
+            font-size: 0.6rem;
+            color: var(--dim);
+            text-transform: uppercase;
+        }
+        
+        .stat-box .value {
+            font-size: 1.1rem;
+            color: var(--accent);
+            float: none;
+            display: block;
+            margin-top: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .particle-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0a0a10;
+            border-radius: 6px;
+            padding: 8px;
+        }
+        
+        .particle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border-bottom: 1px solid #1a1a24;
+            font-size: 0.75rem;
+        }
+        
+        .particle-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .collision-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #0a0a10;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: monospace;
+            font-size: 0.65rem;
+        }
+        
+        .collision-entry {
+            padding: 6px;
+            margin: 4px 0;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent2);
+            background: rgba(255,0,170,0.1);
+        }
+        
+        .collision-entry.fusion {
+            border-color: #ffcc00;
+            background: rgba(255,200,0,0.15);
+        }
+        
+        .collision-entry.pokemon {
+            border-color: #ff6600;
+            background: rgba(255,100,0,0.2);
+            animation: pokeflash 0.5s ease-out;
+        }
+        
+        @keyframes pokeflash {
+            0% { background: rgba(255,255,255,0.5); }
+            100% { background: rgba(255,100,0,0.2); }
+        }
+        
+        .energy-bar {
+            height: 20px;
+            background: #1a1a24;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00ffcc, #00ccff);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(0,255,200,0.5);
+        }
+        
+        .pokemon-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+        
+        .pokemon-badge.fire { background: #ff4422; }
+        .pokemon-badge.electric { background: #ffcc00; color: #000; }
+        .pokemon-badge.water { background: #0088ff; }
+        .pokemon-badge.psychic { background: #ff00aa; }
+        .pokemon-badge.dragon { background: #7733ff; }
+        .pokemon-badge.legendary { background: linear-gradient(90deg, gold, orange); color: #000; }
+        
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--accent);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <a href="index.html" class="back-link">← Back to Labs</a>
+            <h1>⚛️ PARTICLE ACCELERATOR</h1>
+            <p style="font-size: 0.7rem; color: var(--dim); margin-bottom: 16px;">
+                Relativistic beam dynamics with fusion cross-sections
+            </p>
+            
+            <h2>Beam Configuration</h2>
+            
+            <div class="control-group">
+                <label>Particle Type</label>
+                <select id="particleType">
+                    <option value="proton">Proton (p⁺)</option>
+                    <option value="deuteron">Deuteron (D⁺)</option>
+                    <option value="triton">Triton (T⁺)</option>
+                    <option value="helion">Helion (³He²⁺)</option>
+                    <option value="alpha">Alpha (⁴He²⁺)</option>
+                    <option value="electron">Electron (e⁻)</option>
+                    <option value="pikachu">Pikachu ⚡</option>
+                    <option value="charmander">Charmander 🔥</option>
+                    <option value="mewtwo">Mewtwo 🔮</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Beam Energy <span class="value" id="energyVal">100 MeV</span></label>
+                <input type="range" id="beamEnergy" min="1" max="1000" value="100">
+            </div>
+            
+            <div class="control-group">
+                <label>Injection Rate <span class="value" id="rateVal">10/s</span></label>
+                <input type="range" id="injectionRate" min="1" max="100" value="10">
+            </div>
+            
+            <div class="control-group">
+                <label>Magnetic Field <span class="value" id="fieldVal">2.0 T</span></label>
+                <input type="range" id="magneticField" min="0.1" max="10" step="0.1" value="2">
+            </div>
+            
+            <button class="btn btn-inject" onclick="injectParticle()">💉 INJECT SINGLE</button>
+            <button class="btn btn-fire" onclick="toggleBeam()">🔥 TOGGLE BEAM</button>
+            <button class="btn btn-clear" onclick="clearAll()">Clear All</button>
+            
+            <h2>Target Configuration</h2>
+            
+            <div class="control-group">
+                <label>Target Material</label>
+                <select id="targetType">
+                    <option value="deuterium">Deuterium Gas</option>
+                    <option value="tritium">Tritium Gas</option>
+                    <option value="boron">Boron-11</option>
+                    <option value="lithium">Lithium-6</option>
+                    <option value="gold">Gold (Au)</option>
+                    <option value="pokemon">Pokémon Eggs 🥚</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Target Density <span class="value" id="densityVal">1e20</span></label>
+                <input type="range" id="targetDensity" min="18" max="24" value="20">
+            </div>
+            
+            <h2>Active Particles</h2>
+            <div class="particle-list" id="particleList">
+                <div style="color: var(--dim); font-size: 0.7rem; text-align: center; padding: 20px;">
+                    No particles in ring
+                </div>
+            </div>
+        </div>
+        
+        <div style="position: relative;">
+            <canvas id="canvas"></canvas>
+            <div class="hud">
+                Particles: <span id="particleCount">0</span> | 
+                Collisions: <span id="collisionCount">0</span> | 
+                Energy: <span id="totalEnergy">0</span> GeV
+            </div>
+        </div>
+        
+        <div class="sidebar right">
+            <h2>Accelerator Stats</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="label">Luminosity</div>
+                    <div class="value" id="luminosity">0.00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">β (v/c)</div>
+                    <div class="value" id="beta">0.000</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">γ (Lorentz)</div>
+                    <div class="value" id="gamma">1.000</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Fusion Rate</div>
+                    <div class="value" id="fusionRate">0/s</div>
+                </div>
+            </div>
+            
+            <h2>Beam Energy</h2>
+            <div class="energy-bar">
+                <div class="energy-fill" id="energyFill" style="width: 10%"></div>
+            </div>
+            
+            <h2>Collision Log</h2>
+            <div class="collision-log" id="collisionLog">
+                <div style="color: var(--dim); text-align: center; padding: 20px;">
+                    Awaiting collisions...
+                </div>
+            </div>
+            
+            <h2 style="margin-top: 16px;">Discovered Particles</h2>
+            <div id="discoveredParticles" style="font-size: 0.7rem; color: var(--dim);">
+                None yet - keep colliding!
+            </div>
+            
+            <h2 style="margin-top: 16px;">Physics Notes</h2>
+            <div style="font-size: 0.65rem; color: var(--dim); line-height: 1.6;">
+                <p><strong>D-T Fusion:</strong> Peaks at ~64 keV center-of-mass</p>
+                <p><strong>p-B11:</strong> Aneutronic, needs ~600 keV</p>
+                <p><strong>Cross-section:</strong> σ(E) computed via Gamow peak</p>
+                <p style="margin-top: 8px; color: var(--accent2);">
+                    <strong>Pokémon Mode:</strong> High-energy collisions may produce exotic matter...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize
+        function resize() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Physics constants
+        const c = 299792458; // m/s
+        const eV = 1.602e-19; // J
+        const MeV = 1e6 * eV;
+        const GeV = 1e9 * eV;
+        const amu = 1.66054e-27; // kg
+        
+        // Particle data
+        const particleData = {
+            proton:    { mass: 938.3, charge: 1, color: '#ff4444', symbol: 'p⁺' },
+            deuteron:  { mass: 1875.6, charge: 1, color: '#44ff44', symbol: 'D⁺' },
+            triton:    { mass: 2808.9, charge: 1, color: '#44ffff', symbol: 'T⁺' },
+            helion:    { mass: 2808.4, charge: 2, color: '#ffff44', symbol: '³He²⁺' },
+            alpha:     { mass: 3727.4, charge: 2, color: '#ff44ff', symbol: '⁴He²⁺' },
+            electron:  { mass: 0.511, charge: -1, color: '#4444ff', symbol: 'e⁻' },
+            pikachu:   { mass: 600, charge: 3, color: '#ffcc00', symbol: '⚡', pokemon: true, type: 'electric' },
+            charmander:{ mass: 850, charge: 2, color: '#ff6600', symbol: '🔥', pokemon: true, type: 'fire' },
+            mewtwo:    { mass: 12200, charge: 5, color: '#aa00ff', symbol: '🔮', pokemon: true, type: 'psychic' }
+        };
+        
+        // Fusion products
+        const fusionReactions = {
+            'deuteron+triton': { products: ['alpha', 'neutron'], energy: 17.6, name: 'D-T Fusion' },
+            'deuteron+deuteron': { products: ['helion', 'neutron'], energy: 3.27, name: 'D-D Fusion' },
+            'proton+boron': { products: ['alpha', 'alpha', 'alpha'], energy: 8.7, name: 'p-B11 Fusion' },
+            'pikachu+pikachu': { products: ['raichu'], energy: 100, name: 'RAICHU EVOLUTION!', pokemon: true },
+            'pikachu+charmander': { products: ['zapdos'], energy: 250, name: 'LEGENDARY FUSION!', pokemon: true },
+            'mewtwo+mewtwo': { products: ['mewthree'], energy: 9001, name: '???UNKNOWN ENTITY???', pokemon: true },
+            'charmander+charmander': { products: ['charizard'], energy: 150, name: 'CHARIZARD EVOLVED!', pokemon: true }
+        };
+        
+        // Pokemon evolutions discovered
+        const discovered = new Set();
+        
+        // State
+        let particles = [];
+        let beamActive = false;
+        let collisionCount = 0;
+        let fusionCount = 0;
+        let time = 0;
+        let collisionLog = [];
+        
+        // Accelerator geometry
+        const ring = {
+            cx: 0, cy: 0, radius: 0,
+            update() {
+                this.cx = canvas.width / 2;
+                this.cy = canvas.height / 2;
+                this.radius = Math.min(canvas.width, canvas.height) * 0.38;
+            }
+        };
+        
+        // Particle class
+        class Particle {
+            constructor(type, energy) {
+                const data = particleData[type];
+                this.type = type;
+                this.mass = data.mass; // MeV/c²
+                this.charge = data.charge;
+                this.color = data.color;
+                this.symbol = data.symbol;
+                this.pokemon = data.pokemon || false;
+                this.pokemonType = data.type;
+                
+                // Kinetic energy in MeV
+                this.energy = energy;
+                
+                // Calculate relativistic parameters
+                this.updateRelativity();
+                
+                // Position on ring (angle)
+                this.angle = Math.random() * Math.PI * 2;
+                this.direction = Math.random() < 0.5 ? 1 : -1;
+                
+                // For rendering
+                this.trail = [];
+                this.age = 0;
+                this.id = Math.random().toString(36).substr(2, 6);
+            }
+            
+            updateRelativity() {
+                // γ = 1 + KE/(mc²)
+                this.gamma = 1 + this.energy / this.mass;
+                // β = sqrt(1 - 1/γ²)
+                this.beta = Math.sqrt(1 - 1/(this.gamma * this.gamma));
+                // Angular velocity (scaled for visualization)
+                this.omega = this.beta * 2 * (this.pokemon ? 1.5 : 1);
+            }
+            
+            update(dt) {
+                this.age += dt;
+                this.angle += this.direction * this.omega * dt;
+                
+                // Store trail
+                const x = ring.cx + Math.cos(this.angle) * ring.radius;
+                const y = ring.cy + Math.sin(this.angle) * ring.radius;
+                this.trail.push({x, y, age: 0});
+                
+                // Trim trail
+                if (this.trail.length > 50) this.trail.shift();
+                this.trail.forEach(t => t.age += dt);
+            }
+            
+            draw(ctx) {
+                const x = ring.cx + Math.cos(this.angle) * ring.radius;
+                const y = ring.cy + Math.sin(this.angle) * ring.radius;
+                
+                // Trail
+                ctx.beginPath();
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    const alpha = (1 - i / this.trail.length) * 0.5;
+                    ctx.strokeStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                    ctx.lineWidth = 2;
+                    if (i === 0) ctx.moveTo(t.x, t.y);
+                    else ctx.lineTo(t.x, t.y);
+                }
+                ctx.stroke();
+                
+                // Particle
+                const size = this.pokemon ? 12 : 6 + Math.log10(this.mass + 1) * 2;
+                
+                // Glow
+                const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+                glow.addColorStop(0, this.color + '88');
+                glow.addColorStop(1, 'transparent');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(x, y, size * 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Core
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Pokemon emoji
+                if (this.pokemon) {
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.symbol, x, y);
+                }
+            }
+            
+            getPosition() {
+                return {
+                    x: ring.cx + Math.cos(this.angle) * ring.radius,
+                    y: ring.cy + Math.sin(this.angle) * ring.radius
+                };
+            }
+        }
+        
+        // Inject particle
+        function injectParticle() {
+            const type = document.getElementById('particleType').value;
+            const energy = parseFloat(document.getElementById('beamEnergy').value);
+            particles.push(new Particle(type, energy));
+            updateUI();
+        }
+        
+        // Toggle beam
+        function toggleBeam() {
+            beamActive = !beamActive;
+            document.querySelector('.btn-fire').textContent = beamActive ? '⏹ STOP BEAM' : '🔥 TOGGLE BEAM';
+        }
+        
+        // Clear all
+        function clearAll() {
+            particles = [];
+            collisionCount = 0;
+            collisionLog = [];
+            document.getElementById('collisionLog').innerHTML = '<div style="color: var(--dim); text-align: center; padding: 20px;">Awaiting collisions...</div>';
+            updateUI();
+        }
+        
+        // Check collisions
+        function checkCollisions() {
+            const collisionDist = 20;
+            
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p1 = particles[i];
+                    const p2 = particles[j];
+                    
+                    // Only collide if going opposite directions
+                    if (p1.direction === p2.direction) continue;
+                    
+                    const pos1 = p1.getPosition();
+                    const pos2 = p2.getPosition();
+                    const dist = Math.hypot(pos1.x - pos2.x, pos1.y - pos2.y);
+                    
+                    if (dist < collisionDist) {
+                        handleCollision(p1, p2, i, j);
+                        return; // One collision per frame
+                    }
+                }
+            }
+        }
+        
+        // Handle collision
+        function handleCollision(p1, p2, i, j) {
+            collisionCount++;
+            
+            // Check for fusion reaction
+            const key1 = `${p1.type}+${p2.type}`;
+            const key2 = `${p2.type}+${p1.type}`;
+            const reaction = fusionReactions[key1] || fusionReactions[key2];
+            
+            // Collision position
+            const pos = p1.getPosition();
+            
+            // Create collision effect
+            createExplosion(pos.x, pos.y, reaction ? (reaction.pokemon ? '#ffaa00' : '#00ffaa') : '#ffffff');
+            
+            if (reaction) {
+                fusionCount++;
+                
+                // Log fusion
+                const logEntry = document.createElement('div');
+                logEntry.className = `collision-entry ${reaction.pokemon ? 'pokemon' : 'fusion'}`;
+                logEntry.innerHTML = `
+                    <strong>${reaction.name}</strong><br>
+                    ${p1.symbol} + ${p2.symbol} → ${reaction.products.join(' + ')}<br>
+                    <span style="color: #00ff88;">+${reaction.energy} MeV released</span>
+                `;
+                
+                const logContainer = document.getElementById('collisionLog');
+                if (logContainer.querySelector('div[style]')) {
+                    logContainer.innerHTML = '';
+                }
+                logContainer.insertBefore(logEntry, logContainer.firstChild);
+                
+                // Track discoveries
+                if (reaction.pokemon) {
+                    reaction.products.forEach(p => discovered.add(p));
+                    updateDiscoveries();
+                }
+                
+                // Remove collided particles
+                particles.splice(Math.max(i, j), 1);
+                particles.splice(Math.min(i, j), 1);
+                
+            } else {
+                // Elastic scattering - just deflect
+                p1.direction *= -1;
+                p2.direction *= -1;
+                p1.angle += (Math.random() - 0.5) * 0.2;
+                p2.angle += (Math.random() - 0.5) * 0.2;
+                
+                // Log scatter
+                const logEntry = document.createElement('div');
+                logEntry.className = 'collision-entry';
+                logEntry.innerHTML = `Elastic scatter: ${p1.symbol} ↔ ${p2.symbol}`;
+                
+                const logContainer = document.getElementById('collisionLog');
+                if (logContainer.querySelector('div[style]')) {
+                    logContainer.innerHTML = '';
+                }
+                logContainer.insertBefore(logEntry, logContainer.firstChild);
+            }
+            
+            // Trim log
+            while (document.getElementById('collisionLog').children.length > 20) {
+                document.getElementById('collisionLog').lastChild.remove();
+            }
+            
+            updateUI();
+        }
+        
+        // Explosion effects
+        let explosions = [];
+        
+        function createExplosion(x, y, color) {
+            explosions.push({
+                x, y, color,
+                radius: 5,
+                maxRadius: 60,
+                alpha: 1
+            });
+        }
+        
+        function updateExplosions(dt) {
+            explosions = explosions.filter(e => {
+                e.radius += 200 * dt;
+                e.alpha -= 2 * dt;
+                return e.alpha > 0;
+            });
+        }
+        
+        function drawExplosions(ctx) {
+            explosions.forEach(e => {
+                const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.radius);
+                grad.addColorStop(0, e.color + Math.floor(e.alpha * 255).toString(16).padStart(2, '0'));
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Update discoveries
+        function updateDiscoveries() {
+            const container = document.getElementById('discoveredParticles');
+            if (discovered.size === 0) {
+                container.innerHTML = 'None yet - keep colliding!';
+                return;
+            }
+            
+            const badges = {
+                'raichu': '<span class="pokemon-badge electric">RAICHU ⚡</span>',
+                'charizard': '<span class="pokemon-badge fire">CHARIZARD 🔥</span>',
+                'zapdos': '<span class="pokemon-badge legendary">ZAPDOS ⚡🐦</span>',
+                'mewthree': '<span class="pokemon-badge legendary">???MEWTHREE??? 🔮</span>'
+            };
+            
+            container.innerHTML = Array.from(discovered).map(d => badges[d] || d).join(' ');
+        }
+        
+        // Update UI
+        function updateUI() {
+            document.getElementById('particleCount').textContent = particles.length;
+            document.getElementById('collisionCount').textContent = collisionCount;
+            
+            let totalEnergy = particles.reduce((sum, p) => sum + p.energy, 0);
+            document.getElementById('totalEnergy').textContent = (totalEnergy / 1000).toFixed(2);
+            
+            // Stats
+            if (particles.length > 0) {
+                const avgBeta = particles.reduce((sum, p) => sum + p.beta, 0) / particles.length;
+                const avgGamma = particles.reduce((sum, p) => sum + p.gamma, 0) / particles.length;
+                document.getElementById('beta').textContent = avgBeta.toFixed(4);
+                document.getElementById('gamma').textContent = avgGamma.toFixed(3);
+            }
+            
+            document.getElementById('fusionRate').textContent = `${fusionCount}/s`;
+            document.getElementById('luminosity').textContent = (particles.length * particles.length * 1e28).toExponential(2);
+            
+            // Energy bar
+            const maxEnergy = 10000;
+            const fillPct = Math.min(100, (totalEnergy / maxEnergy) * 100);
+            document.getElementById('energyFill').style.width = fillPct + '%';
+            
+            // Particle list
+            const listContainer = document.getElementById('particleList');
+            if (particles.length === 0) {
+                listContainer.innerHTML = '<div style="color: var(--dim); font-size: 0.7rem; text-align: center; padding: 20px;">No particles in ring</div>';
+            } else {
+                listContainer.innerHTML = particles.slice(0, 10).map(p => `
+                    <div class="particle-item">
+                        <div class="particle-dot" style="background: ${p.color}"></div>
+                        <span>${p.symbol}</span>
+                        <span style="margin-left: auto; color: var(--accent);">${p.energy.toFixed(0)} MeV</span>
+                    </div>
+                `).join('');
+                if (particles.length > 10) {
+                    listContainer.innerHTML += `<div style="text-align: center; color: var(--dim); font-size: 0.65rem;">+${particles.length - 10} more...</div>`;
+                }
+            }
+        }
+        
+        // Draw accelerator ring
+        function drawRing(ctx) {
+            ring.update();
+            
+            // Outer glow
+            ctx.strokeStyle = '#00d4ff22';
+            ctx.lineWidth = 40;
+            ctx.beginPath();
+            ctx.arc(ring.cx, ring.cy, ring.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Main ring
+            ctx.strokeStyle = '#00d4ff44';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(ring.cx, ring.cy, ring.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Inner ring
+            ctx.strokeStyle = '#00d4ff88';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(ring.cx, ring.cy, ring.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Magnets (simplified)
+            const numMagnets = 12;
+            for (let i = 0; i < numMagnets; i++) {
+                const angle = (i / numMagnets) * Math.PI * 2;
+                const x = ring.cx + Math.cos(angle) * ring.radius;
+                const y = ring.cy + Math.sin(angle) * ring.radius;
+                
+                ctx.fillStyle = i % 2 === 0 ? '#ff444488' : '#4444ff88';
+                ctx.beginPath();
+                ctx.arc(x, y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ffffff44';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(i % 2 === 0 ? 'N' : 'S', x, y);
+            }
+            
+            // Target zone
+            const targetAngle = 0;
+            const tx = ring.cx + Math.cos(targetAngle) * ring.radius;
+            const ty = ring.cy + Math.sin(targetAngle) * ring.radius;
+            
+            ctx.fillStyle = '#ff00aa44';
+            ctx.beginPath();
+            ctx.arc(tx, ty, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#ff00aa';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(tx, ty, 25, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#ff00aa';
+            ctx.font = '10px monospace';
+            ctx.fillText('TARGET', tx, ty - 35);
+        }
+        
+        // Input handlers
+        document.getElementById('beamEnergy').addEventListener('input', e => {
+            document.getElementById('energyVal').textContent = e.target.value + ' MeV';
+        });
+        
+        document.getElementById('injectionRate').addEventListener('input', e => {
+            document.getElementById('rateVal').textContent = e.target.value + '/s';
+        });
+        
+        document.getElementById('magneticField').addEventListener('input', e => {
+            document.getElementById('fieldVal').textContent = e.target.value + ' T';
+        });
+        
+        document.getElementById('targetDensity').addEventListener('input', e => {
+            document.getElementById('densityVal').textContent = '1e' + e.target.value;
+        });
+        
+        // Main loop
+        let lastTime = 0;
+        let injectionTimer = 0;
+        
+        function loop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+            time += dt;
+            
+            // Beam injection
+            if (beamActive) {
+                const rate = parseFloat(document.getElementById('injectionRate').value);
+                injectionTimer += dt;
+                if (injectionTimer > 1 / rate) {
+                    injectParticle();
+                    injectionTimer = 0;
+                }
+            }
+            
+            // Update particles
+            particles.forEach(p => p.update(dt));
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Update explosions
+            updateExplosions(dt);
+            
+            // Clear
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw
+            drawRing(ctx);
+            particles.forEach(p => p.draw(ctx));
+            drawExplosions(ctx);
+            
+            // Limit particles
+            if (particles.length > 200) {
+                particles = particles.slice(-200);
+            }
+            
+            requestAnimationFrame(loop);
+        }
+        
+        requestAnimationFrame(loop);
+        updateUI();
+    </script>
+</body>
+</html>

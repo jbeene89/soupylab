@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lattice-Boltzmann Fluid | Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        #sidebar {
+            width: 280px;
+            background: #0d0d14;
+            border-right: 1px solid #1a1a2e;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        .logo {
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            color: #00aaff;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+        .section {
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 0.7rem;
+            color: #555;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #1a1a2e;
+            padding-bottom: 0.5rem;
+        }
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            accent-color: #00aaff;
+        }
+        .value {
+            font-size: 0.7rem;
+            color: #00aaff;
+            text-align: right;
+            margin-bottom: 0.75rem;
+        }
+        select, button {
+            width: 100%;
+            padding: 0.5rem;
+            background: #1a1a2e;
+            border: 1px solid #2a2a3e;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2a2a3e;
+            border-color: #00aaff;
+        }
+        button.active {
+            background: #00aaff;
+            color: #000;
+        }
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-row button {
+            flex: 1;
+        }
+        .stats {
+            font-size: 0.7rem;
+            color: #555;
+            line-height: 1.8;
+        }
+        .stats span {
+            color: #00aaff;
+        }
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .help {
+            font-size: 0.65rem;
+            color: #444;
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+        a { color: #00aaff; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="sidebar">
+            <div class="logo">SOUPY LABS</div>
+            <h1>Lattice-Boltzmann Fluid</h1>
+
+            <div class="section">
+                <div class="section-title">SIMULATION</div>
+                <label>Viscosity (ν)</label>
+                <input type="range" id="viscosity" min="0.001" max="0.1" step="0.001" value="0.02">
+                <div class="value" id="viscosity-val">0.020</div>
+
+                <label>Inlet Velocity</label>
+                <input type="range" id="velocity" min="0.01" max="0.3" step="0.01" value="0.1">
+                <div class="value" id="velocity-val">0.100</div>
+
+                <label>Resolution</label>
+                <select id="resolution">
+                    <option value="256">256 × 128</option>
+                    <option value="512" selected>512 × 256</option>
+                    <option value="1024">1024 × 512</option>
+                </select>
+            </div>
+
+            <div class="section">
+                <div class="section-title">VISUALIZATION</div>
+                <select id="viz-mode">
+                    <option value="velocity">Velocity Magnitude</option>
+                    <option value="vorticity">Vorticity (Curl)</option>
+                    <option value="pressure">Pressure Field</option>
+                    <option value="density">Density</option>
+                </select>
+            </div>
+
+            <div class="section">
+                <div class="section-title">TOOLS</div>
+                <div class="btn-row">
+                    <button id="tool-draw" class="active">Draw</button>
+                    <button id="tool-erase">Erase</button>
+                </div>
+                <label>Brush Size</label>
+                <input type="range" id="brush-size" min="2" max="30" value="10">
+                <div class="value" id="brush-val">10</div>
+            </div>
+
+            <div class="section">
+                <div class="btn-row">
+                    <button id="reset">Reset Fluid</button>
+                    <button id="clear">Clear Obstacles</button>
+                </div>
+                <button id="pause">Pause</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">STATISTICS</div>
+                <div class="stats">
+                    Reynolds Number: <span id="reynolds">—</span><br>
+                    Max Velocity: <span id="max-vel">—</span><br>
+                    Steps/sec: <span id="fps">—</span><br>
+                    Lattice: <span id="lattice-size">—</span>
+                </div>
+            </div>
+
+            <div class="help">
+                <strong>Lattice-Boltzmann Method</strong><br>
+                D2Q9 velocity discretization with BGK collision operator. 
+                Bounce-back boundaries for no-slip walls. 
+                Approximates incompressible Navier-Stokes.<br><br>
+                <a href="index.html">← Back to Modules</a>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+<script>
+// ============================================================
+// LATTICE-BOLTZMANN FLUID SIMULATION
+// D2Q9 Model with BGK Collision Operator
+// GPU-Accelerated via WebGL 2.0
+// ============================================================
+
+const canvas = document.getElementById('canvas');
+const gl = canvas.getContext('webgl2');
+
+if (!gl) {
+    alert('WebGL 2.0 required');
+    throw new Error('No WebGL 2');
+}
+
+// Enable float textures
+const ext = gl.getExtension('EXT_color_buffer_float');
+if (!ext) {
+    alert('EXT_color_buffer_float required');
+}
+
+// D2Q9 Lattice velocities and weights
+// Directions: 0=rest, 1-4=cardinal, 5-8=diagonal
+const ex = [0, 1, 0, -1, 0, 1, -1, -1, 1];
+const ey = [0, 0, 1, 0, -1, 1, 1, -1, -1];
+const weights = [4/9, 1/9, 1/9, 1/9, 1/9, 1/36, 1/36, 1/36, 1/36];
+const opposite = [0, 3, 4, 1, 2, 7, 8, 5, 6];
+
+// Simulation state
+let NX = 512, NY = 256;
+let omega = 1.7; // Relaxation parameter (1/tau)
+let inletVel = 0.1;
+let paused = false;
+let tool = 'draw';
+let brushSize = 10;
+let vizMode = 'velocity';
+
+// WebGL resources
+let programs = {};
+let textures = {};
+let framebuffers = {};
+
+// ============================================================
+// SHADER SOURCES
+// ============================================================
+
+const quadVert = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+    v_uv = a_pos * 0.5 + 0.5;
+    gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+// Collision + Streaming shader (the core LBM step)
+const lbmFrag = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_f0123; // f0, f1, f2, f3
+uniform sampler2D u_f4567; // f4, f5, f6, f7
+uniform sampler2D u_f8obs; // f8, obstacle flag
+uniform float u_omega;
+uniform float u_inletVel;
+uniform vec2 u_resolution;
+
+in vec2 v_uv;
+layout(location = 0) out vec4 out_f0123;
+layout(location = 1) out vec4 out_f4567;
+layout(location = 2) out vec4 out_f8obs;
+
+// D2Q9 weights
+const float w0 = 4.0/9.0;
+const float w1 = 1.0/9.0;
+const float w5 = 1.0/36.0;
+
+// Lattice velocities
+const ivec2 e[9] = ivec2[9](
+    ivec2(0,0), ivec2(1,0), ivec2(0,1), ivec2(-1,0), ivec2(0,-1),
+    ivec2(1,1), ivec2(-1,1), ivec2(-1,-1), ivec2(1,-1)
+);
+
+float feq(int i, float rho, vec2 u) {
+    float w = (i == 0) ? w0 : ((i < 5) ? w1 : w5);
+    vec2 ei = vec2(e[i]);
+    float eu = dot(ei, u);
+    float u2 = dot(u, u);
+    return w * rho * (1.0 + 3.0*eu + 4.5*eu*eu - 1.5*u2);
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_FragCoord.xy);
+    vec2 texel = 1.0 / u_resolution;
+    
+    // Stream: pull from neighbors
+    float f[9];
+    
+    // For each direction, fetch from upstream cell
+    for (int i = 0; i < 9; i++) {
+        ivec2 src = pos - e[i];
+        vec2 srcUV = (vec2(src) + 0.5) * texel;
+        
+        // Clamp to boundaries
+        srcUV = clamp(srcUV, vec2(0.0), vec2(1.0));
+        
+        vec4 s0123 = texture(u_f0123, srcUV);
+        vec4 s4567 = texture(u_f4567, srcUV);
+        vec4 s8obs = texture(u_f8obs, srcUV);
+        
+        if (i == 0) f[0] = s0123.x;
+        else if (i == 1) f[1] = s0123.y;
+        else if (i == 2) f[2] = s0123.z;
+        else if (i == 3) f[3] = s0123.w;
+        else if (i == 4) f[4] = s4567.x;
+        else if (i == 5) f[5] = s4567.y;
+        else if (i == 6) f[6] = s4567.z;
+        else if (i == 7) f[7] = s4567.w;
+        else f[8] = s8obs.x;
+    }
+    
+    // Check obstacle at current position
+    vec4 here8obs = texture(u_f8obs, v_uv);
+    float obstacle = here8obs.y;
+    
+    // Compute macroscopic quantities
+    float rho = f[0]+f[1]+f[2]+f[3]+f[4]+f[5]+f[6]+f[7]+f[8];
+    vec2 u = vec2(
+        f[1] - f[3] + f[5] - f[6] - f[7] + f[8],
+        f[2] - f[4] + f[5] + f[6] - f[7] - f[8]
+    ) / rho;
+    
+    // Boundary conditions
+    
+    // Left inlet: prescribed velocity (Zou-He)
+    if (pos.x == 0) {
+        u = vec2(u_inletVel, 0.0);
+        rho = (f[0] + f[2] + f[4] + 2.0*(f[3] + f[6] + f[7])) / (1.0 - u_inletVel);
+        f[1] = f[3] + (2.0/3.0)*rho*u_inletVel;
+        f[5] = f[7] + (1.0/6.0)*rho*u_inletVel - 0.5*(f[2] - f[4]);
+        f[8] = f[6] + (1.0/6.0)*rho*u_inletVel + 0.5*(f[2] - f[4]);
+    }
+    
+    // Right outlet: extrapolation
+    if (pos.x == int(u_resolution.x) - 1) {
+        ivec2 src = pos - ivec2(1, 0);
+        vec2 srcUV = (vec2(src) + 0.5) * texel;
+        vec4 s0123 = texture(u_f0123, srcUV);
+        vec4 s4567 = texture(u_f4567, srcUV);
+        vec4 s8obs = texture(u_f8obs, srcUV);
+        f[3] = s0123.w;
+        f[6] = s4567.z;
+        f[7] = s4567.w;
+    }
+    
+    // Top/bottom walls: bounce-back
+    if (pos.y == 0 || pos.y == int(u_resolution.y) - 1) {
+        obstacle = 1.0;
+    }
+    
+    // Obstacle bounce-back
+    if (obstacle > 0.5) {
+        float tmp;
+        tmp = f[1]; f[1] = f[3]; f[3] = tmp;
+        tmp = f[2]; f[2] = f[4]; f[4] = tmp;
+        tmp = f[5]; f[5] = f[7]; f[7] = tmp;
+        tmp = f[6]; f[6] = f[8]; f[8] = tmp;
+    } else {
+        // BGK Collision
+        for (int i = 0; i < 9; i++) {
+            float feqi = feq(i, rho, u);
+            if (i == 0) f[0] = f[0] - u_omega * (f[0] - feqi);
+            else if (i == 1) f[1] = f[1] - u_omega * (f[1] - feqi);
+            else if (i == 2) f[2] = f[2] - u_omega * (f[2] - feqi);
+            else if (i == 3) f[3] = f[3] - u_omega * (f[3] - feqi);
+            else if (i == 4) f[4] = f[4] - u_omega * (f[4] - feqi);
+            else if (i == 5) f[5] = f[5] - u_omega * (f[5] - feqi);
+            else if (i == 6) f[6] = f[6] - u_omega * (f[6] - feqi);
+            else if (i == 7) f[7] = f[7] - u_omega * (f[7] - feqi);
+            else f[8] = f[8] - u_omega * (f[8] - feqi);
+        }
+    }
+    
+    out_f0123 = vec4(f[0], f[1], f[2], f[3]);
+    out_f4567 = vec4(f[4], f[5], f[6], f[7]);
+    out_f8obs = vec4(f[8], obstacle, 0.0, 1.0);
+}`;
+
+// Visualization shader
+const vizFrag = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_f0123;
+uniform sampler2D u_f4567;
+uniform sampler2D u_f8obs;
+uniform int u_mode; // 0=velocity, 1=vorticity, 2=pressure, 3=density
+uniform vec2 u_resolution;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 viridis(float t) {
+    const vec3 c0 = vec3(0.267, 0.004, 0.329);
+    const vec3 c1 = vec3(0.282, 0.140, 0.457);
+    const vec3 c2 = vec3(0.253, 0.265, 0.529);
+    const vec3 c3 = vec3(0.190, 0.407, 0.556);
+    const vec3 c4 = vec3(0.127, 0.566, 0.550);
+    const vec3 c5 = vec3(0.267, 0.678, 0.480);
+    const vec3 c6 = vec3(0.478, 0.821, 0.318);
+    const vec3 c7 = vec3(0.741, 0.873, 0.150);
+    const vec3 c8 = vec3(0.993, 0.906, 0.144);
+    
+    t = clamp(t, 0.0, 1.0);
+    float idx = t * 7.0;
+    int i = int(floor(idx));
+    float f = fract(idx);
+    
+    if (i == 0) return mix(c0, c1, f);
+    if (i == 1) return mix(c1, c2, f);
+    if (i == 2) return mix(c2, c3, f);
+    if (i == 3) return mix(c3, c4, f);
+    if (i == 4) return mix(c4, c5, f);
+    if (i == 5) return mix(c5, c6, f);
+    if (i == 6) return mix(c6, c7, f);
+    return mix(c7, c8, f);
+}
+
+vec3 coolwarm(float t) {
+    t = clamp(t, 0.0, 1.0);
+    vec3 cool = vec3(0.2, 0.4, 0.8);
+    vec3 warm = vec3(0.8, 0.2, 0.1);
+    vec3 white = vec3(0.95);
+    if (t < 0.5) {
+        return mix(cool, white, t * 2.0);
+    }
+    return mix(white, warm, (t - 0.5) * 2.0);
+}
+
+void main() {
+    vec4 f0123 = texture(u_f0123, v_uv);
+    vec4 f4567 = texture(u_f4567, v_uv);
+    vec4 f8obs = texture(u_f8obs, v_uv);
+    
+    float obstacle = f8obs.y;
+    
+    if (obstacle > 0.5) {
+        fragColor = vec4(0.15, 0.15, 0.2, 1.0);
+        return;
+    }
+    
+    float f0 = f0123.x, f1 = f0123.y, f2 = f0123.z, f3 = f0123.w;
+    float f4 = f4567.x, f5 = f4567.y, f6 = f4567.z, f7 = f4567.w;
+    float f8 = f8obs.x;
+    
+    float rho = f0+f1+f2+f3+f4+f5+f6+f7+f8;
+    vec2 u = vec2(
+        f1 - f3 + f5 - f6 - f7 + f8,
+        f2 - f4 + f5 + f6 - f7 - f8
+    ) / rho;
+    
+    vec3 color;
+    
+    if (u_mode == 0) {
+        // Velocity magnitude
+        float vel = length(u);
+        color = viridis(vel * 5.0);
+    } else if (u_mode == 1) {
+        // Vorticity (curl of velocity)
+        vec2 texel = 1.0 / u_resolution;
+        
+        vec4 r0123 = texture(u_f0123, v_uv + vec2(texel.x, 0));
+        vec4 r4567 = texture(u_f4567, v_uv + vec2(texel.x, 0));
+        vec4 r8obs = texture(u_f8obs, v_uv + vec2(texel.x, 0));
+        float rhoR = r0123.x+r0123.y+r0123.z+r0123.w+r4567.x+r4567.y+r4567.z+r4567.w+r8obs.x;
+        float uyR = (r0123.z - r4567.x + r4567.y + r4567.z - r4567.w - r8obs.x) / rhoR;
+        
+        vec4 l0123 = texture(u_f0123, v_uv - vec2(texel.x, 0));
+        vec4 l4567 = texture(u_f4567, v_uv - vec2(texel.x, 0));
+        vec4 l8obs = texture(u_f8obs, v_uv - vec2(texel.x, 0));
+        float rhoL = l0123.x+l0123.y+l0123.z+l0123.w+l4567.x+l4567.y+l4567.z+l4567.w+l8obs.x;
+        float uyL = (l0123.z - l4567.x + l4567.y + l4567.z - l4567.w - l8obs.x) / rhoL;
+        
+        vec4 t0123 = texture(u_f0123, v_uv + vec2(0, texel.y));
+        vec4 t4567 = texture(u_f4567, v_uv + vec2(0, texel.y));
+        vec4 t8obs = texture(u_f8obs, v_uv + vec2(0, texel.y));
+        float rhoT = t0123.x+t0123.y+t0123.z+t0123.w+t4567.x+t4567.y+t4567.z+t4567.w+t8obs.x;
+        float uxT = (t0123.y - t0123.w + t4567.y - t4567.z - t4567.w + t8obs.x) / rhoT;
+        
+        vec4 b0123 = texture(u_f0123, v_uv - vec2(0, texel.y));
+        vec4 b4567 = texture(u_f4567, v_uv - vec2(0, texel.y));
+        vec4 b8obs = texture(u_f8obs, v_uv - vec2(0, texel.y));
+        float rhoB = b0123.x+b0123.y+b0123.z+b0123.w+b4567.x+b4567.y+b4567.z+b4567.w+b8obs.x;
+        float uxB = (b0123.y - b0123.w + b4567.y - b4567.z - b4567.w + b8obs.x) / rhoB;
+        
+        float vort = (uyR - uyL) / (2.0 * texel.x) - (uxT - uxB) / (2.0 * texel.y);
+        vort = vort * 0.1;
+        color = coolwarm(vort * 0.5 + 0.5);
+    } else if (u_mode == 2) {
+        // Pressure (proportional to density in LBM)
+        float pressure = (rho - 1.0) * 3.0;
+        color = coolwarm(pressure * 5.0 + 0.5);
+    } else {
+        // Density
+        color = viridis((rho - 0.9) * 5.0);
+    }
+    
+    fragColor = vec4(color, 1.0);
+}`;
+
+// Obstacle drawing shader
+const drawFrag = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_f8obs;
+uniform vec2 u_mouse;
+uniform float u_radius;
+uniform float u_draw; // 1 = draw, 0 = erase
+uniform vec2 u_resolution;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+void main() {
+    vec4 current = texture(u_f8obs, v_uv);
+    vec2 pos = gl_FragCoord.xy;
+    
+    float dist = length(pos - u_mouse);
+    
+    if (dist < u_radius) {
+        current.y = u_draw;
+    }
+    
+    fragColor = current;
+}`;
+
+// ============================================================
+// WEBGL UTILITIES
+// ============================================================
+
+function createShader(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
+
+function createProgram(vertSrc, fragSrc) {
+    const vert = createShader(gl.VERTEX_SHADER, vertSrc);
+    const frag = createShader(gl.FRAGMENT_SHADER, fragSrc);
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vert);
+    gl.attachShader(prog, frag);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        console.error(gl.getProgramInfoLog(prog));
+        return null;
+    }
+    return prog;
+}
+
+function createTexture(width, height, internalFormat, format, type) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return tex;
+}
+
+function createFramebuffer(textures) {
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    for (let i = 0; i < textures.length; i++) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, textures[i], 0);
+    }
+    gl.drawBuffers(textures.map((_, i) => gl.COLOR_ATTACHMENT0 + i));
+    return fb;
+}
+
+// Fullscreen quad
+const quadBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+function drawQuad(program) {
+    gl.useProgram(program);
+    const posLoc = gl.getAttribLocation(program, 'a_pos');
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+function init() {
+    canvas.width = NX;
+    canvas.height = NY;
+    
+    // Create programs
+    programs.lbm = createProgram(quadVert, lbmFrag);
+    programs.viz = createProgram(quadVert, vizFrag);
+    programs.draw = createProgram(quadVert, drawFrag);
+    
+    // Create textures (ping-pong buffers)
+    // We need: f0-f3 (RGBA), f4-f7 (RGBA), f8+obstacle (RG)
+    textures.f0123_a = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    textures.f0123_b = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    textures.f4567_a = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    textures.f4567_b = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    textures.f8obs_a = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    textures.f8obs_b = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    
+    // Create framebuffers
+    framebuffers.a = createFramebuffer([textures.f0123_a, textures.f4567_a, textures.f8obs_a]);
+    framebuffers.b = createFramebuffer([textures.f0123_b, textures.f4567_b, textures.f8obs_b]);
+    
+    // Initialize distribution functions with equilibrium
+    initializeFluid();
+    
+    document.getElementById('lattice-size').textContent = `${NX}×${NY}`;
+}
+
+function initializeFluid() {
+    // Create initial data
+    const f0123 = new Float32Array(NX * NY * 4);
+    const f4567 = new Float32Array(NX * NY * 4);
+    const f8obs = new Float32Array(NX * NY * 4);
+    
+    const rho0 = 1.0;
+    const u0 = [inletVel, 0];
+    
+    for (let y = 0; y < NY; y++) {
+        for (let x = 0; x < NX; x++) {
+            const idx = (y * NX + x) * 4;
+            
+            // Equilibrium distribution
+            const u2 = u0[0]*u0[0] + u0[1]*u0[1];
+            
+            for (let i = 0; i < 9; i++) {
+                const eu = ex[i]*u0[0] + ey[i]*u0[1];
+                const feq = weights[i] * rho0 * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+                
+                if (i < 4) f0123[idx + i] = feq;
+                else if (i < 8) f4567[idx + i - 4] = feq;
+                else f8obs[idx] = feq;
+            }
+            
+            // Add a cylinder obstacle in the middle
+            const cx = NX * 0.25, cy = NY * 0.5;
+            const r = NY * 0.1;
+            const dist = Math.sqrt((x-cx)*(x-cx) + (y-cy)*(y-cy));
+            f8obs[idx + 1] = dist < r ? 1.0 : 0.0;
+        }
+    }
+    
+    // Upload to textures
+    gl.bindTexture(gl.TEXTURE_2D, textures.f0123_a);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f0123);
+    gl.bindTexture(gl.TEXTURE_2D, textures.f0123_b);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f0123);
+    
+    gl.bindTexture(gl.TEXTURE_2D, textures.f4567_a);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f4567);
+    gl.bindTexture(gl.TEXTURE_2D, textures.f4567_b);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f4567);
+    
+    gl.bindTexture(gl.TEXTURE_2D, textures.f8obs_a);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f8obs);
+    gl.bindTexture(gl.TEXTURE_2D, textures.f8obs_b);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f8obs);
+}
+
+function clearObstacles() {
+    const f8obs = new Float32Array(NX * NY * 4);
+    
+    const rho0 = 1.0;
+    const u0 = [inletVel, 0];
+    const u2 = u0[0]*u0[0] + u0[1]*u0[1];
+    const eu = ex[8]*u0[0] + ey[8]*u0[1];
+    const feq = weights[8] * rho0 * (1 + 3*eu + 4.5*eu*eu - 1.5*u2);
+    
+    for (let y = 0; y < NY; y++) {
+        for (let x = 0; x < NX; x++) {
+            const idx = (y * NX + x) * 4;
+            f8obs[idx] = feq;
+            f8obs[idx + 1] = 0.0;
+        }
+    }
+    
+    gl.bindTexture(gl.TEXTURE_2D, textures.f8obs_a);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f8obs);
+    gl.bindTexture(gl.TEXTURE_2D, textures.f8obs_b);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NX, NY, 0, gl.RGBA, gl.FLOAT, f8obs);
+}
+
+// ============================================================
+// SIMULATION STEP
+// ============================================================
+
+let pingpong = 0;
+
+function step() {
+    const src = pingpong === 0 ? 'a' : 'b';
+    const dst = pingpong === 0 ? 'b' : 'a';
+    
+    gl.viewport(0, 0, NX, NY);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[dst]);
+    
+    gl.useProgram(programs.lbm);
+    
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f0123_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.lbm, 'u_f0123'), 0);
+    
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f4567_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.lbm, 'u_f4567'), 1);
+    
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f8obs_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.lbm, 'u_f8obs'), 2);
+    
+    gl.uniform1f(gl.getUniformLocation(programs.lbm, 'u_omega'), omega);
+    gl.uniform1f(gl.getUniformLocation(programs.lbm, 'u_inletVel'), inletVel);
+    gl.uniform2f(gl.getUniformLocation(programs.lbm, 'u_resolution'), NX, NY);
+    
+    drawQuad(programs.lbm);
+    
+    pingpong = 1 - pingpong;
+}
+
+function render() {
+    const src = pingpong === 0 ? 'a' : 'b';
+    
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    
+    gl.useProgram(programs.viz);
+    
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f0123_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.viz, 'u_f0123'), 0);
+    
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f4567_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.viz, 'u_f4567'), 1);
+    
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f8obs_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.viz, 'u_f8obs'), 2);
+    
+    const modeMap = { velocity: 0, vorticity: 1, pressure: 2, density: 3 };
+    gl.uniform1i(gl.getUniformLocation(programs.viz, 'u_mode'), modeMap[vizMode] || 0);
+    gl.uniform2f(gl.getUniformLocation(programs.viz, 'u_resolution'), NX, NY);
+    
+    drawQuad(programs.viz);
+}
+
+// ============================================================
+// MOUSE INTERACTION
+// ============================================================
+
+let mouseDown = false;
+let lastMouse = null;
+
+function drawObstacle(x, y) {
+    const src = pingpong === 0 ? 'a' : 'b';
+    
+    // Read current f8obs
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[src]);
+    gl.viewport(0, 0, NX, NY);
+    
+    // We need a separate pass to update just the obstacle texture
+    const tempTex = createTexture(NX, NY, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+    const tempFb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tempTex, 0);
+    
+    gl.useProgram(programs.draw);
+    
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f8obs_${src}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.draw, 'u_f8obs'), 0);
+    
+    gl.uniform2f(gl.getUniformLocation(programs.draw, 'u_mouse'), x, y);
+    gl.uniform1f(gl.getUniformLocation(programs.draw, 'u_radius'), brushSize);
+    gl.uniform1f(gl.getUniformLocation(programs.draw, 'u_draw'), tool === 'draw' ? 1.0 : 0.0);
+    gl.uniform2f(gl.getUniformLocation(programs.draw, 'u_resolution'), NX, NY);
+    
+    drawQuad(programs.draw);
+    
+    // Copy back
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f8obs_${src}`]);
+    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, NX, NY, 0);
+    
+    // Also update the other buffer
+    const other = src === 'a' ? 'b' : 'a';
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f8obs_${other}`]);
+    gl.uniform1i(gl.getUniformLocation(programs.draw, 'u_f8obs'), 0);
+    drawQuad(programs.draw);
+    
+    gl.bindTexture(gl.TEXTURE_2D, textures[`f8obs_${other}`]);
+    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 0, 0, NX, NY, 0);
+    
+    gl.deleteTexture(tempTex);
+    gl.deleteFramebuffer(tempFb);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    mouseDown = true;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * NX;
+    const y = NY - (e.clientY - rect.top) / rect.height * NY;
+    drawObstacle(x, y);
+    lastMouse = [x, y];
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!mouseDown) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * NX;
+    const y = NY - (e.clientY - rect.top) / rect.height * NY;
+    
+    if (lastMouse) {
+        const steps = Math.max(Math.abs(x - lastMouse[0]), Math.abs(y - lastMouse[1]));
+        for (let i = 0; i <= steps; i++) {
+            const t = steps > 0 ? i / steps : 0;
+            const px = lastMouse[0] + (x - lastMouse[0]) * t;
+            const py = lastMouse[1] + (y - lastMouse[1]) * t;
+            drawObstacle(px, py);
+        }
+    }
+    lastMouse = [x, y];
+});
+
+canvas.addEventListener('mouseup', () => { mouseDown = false; lastMouse = null; });
+canvas.addEventListener('mouseleave', () => { mouseDown = false; lastMouse = null; });
+
+// ============================================================
+// UI CONTROLS
+// ============================================================
+
+document.getElementById('viscosity').addEventListener('input', function() {
+    const nu = parseFloat(this.value);
+    omega = 1.0 / (3.0 * nu + 0.5);
+    document.getElementById('viscosity-val').textContent = nu.toFixed(3);
+});
+
+document.getElementById('velocity').addEventListener('input', function() {
+    inletVel = parseFloat(this.value);
+    document.getElementById('velocity-val').textContent = inletVel.toFixed(3);
+});
+
+document.getElementById('resolution').addEventListener('change', function() {
+    NX = parseInt(this.value);
+    NY = NX / 2;
+    init();
+    document.getElementById('lattice-size').textContent = `${NX}×${NY}`;
+});
+
+document.getElementById('viz-mode').addEventListener('change', function() {
+    vizMode = this.value;
+});
+
+document.getElementById('tool-draw').addEventListener('click', function() {
+    tool = 'draw';
+    this.classList.add('active');
+    document.getElementById('tool-erase').classList.remove('active');
+});
+
+document.getElementById('tool-erase').addEventListener('click', function() {
+    tool = 'erase';
+    this.classList.add('active');
+    document.getElementById('tool-draw').classList.remove('active');
+});
+
+document.getElementById('brush-size').addEventListener('input', function() {
+    brushSize = parseInt(this.value);
+    document.getElementById('brush-val').textContent = brushSize;
+});
+
+document.getElementById('reset').addEventListener('click', initializeFluid);
+document.getElementById('clear').addEventListener('click', clearObstacles);
+
+document.getElementById('pause').addEventListener('click', function() {
+    paused = !paused;
+    this.textContent = paused ? 'Resume' : 'Pause';
+    this.classList.toggle('active', paused);
+});
+
+// ============================================================
+// MAIN LOOP
+// ============================================================
+
+let frameCount = 0;
+let lastTime = performance.now();
+let maxVel = 0;
+
+function animate() {
+    if (!paused) {
+        // Multiple substeps per frame for stability
+        for (let i = 0; i < 10; i++) {
+            step();
+        }
+    }
+    
+    render();
+    
+    frameCount++;
+    const now = performance.now();
+    if (now - lastTime > 500) {
+        const fps = frameCount / (now - lastTime) * 1000 * 10;
+        document.getElementById('fps').textContent = fps.toFixed(0);
+        
+        // Reynolds number: Re = u*L/nu
+        const nu = (1/omega - 0.5) / 3;
+        const L = NY * 0.2; // Characteristic length (obstacle diameter)
+        const Re = inletVel * L / nu;
+        document.getElementById('reynolds').textContent = Re.toFixed(0);
+        document.getElementById('max-vel').textContent = inletVel.toFixed(3);
+        
+        frameCount = 0;
+        lastTime = now;
+    }
+    
+    requestAnimationFrame(animate);
+}
+
+// Initialize and start
+init();
+animate();
+
+</script>
+</body>
+</html>

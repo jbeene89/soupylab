@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fusion Reactor Comparison - Soupy Labs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #00ff9d;
+            --plasma: #ff6b35;
+            --tokamak: #00aaff;
+            --stellarator: #ff00aa;
+            --text: #e0e0e0;
+            --dim: #606080;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        header {
+            background: linear-gradient(180deg, rgba(0,255,157,0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(0,255,157,0.2);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        
+        header a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border: 1px solid rgba(0,255,157,0.3);
+            border-radius: 4px;
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 1fr 280px;
+            gap: 12px;
+            padding: 12px;
+            height: calc(100vh - 60px);
+        }
+        
+        .controls-panel {
+            background: var(--panel);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .controls-panel h2 {
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0,255,157,0.2);
+        }
+        
+        .param-group {
+            margin-bottom: 16px;
+        }
+        
+        .param-group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .param-group-header select {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        
+        .param-group-header label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+        }
+        
+        .slider-row {
+            margin-bottom: 10px;
+        }
+        
+        .slider-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--dim);
+            margin-bottom: 3px;
+        }
+        
+        .slider-row label span {
+            color: var(--accent);
+            font-family: monospace;
+        }
+        
+        .slider-row input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .tokamak-slider input[type="range"]::-webkit-slider-thumb {
+            background: var(--tokamak);
+        }
+        
+        .stellarator-slider input[type="range"]::-webkit-slider-thumb {
+            background: var(--stellarator);
+        }
+        
+        .canvas-container {
+            background: var(--panel);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .canvas-container canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .reactor-label {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        
+        .tokamak-label {
+            background: rgba(0,170,255,0.2);
+            color: var(--tokamak);
+            border: 1px solid var(--tokamak);
+        }
+        
+        .stellarator-label {
+            background: rgba(255,0,170,0.2);
+            color: var(--stellarator);
+            border: 1px solid var(--stellarator);
+        }
+        
+        .stats-overlay {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-family: monospace;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .stats-row:last-child { margin-bottom: 0; }
+        
+        .good { color: #00ff88; }
+        .warn { color: #ffaa00; }
+        .bad { color: #ff4444; }
+        
+        .comparison-bar {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            margin-bottom: 3px;
+        }
+        
+        .bar-track {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        
+        .tokamak-bar .bar-fill { background: var(--tokamak); }
+        .stellarator-bar .bar-fill { background: var(--stellarator); }
+        
+        .info-section {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            line-height: 1.5;
+            color: var(--dim);
+        }
+        
+        .info-section h4 {
+            color: var(--accent);
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+        }
+        
+        .hidden { display: none !important; }
+        
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto 1fr 1fr;
+            }
+            .controls-panel:first-child {
+                grid-column: 1;
+            }
+            .controls-panel:last-child {
+                grid-column: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>⚛ FUSION REACTOR COMPARISON</h1>
+        <a href="index.html">← BACK TO LAB</a>
+    </header>
+    
+    <div class="main-container">
+        <!-- Tokamak Controls -->
+        <div class="controls-panel">
+            <h2 style="color: var(--tokamak);">TOKAMAK PARAMETERS</h2>
+            
+            <div class="param-group">
+                <div class="param-group-header">
+                    <label>Category:</label>
+                    <select id="tokamakCategory" onchange="updateParamVisibility('tokamak')">
+                        <option value="geometry">Geometry</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="magnetic">Magnetic Field</option>
+                        <option value="heating">Heating & Power</option>
+                        <option value="stability">Stability</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Geometry params -->
+            <div class="param-set tokamak-geometry">
+                <div class="slider-row tokamak-slider">
+                    <label>Major Radius (R₀) <span id="tok_R0_val">6.0</span> m</label>
+                    <input type="range" id="tok_R0" min="2" max="12" step="0.1" value="6" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Minor Radius (a) <span id="tok_a_val">2.0</span> m</label>
+                    <input type="range" id="tok_a" min="0.5" max="4" step="0.1" value="2" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Elongation (κ) <span id="tok_kappa_val">1.7</span></label>
+                    <input type="range" id="tok_kappa" min="1" max="2.5" step="0.1" value="1.7" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Triangularity (δ) <span id="tok_delta_val">0.33</span></label>
+                    <input type="range" id="tok_delta" min="0" max="0.8" step="0.01" value="0.33" oninput="updateTokamak()">
+                </div>
+            </div>
+            
+            <!-- Plasma params -->
+            <div class="param-set tokamak-plasma hidden">
+                <div class="slider-row tokamak-slider">
+                    <label>Density (n) <span id="tok_n_val">1.0</span> ×10²⁰ m⁻³</label>
+                    <input type="range" id="tok_n" min="0.1" max="3" step="0.1" value="1" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Temperature (T) <span id="tok_T_val">15</span> keV</label>
+                    <input type="range" id="tok_T" min="1" max="40" step="1" value="15" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Plasma Current (Ip) <span id="tok_Ip_val">15</span> MA</label>
+                    <input type="range" id="tok_Ip" min="1" max="30" step="0.5" value="15" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Zeff (impurity) <span id="tok_Zeff_val">1.5</span></label>
+                    <input type="range" id="tok_Zeff" min="1" max="4" step="0.1" value="1.5" oninput="updateTokamak()">
+                </div>
+            </div>
+            
+            <!-- Magnetic params -->
+            <div class="param-set tokamak-magnetic hidden">
+                <div class="slider-row tokamak-slider">
+                    <label>Toroidal Field (B_T) <span id="tok_BT_val">5.3</span> T</label>
+                    <input type="range" id="tok_BT" min="1" max="15" step="0.1" value="5.3" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Safety Factor (q95) <span id="tok_q95_val">3.0</span></label>
+                    <input type="range" id="tok_q95" min="1" max="6" step="0.1" value="3" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>β_N (normalized) <span id="tok_betaN_val">2.0</span></label>
+                    <input type="range" id="tok_betaN" min="0.5" max="4" step="0.1" value="2" oninput="updateTokamak()">
+                </div>
+            </div>
+            
+            <!-- Heating params -->
+            <div class="param-set tokamak-heating hidden">
+                <div class="slider-row tokamak-slider">
+                    <label>NBI Power <span id="tok_NBI_val">33</span> MW</label>
+                    <input type="range" id="tok_NBI" min="0" max="100" step="1" value="33" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>ICRH Power <span id="tok_ICRH_val">20</span> MW</label>
+                    <input type="range" id="tok_ICRH" min="0" max="50" step="1" value="20" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>ECRH Power <span id="tok_ECRH_val">20</span> MW</label>
+                    <input type="range" id="tok_ECRH" min="0" max="50" step="1" value="20" oninput="updateTokamak()">
+                </div>
+            </div>
+            
+            <!-- Stability params -->
+            <div class="param-set tokamak-stability hidden">
+                <div class="slider-row tokamak-slider">
+                    <label>ELM Frequency <span id="tok_ELM_val">10</span> Hz</label>
+                    <input type="range" id="tok_ELM" min="0" max="50" step="1" value="10" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>Disruption Risk <span id="tok_disrupt_val">15</span> %</label>
+                    <input type="range" id="tok_disrupt" min="0" max="50" step="1" value="15" oninput="updateTokamak()">
+                </div>
+                <div class="slider-row tokamak-slider">
+                    <label>H-mode Factor <span id="tok_H_val">1.0</span></label>
+                    <input type="range" id="tok_H" min="0.5" max="1.5" step="0.05" value="1" oninput="updateTokamak()">
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h4>TOKAMAK</h4>
+                Uses plasma current for rotational transform. Simpler coils but inherently pulsed operation. Risk of disruptions when q &lt; 2.
+            </div>
+        </div>
+        
+        <!-- Tokamak Canvas -->
+        <div class="canvas-container">
+            <div class="reactor-label tokamak-label">TOKAMAK</div>
+            <canvas id="tokamakCanvas"></canvas>
+            <div class="stats-overlay">
+                <div class="stats-row">
+                    <span>Aspect Ratio (A)</span>
+                    <span id="tok_aspect" class="good">3.0</span>
+                </div>
+                <div class="stats-row">
+                    <span>Volume</span>
+                    <span id="tok_volume">141 m³</span>
+                </div>
+                <div class="stats-row">
+                    <span>Confinement τ_E</span>
+                    <span id="tok_tau">3.2 s</span>
+                </div>
+                <div class="stats-row">
+                    <span>Lawson nτT</span>
+                    <span id="tok_lawson" class="good">4.8×10²¹</span>
+                </div>
+                <div class="stats-row">
+                    <span>Fusion Power</span>
+                    <span id="tok_Pfus">500 MW</span>
+                </div>
+                <div class="stats-row">
+                    <span>Q Factor</span>
+                    <span id="tok_Q" class="good">10.0</span>
+                </div>
+                <div class="comparison-bar tokamak-bar">
+                    <div class="bar-label"><span>Efficiency Score</span><span id="tok_score">75%</span></div>
+                    <div class="bar-track"><div class="bar-fill" id="tok_bar" style="width: 75%"></div></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stellarator Canvas -->
+        <div class="canvas-container">
+            <div class="reactor-label stellarator-label">STELLARATOR</div>
+            <canvas id="stellaratorCanvas"></canvas>
+            <div class="stats-overlay">
+                <div class="stats-row">
+                    <span>Aspect Ratio (A)</span>
+                    <span id="stel_aspect" class="good">10.0</span>
+                </div>
+                <div class="stats-row">
+                    <span>Volume</span>
+                    <span id="stel_volume">30 m³</span>
+                </div>
+                <div class="stats-row">
+                    <span>Confinement τ_E</span>
+                    <span id="stel_tau">1.2 s</span>
+                </div>
+                <div class="stats-row">
+                    <span>Lawson nτT</span>
+                    <span id="stel_lawson" class="warn">1.8×10²¹</span>
+                </div>
+                <div class="stats-row">
+                    <span>Fusion Power</span>
+                    <span id="stel_Pfus">150 MW</span>
+                </div>
+                <div class="stats-row">
+                    <span>Q Factor</span>
+                    <span id="stel_Q" class="warn">3.0</span>
+                </div>
+                <div class="comparison-bar stellarator-bar">
+                    <div class="bar-label"><span>Efficiency Score</span><span id="stel_score">60%</span></div>
+                    <div class="bar-track"><div class="bar-fill" id="stel_bar" style="width: 60%"></div></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stellarator Controls -->
+        <div class="controls-panel">
+            <h2 style="color: var(--stellarator);">STELLARATOR PARAMETERS</h2>
+            
+            <div class="param-group">
+                <div class="param-group-header">
+                    <label>Category:</label>
+                    <select id="stellaratorCategory" onchange="updateParamVisibility('stellarator')">
+                        <option value="geometry">Geometry</option>
+                        <option value="plasma">Plasma</option>
+                        <option value="magnetic">Magnetic Field</option>
+                        <option value="heating">Heating & Power</option>
+                        <option value="coils">Coil Complexity</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Geometry params -->
+            <div class="param-set stellarator-geometry">
+                <div class="slider-row stellarator-slider">
+                    <label>Major Radius (R₀) <span id="stel_R0_val">5.5</span> m</label>
+                    <input type="range" id="stel_R0" min="2" max="12" step="0.1" value="5.5" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Minor Radius (a) <span id="stel_a_val">0.55</span> m</label>
+                    <input type="range" id="stel_a" min="0.2" max="2" step="0.05" value="0.55" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Field Periods <span id="stel_periods_val">5</span></label>
+                    <input type="range" id="stel_periods" min="2" max="10" step="1" value="5" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Rotational Transform (ι) <span id="stel_iota_val">1.0</span></label>
+                    <input type="range" id="stel_iota" min="0.1" max="2" step="0.1" value="1" oninput="updateStellarator()">
+                </div>
+            </div>
+            
+            <!-- Plasma params -->
+            <div class="param-set stellarator-plasma hidden">
+                <div class="slider-row stellarator-slider">
+                    <label>Density (n) <span id="stel_n_val">0.8</span> ×10²⁰ m⁻³</label>
+                    <input type="range" id="stel_n" min="0.1" max="3" step="0.1" value="0.8" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Temperature (T) <span id="stel_T_val">10</span> keV</label>
+                    <input type="range" id="stel_T" min="1" max="40" step="1" value="10" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Zeff (impurity) <span id="stel_Zeff_val">1.3</span></label>
+                    <input type="range" id="stel_Zeff" min="1" max="4" step="0.1" value="1.3" oninput="updateStellarator()">
+                </div>
+            </div>
+            
+            <!-- Magnetic params -->
+            <div class="param-set stellarator-magnetic hidden">
+                <div class="slider-row stellarator-slider">
+                    <label>Toroidal Field (B) <span id="stel_B_val">2.5</span> T</label>
+                    <input type="range" id="stel_B" min="1" max="10" step="0.1" value="2.5" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Mirror Ratio <span id="stel_mirror_val">1.1</span></label>
+                    <input type="range" id="stel_mirror" min="1" max="2" step="0.05" value="1.1" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>β (plasma beta) <span id="stel_beta_val">4</span> %</label>
+                    <input type="range" id="stel_beta" min="0.5" max="10" step="0.5" value="4" oninput="updateStellarator()">
+                </div>
+            </div>
+            
+            <!-- Heating params -->
+            <div class="param-set stellarator-heating hidden">
+                <div class="slider-row stellarator-slider">
+                    <label>ECRH Power <span id="stel_ECRH_val">10</span> MW</label>
+                    <input type="range" id="stel_ECRH" min="0" max="30" step="1" value="10" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>NBI Power <span id="stel_NBI_val">5</span> MW</label>
+                    <input type="range" id="stel_NBI" min="0" max="30" step="1" value="5" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>ICRH Power <span id="stel_ICRH_val">0</span> MW</label>
+                    <input type="range" id="stel_ICRH" min="0" max="20" step="1" value="0" oninput="updateStellarator()">
+                </div>
+            </div>
+            
+            <!-- Coil params -->
+            <div class="param-set stellarator-coils hidden">
+                <div class="slider-row stellarator-slider">
+                    <label>Coil Complexity <span id="stel_complexity_val">5</span></label>
+                    <input type="range" id="stel_complexity" min="1" max="10" step="1" value="5" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Modular Coils <span id="stel_coils_val">50</span></label>
+                    <input type="range" id="stel_coils" min="10" max="100" step="5" value="50" oninput="updateStellarator()">
+                </div>
+                <div class="slider-row stellarator-slider">
+                    <label>Coil-Plasma Gap <span id="stel_gap_val">0.3</span> m</label>
+                    <input type="range" id="stel_gap" min="0.1" max="1" step="0.05" value="0.3" oninput="updateStellarator()">
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h4>STELLARATOR</h4>
+                External coils provide all rotational transform. Complex 3D geometry but inherently steady-state. No disruptions, but challenging engineering.
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // WebGL setup for both canvases
+        const tokCanvas = document.getElementById('tokamakCanvas');
+        const stelCanvas = document.getElementById('stellaratorCanvas');
+        
+        let tokGL, stelGL;
+        let tokProgram, stelProgram;
+        let time = 0;
+        
+        // Tokamak parameters
+        const tokamak = {
+            R0: 6.0, a: 2.0, kappa: 1.7, delta: 0.33,
+            n: 1.0, T: 15, Ip: 15, Zeff: 1.5,
+            BT: 5.3, q95: 3.0, betaN: 2.0,
+            NBI: 33, ICRH: 20, ECRH: 20,
+            ELM: 10, disrupt: 15, H: 1.0
+        };
+        
+        // Stellarator parameters
+        const stellarator = {
+            R0: 5.5, a: 0.55, periods: 5, iota: 1.0,
+            n: 0.8, T: 10, Zeff: 1.3,
+            B: 2.5, mirror: 1.1, beta: 4,
+            ECRH: 10, NBI: 5, ICRH: 0,
+            complexity: 5, coils: 50, gap: 0.3
+        };
+        
+        function initWebGL(canvas) {
+            const gl = canvas.getContext('webgl2');
+            if (!gl) return null;
+            
+            const vsSource = `#version 300 es
+                in vec2 aPosition;
+                void main() {
+                    gl_Position = vec4(aPosition, 0.0, 1.0);
+                }
+            `;
+            
+            const fsTokamak = `#version 300 es
+                precision highp float;
+                uniform float uTime;
+                uniform float uR0, uA, uKappa, uDelta;
+                uniform float uBT, uIp, uT;
+                out vec4 fragColor;
+                
+                vec3 plasma(float t) {
+                    return vec3(
+                        0.5 + 0.5 * sin(6.28318 * (t + 0.0)),
+                        0.5 + 0.5 * sin(6.28318 * (t + 0.33)),
+                        0.5 + 0.5 * sin(6.28318 * (t + 0.67))
+                    );
+                }
+                
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / vec2(800.0, 600.0);
+                    uv = uv * 2.0 - 1.0;
+                    uv.x *= 1.33;
+                    
+                    // Tokamak cross-section (D-shaped)
+                    float aspect = uR0 / uA;
+                    float theta = atan(uv.y * uKappa, uv.x);
+                    float r = length(vec2(uv.x, uv.y / uKappa));
+                    
+                    // Plasma boundary with triangularity
+                    float boundary = 0.4 + 0.1 * uDelta * cos(theta);
+                    
+                    // Core temperature profile
+                    float rNorm = r / boundary;
+                    float tempProfile = pow(max(0.0, 1.0 - rNorm * rNorm), 0.5);
+                    
+                    // Plasma glow
+                    vec3 col = vec3(0.02, 0.01, 0.03);
+                    
+                    if (r < boundary) {
+                        // Hot core
+                        float temp = tempProfile * uT / 15.0;
+                        vec3 plasmaCol = mix(
+                            vec3(1.0, 0.3, 0.1),  // Edge (cooler)
+                            vec3(1.0, 1.0, 0.9),   // Core (hotter)
+                            temp
+                        );
+                        
+                        // Add turbulent structure
+                        float turb = sin(theta * 8.0 + uTime * 2.0) * 0.1;
+                        turb += sin(r * 20.0 - uTime * 3.0) * 0.05;
+                        
+                        col = plasmaCol * (0.5 + 0.5 * tempProfile + turb);
+                        
+                        // Field line hints
+                        float fieldLine = sin(theta * uIp / 5.0 + r * 10.0) * 0.5 + 0.5;
+                        col += vec3(0.0, 0.5, 1.0) * fieldLine * 0.1 * (1.0 - rNorm);
+                    }
+                    
+                    // Vessel wall
+                    float wall = smoothstep(0.02, 0.0, abs(r - boundary - 0.05));
+                    col = mix(col, vec3(0.3, 0.3, 0.35), wall);
+                    
+                    // Magnetic coils (simplified)
+                    float coilAngle = mod(theta + 3.14159, 0.5) - 0.25;
+                    float coil = smoothstep(0.03, 0.0, abs(coilAngle)) * smoothstep(0.0, 0.02, abs(r - boundary - 0.12));
+                    col = mix(col, vec3(0.0, 0.6, 1.0), coil * 0.5);
+                    
+                    fragColor = vec4(col, 1.0);
+                }
+            `;
+            
+            const fsStellarator = `#version 300 es
+                precision highp float;
+                uniform float uTime;
+                uniform float uR0, uA, uPeriods, uIota;
+                uniform float uB, uT, uComplexity;
+                out vec4 fragColor;
+                
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / vec2(800.0, 600.0);
+                    uv = uv * 2.0 - 1.0;
+                    uv.x *= 1.33;
+                    
+                    // 3D projection of stellarator
+                    float phi = uTime * 0.3; // Rotation
+                    float toroidalAngle = atan(uv.y, uv.x);
+                    
+                    // Stellarator has twisted, bean-shaped cross-section
+                    float twist = sin(toroidalAngle * uPeriods + phi) * 0.3 * uIota;
+                    vec2 twisted = vec2(
+                        uv.x * cos(twist) - uv.y * sin(twist),
+                        uv.x * sin(twist) + uv.y * cos(twist)
+                    );
+                    
+                    // Bean shape (stellarator cross-section varies)
+                    float r = length(twisted);
+                    float theta = atan(twisted.y, twisted.x);
+                    float boundary = 0.25 + 0.08 * cos(theta * 2.0 + toroidalAngle * uPeriods);
+                    boundary *= 0.8 + 0.2 * sin(toroidalAngle * uPeriods * 2.0 + phi);
+                    
+                    vec3 col = vec3(0.02, 0.01, 0.03);
+                    
+                    if (r < boundary) {
+                        float rNorm = r / boundary;
+                        float tempProfile = pow(max(0.0, 1.0 - rNorm * rNorm), 0.7);
+                        
+                        // Stellarator plasma (different color scheme)
+                        vec3 plasmaCol = mix(
+                            vec3(1.0, 0.2, 0.5),   // Edge
+                            vec3(1.0, 0.9, 1.0),   // Core
+                            tempProfile * uT / 10.0
+                        );
+                        
+                        // Helical structure from rotational transform
+                        float helix = sin(theta * uIota * 10.0 + toroidalAngle * uPeriods + uTime) * 0.5 + 0.5;
+                        
+                        col = plasmaCol * (0.4 + 0.4 * tempProfile + 0.2 * helix);
+                    }
+                    
+                    // Modular coils (complex 3D shape)
+                    for (float i = 0.0; i < 10.0; i++) {
+                        float coilPhi = i * 6.28318 / uPeriods / 2.0;
+                        float coilTwist = sin(coilPhi * uPeriods) * 0.3 * uComplexity / 5.0;
+                        
+                        vec2 coilPos = vec2(
+                            (boundary + 0.1) * cos(coilPhi + phi),
+                            (boundary + 0.1) * sin(coilPhi + phi) * (1.0 + coilTwist)
+                        );
+                        
+                        float coilDist = length(uv - coilPos * 0.8);
+                        float coil = smoothstep(0.04, 0.02, coilDist);
+                        col = mix(col, vec3(1.0, 0.0, 0.7), coil * 0.6);
+                    }
+                    
+                    // Wall
+                    float wall = smoothstep(0.02, 0.0, abs(r - boundary - 0.03));
+                    col = mix(col, vec3(0.3, 0.25, 0.35), wall);
+                    
+                    fragColor = vec4(col, 1.0);
+                }
+            `;
+            
+            return { gl, vsSource, fsTokamak, fsStellarator };
+        }
+        
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+        
+        function createProgram(gl, vsSource, fsSource) {
+            const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(program));
+                return null;
+            }
+            return program;
+        }
+        
+        function setupRenderer(canvas, fsSource, vsSource) {
+            const gl = canvas.getContext('webgl2');
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            
+            const program = createProgram(gl, vsSource, fsSource);
+            
+            // Fullscreen quad
+            const positions = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+            
+            const vao = gl.createVertexArray();
+            gl.bindVertexArray(vao);
+            const posLoc = gl.getAttribLocation(program, 'aPosition');
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+            
+            return { gl, program, vao };
+        }
+        
+        let tokRenderer, stelRenderer;
+        
+        function init() {
+            const setup = initWebGL(tokCanvas);
+            if (!setup) {
+                console.error('WebGL2 not supported');
+                return;
+            }
+            
+            tokRenderer = setupRenderer(tokCanvas, setup.fsTokamak, setup.vsSource);
+            stelRenderer = setupRenderer(stelCanvas, setup.fsStellarator, setup.vsSource);
+            
+            animate();
+        }
+        
+        function render(renderer, params, isTokamak) {
+            const { gl, program, vao } = renderer;
+            
+            gl.useProgram(program);
+            gl.bindVertexArray(vao);
+            
+            gl.uniform1f(gl.getUniformLocation(program, 'uTime'), time);
+            
+            if (isTokamak) {
+                gl.uniform1f(gl.getUniformLocation(program, 'uR0'), params.R0);
+                gl.uniform1f(gl.getUniformLocation(program, 'uA'), params.a);
+                gl.uniform1f(gl.getUniformLocation(program, 'uKappa'), params.kappa);
+                gl.uniform1f(gl.getUniformLocation(program, 'uDelta'), params.delta);
+                gl.uniform1f(gl.getUniformLocation(program, 'uBT'), params.BT);
+                gl.uniform1f(gl.getUniformLocation(program, 'uIp'), params.Ip);
+                gl.uniform1f(gl.getUniformLocation(program, 'uT'), params.T);
+            } else {
+                gl.uniform1f(gl.getUniformLocation(program, 'uR0'), params.R0);
+                gl.uniform1f(gl.getUniformLocation(program, 'uA'), params.a);
+                gl.uniform1f(gl.getUniformLocation(program, 'uPeriods'), params.periods);
+                gl.uniform1f(gl.getUniformLocation(program, 'uIota'), params.iota);
+                gl.uniform1f(gl.getUniformLocation(program, 'uB'), params.B);
+                gl.uniform1f(gl.getUniformLocation(program, 'uT'), params.T);
+                gl.uniform1f(gl.getUniformLocation(program, 'uComplexity'), params.complexity);
+            }
+            
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+        
+        function animate() {
+            time += 0.016;
+            
+            if (tokRenderer) render(tokRenderer, tokamak, true);
+            if (stelRenderer) render(stelRenderer, stellarator, false);
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Parameter visibility
+        function updateParamVisibility(type) {
+            const category = document.getElementById(type + 'Category').value;
+            const sets = document.querySelectorAll(`.param-set.${type}-geometry, .param-set.${type}-plasma, .param-set.${type}-magnetic, .param-set.${type}-heating, .param-set.${type}-stability, .param-set.${type}-coils`);
+            
+            sets.forEach(s => s.classList.add('hidden'));
+            const active = document.querySelector(`.param-set.${type}-${category}`);
+            if (active) active.classList.remove('hidden');
+        }
+        
+        // Update functions
+        function updateTokamak() {
+            // Read all sliders
+            tokamak.R0 = parseFloat(document.getElementById('tok_R0').value);
+            tokamak.a = parseFloat(document.getElementById('tok_a').value);
+            tokamak.kappa = parseFloat(document.getElementById('tok_kappa').value);
+            tokamak.delta = parseFloat(document.getElementById('tok_delta').value);
+            tokamak.n = parseFloat(document.getElementById('tok_n').value);
+            tokamak.T = parseFloat(document.getElementById('tok_T').value);
+            tokamak.Ip = parseFloat(document.getElementById('tok_Ip').value);
+            tokamak.Zeff = parseFloat(document.getElementById('tok_Zeff').value);
+            tokamak.BT = parseFloat(document.getElementById('tok_BT').value);
+            tokamak.q95 = parseFloat(document.getElementById('tok_q95').value);
+            tokamak.betaN = parseFloat(document.getElementById('tok_betaN').value);
+            tokamak.NBI = parseFloat(document.getElementById('tok_NBI').value);
+            tokamak.ICRH = parseFloat(document.getElementById('tok_ICRH').value);
+            tokamak.ECRH = parseFloat(document.getElementById('tok_ECRH').value);
+            tokamak.ELM = parseFloat(document.getElementById('tok_ELM').value);
+            tokamak.disrupt = parseFloat(document.getElementById('tok_disrupt').value);
+            tokamak.H = parseFloat(document.getElementById('tok_H').value);
+            
+            // Update value displays
+            document.getElementById('tok_R0_val').textContent = tokamak.R0.toFixed(1);
+            document.getElementById('tok_a_val').textContent = tokamak.a.toFixed(1);
+            document.getElementById('tok_kappa_val').textContent = tokamak.kappa.toFixed(1);
+            document.getElementById('tok_delta_val').textContent = tokamak.delta.toFixed(2);
+            document.getElementById('tok_n_val').textContent = tokamak.n.toFixed(1);
+            document.getElementById('tok_T_val').textContent = tokamak.T;
+            document.getElementById('tok_Ip_val').textContent = tokamak.Ip;
+            document.getElementById('tok_Zeff_val').textContent = tokamak.Zeff.toFixed(1);
+            document.getElementById('tok_BT_val').textContent = tokamak.BT.toFixed(1);
+            document.getElementById('tok_q95_val').textContent = tokamak.q95.toFixed(1);
+            document.getElementById('tok_betaN_val').textContent = tokamak.betaN.toFixed(1);
+            document.getElementById('tok_NBI_val').textContent = tokamak.NBI;
+            document.getElementById('tok_ICRH_val').textContent = tokamak.ICRH;
+            document.getElementById('tok_ECRH_val').textContent = tokamak.ECRH;
+            document.getElementById('tok_ELM_val').textContent = tokamak.ELM;
+            document.getElementById('tok_disrupt_val').textContent = tokamak.disrupt;
+            document.getElementById('tok_H_val').textContent = tokamak.H.toFixed(2);
+            
+            // Calculate derived quantities
+            const aspect = tokamak.R0 / tokamak.a;
+            const volume = 2 * Math.PI * Math.PI * tokamak.R0 * tokamak.a * tokamak.a * tokamak.kappa;
+            
+            // ITER scaling for confinement time
+            const Pheat = tokamak.NBI + tokamak.ICRH + tokamak.ECRH;
+            const tau = 0.145 * tokamak.H * Math.pow(tokamak.Ip, 0.93) * Math.pow(tokamak.BT, 0.15) * 
+                       Math.pow(tokamak.n * 0.1, 0.41) * Math.pow(Pheat, -0.69) * 
+                       Math.pow(tokamak.R0, 1.97) * Math.pow(tokamak.a / tokamak.R0, 0.58) *
+                       Math.pow(tokamak.kappa, 0.78);
+            
+            // Lawson parameter
+            const lawson = tokamak.n * 1e20 * tau * tokamak.T * 1000; // in keV s m^-3
+            
+            // Fusion power (simplified)
+            const Pfus = 0.001 * tokamak.n * tokamak.n * Math.pow(tokamak.T, 2) * volume * 
+                        Math.exp(-20 / tokamak.T); // Rough scaling
+            
+            // Q factor
+            const Q = Pfus / Math.max(1, Pheat);
+            
+            // Update stats
+            document.getElementById('tok_aspect').textContent = aspect.toFixed(1);
+            document.getElementById('tok_volume').textContent = volume.toFixed(0) + ' m³';
+            document.getElementById('tok_tau').textContent = tau.toFixed(2) + ' s';
+            document.getElementById('tok_lawson').textContent = (lawson / 1e21).toFixed(1) + '×10²¹';
+            document.getElementById('tok_Pfus').textContent = Pfus.toFixed(0) + ' MW';
+            document.getElementById('tok_Q').textContent = Q.toFixed(1);
+            
+            // Color coding
+            const lawsonEl = document.getElementById('tok_lawson');
+            lawsonEl.className = lawson > 3e21 ? 'good' : lawson > 1e21 ? 'warn' : 'bad';
+            
+            const qEl = document.getElementById('tok_Q');
+            qEl.className = Q > 5 ? 'good' : Q > 1 ? 'warn' : 'bad';
+            
+            // Score
+            const score = Math.min(100, (Q * 5 + (1 - tokamak.disrupt/100) * 30 + (lawson/5e21) * 40));
+            document.getElementById('tok_score').textContent = score.toFixed(0) + '%';
+            document.getElementById('tok_bar').style.width = score + '%';
+        }
+        
+        function updateStellarator() {
+            // Read all sliders
+            stellarator.R0 = parseFloat(document.getElementById('stel_R0').value);
+            stellarator.a = parseFloat(document.getElementById('stel_a').value);
+            stellarator.periods = parseFloat(document.getElementById('stel_periods').value);
+            stellarator.iota = parseFloat(document.getElementById('stel_iota').value);
+            stellarator.n = parseFloat(document.getElementById('stel_n').value);
+            stellarator.T = parseFloat(document.getElementById('stel_T').value);
+            stellarator.Zeff = parseFloat(document.getElementById('stel_Zeff').value);
+            stellarator.B = parseFloat(document.getElementById('stel_B').value);
+            stellarator.mirror = parseFloat(document.getElementById('stel_mirror').value);
+            stellarator.beta = parseFloat(document.getElementById('stel_beta').value);
+            stellarator.ECRH = parseFloat(document.getElementById('stel_ECRH').value);
+            stellarator.NBI = parseFloat(document.getElementById('stel_NBI').value);
+            stellarator.ICRH = parseFloat(document.getElementById('stel_ICRH').value);
+            stellarator.complexity = parseFloat(document.getElementById('stel_complexity').value);
+            stellarator.coils = parseFloat(document.getElementById('stel_coils').value);
+            stellarator.gap = parseFloat(document.getElementById('stel_gap').value);
+            
+            // Update displays
+            document.getElementById('stel_R0_val').textContent = stellarator.R0.toFixed(1);
+            document.getElementById('stel_a_val').textContent = stellarator.a.toFixed(2);
+            document.getElementById('stel_periods_val').textContent = stellarator.periods;
+            document.getElementById('stel_iota_val').textContent = stellarator.iota.toFixed(1);
+            document.getElementById('stel_n_val').textContent = stellarator.n.toFixed(1);
+            document.getElementById('stel_T_val').textContent = stellarator.T;
+            document.getElementById('stel_Zeff_val').textContent = stellarator.Zeff.toFixed(1);
+            document.getElementById('stel_B_val').textContent = stellarator.B.toFixed(1);
+            document.getElementById('stel_mirror_val').textContent = stellarator.mirror.toFixed(2);
+            document.getElementById('stel_beta_val').textContent = stellarator.beta;
+            document.getElementById('stel_ECRH_val').textContent = stellarator.ECRH;
+            document.getElementById('stel_NBI_val').textContent = stellarator.NBI;
+            document.getElementById('stel_ICRH_val').textContent = stellarator.ICRH;
+            document.getElementById('stel_complexity_val').textContent = stellarator.complexity;
+            document.getElementById('stel_coils_val').textContent = stellarator.coils;
+            document.getElementById('stel_gap_val').textContent = stellarator.gap.toFixed(2);
+            
+            // Derived quantities
+            const aspect = stellarator.R0 / stellarator.a;
+            const volume = 2 * Math.PI * Math.PI * stellarator.R0 * stellarator.a * stellarator.a;
+            
+            // ISS04 scaling for stellarators
+            const Pheat = stellarator.ECRH + stellarator.NBI + stellarator.ICRH;
+            const tau = 0.134 * Math.pow(stellarator.a, 2.28) * Math.pow(stellarator.R0, 0.64) *
+                       Math.pow(Pheat, -0.61) * Math.pow(stellarator.n * 0.1, 0.54) *
+                       Math.pow(stellarator.B, 0.84) * Math.pow(stellarator.iota, 0.41);
+            
+            const lawson = stellarator.n * 1e20 * tau * stellarator.T * 1000;
+            
+            const Pfus = 0.0008 * stellarator.n * stellarator.n * Math.pow(stellarator.T, 2) * volume *
+                        Math.exp(-20 / stellarator.T);
+            
+            const Q = Pfus / Math.max(1, Pheat);
+            
+            // Update stats
+            document.getElementById('stel_aspect').textContent = aspect.toFixed(1);
+            document.getElementById('stel_volume').textContent = volume.toFixed(0) + ' m³';
+            document.getElementById('stel_tau').textContent = tau.toFixed(2) + ' s';
+            document.getElementById('stel_lawson').textContent = (lawson / 1e21).toFixed(1) + '×10²¹';
+            document.getElementById('stel_Pfus').textContent = Pfus.toFixed(0) + ' MW';
+            document.getElementById('stel_Q').textContent = Q.toFixed(1);
+            
+            const lawsonEl = document.getElementById('stel_lawson');
+            lawsonEl.className = lawson > 3e21 ? 'good' : lawson > 1e21 ? 'warn' : 'bad';
+            
+            const qEl = document.getElementById('stel_Q');
+            qEl.className = Q > 5 ? 'good' : Q > 1 ? 'warn' : 'bad';
+            
+            // Score (stellarators get bonus for no disruptions)
+            const score = Math.min(100, (Q * 5 + 30 + (lawson/5e21) * 40 - stellarator.complexity * 2));
+            document.getElementById('stel_score').textContent = score.toFixed(0) + '%';
+            document.getElementById('stel_bar').style.width = score + '%';
+        }
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            init();
+            updateTokamak();
+            updateStellarator();
+        });
+        
+        window.addEventListener('resize', () => {
+            if (tokRenderer) {
+                tokCanvas.width = tokCanvas.clientWidth;
+                tokCanvas.height = tokCanvas.clientHeight;
+                tokRenderer.gl.viewport(0, 0, tokCanvas.width, tokCanvas.height);
+            }
+            if (stelRenderer) {
+                stelCanvas.width = stelCanvas.clientWidth;
+                stelCanvas.height = stelCanvas.clientHeight;
+                stelRenderer.gl.viewport(0, 0, stelCanvas.width, stelCanvas.height);
+            }
+        });
+    </script>
+</body>
+</html>
