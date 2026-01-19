@@ -1710,8 +1710,15 @@ mag.render();</pre>
     // ============================================
     // APPLICATION SETUP
     // ============================================
-    
+
+    // Wait for DOM to be fully loaded
+    window.addEventListener('DOMContentLoaded', function() {
+
     const canvas = document.getElementById('glCanvas');
+    if (!canvas) {
+        console.error('Canvas element not found!');
+        return;
+    }
     const magneticGPU = new MagneticGPU(canvas);
     
     // Generate initial field
@@ -1904,6 +1911,8 @@ mag.render();</pre>
     }
     
     loop();
+
+    }); // End DOMContentLoaded
     </script>
 </body>
 </html>
