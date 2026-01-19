@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DPEP Engine - WebAssembly vs JavaScript Performance - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&display=swap');
+
+        :root {
+            --bg: #000208;
+            --panel: #0a0515;
+            --accent: #00ff88;
+            --wasm: #ff00ff;
+            --js: #00aaff;
+            --text: #e0e0e0;
+            --dim: #6688aa;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at center, #0a0520 0%, var(--bg) 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: linear-gradient(180deg, rgba(0,255,136,0.1) 0%, transparent 100%);
+            border-bottom: 2px solid rgba(0,255,136,0.3);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--wasm) 50%, var(--js) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(0,255,136,0.5);
+            margin-bottom: 1rem;
+            letter-spacing: 0.1em;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(0,255,136,0.3); }
+            50% { text-shadow: 0 0 40px rgba(0,255,136,0.8); }
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .mode-btn {
+            padding: 1rem 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: 2px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .mode-btn.wasm {
+            background: linear-gradient(135deg, rgba(255,0,255,0.2), rgba(255,0,255,0.05));
+            border-color: var(--wasm);
+            color: var(--wasm);
+        }
+
+        .mode-btn.wasm.active {
+            background: linear-gradient(135deg, var(--wasm), #aa00aa);
+            color: #000;
+            box-shadow: 0 0 30px var(--wasm);
+        }
+
+        .mode-btn.js {
+            background: linear-gradient(135deg, rgba(0,170,255,0.2), rgba(0,170,255,0.05));
+            border-color: var(--js);
+            color: var(--js);
+        }
+
+        .mode-btn.js.active {
+            background: linear-gradient(135deg, var(--js), #0066cc);
+            color: #fff;
+            box-shadow: 0 0 30px var(--js);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(10,5,21,0.9);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .performance-box {
+            background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(255,0,255,0.1));
+            border: 2px solid rgba(0,255,136,0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .perf-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .perf-label {
+            font-size: 0.9rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .perf-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent), var(--wasm));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .perf-value.fps {
+            color: var(--accent);
+            -webkit-text-fill-color: var(--accent);
+        }
+
+        .canvas-container {
+            background: rgba(0,2,8,0.95);
+            border: 2px solid rgba(0,255,136,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,255,136,0.05);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0,255,136,0.3);
+        }
+
+        .control-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(0,255,136,0.2), rgba(255,0,255,0.2));
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, var(--accent), var(--wasm));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 8px rgba(0,255,136,0.6);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(0,255,136,0.05);
+            border: 1px solid rgba(0,255,136,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        .stat-box {
+            background: rgba(0,255,136,0.05);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(10,5,21,0.9);
+            border: 1px solid rgba(0,255,136,0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .back-link:hover {
+            background: rgba(0,255,136,0.2);
+            transform: translateX(-3px);
+            box-shadow: 0 0 20px rgba(0,255,136,0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>⚡ DPEP ENGINE: WASM vs JS ⚡</h1>
+        <p style="color: var(--dim); margin-bottom: 1rem;">Real-time performance comparison: C++/WebAssembly vs Pure JavaScript</p>
+        
+        <div class="mode-selector">
+            <button class="mode-btn wasm active" id="wasmBtn">
+                🚀 WASM MODE<br>
+                <span style="font-size: 0.6rem; opacity: 0.7;">C++ Compiled</span>
+            </button>
+            <button class="mode-btn js" id="jsBtn">
+                🌐 JS MODE<br>
+                <span style="font-size: 0.6rem; opacity: 0.7;">Pure JavaScript</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Left: Controls -->
+        <div class="panel">
+            <div class="performance-box">
+                <div class="perf-metric">
+                    <span class="perf-label">FPS</span>
+                    <span class="perf-value fps" id="fpsDisplay">60</span>
+                </div>
+                <div class="perf-metric">
+                    <span class="perf-label">Frame Time</span>
+                    <span class="perf-value" id="frameTimeDisplay" style="font-size: 1.2rem;">16ms</span>
+                </div>
+                <div class="perf-metric">
+                    <span class="perf-label">Particles</span>
+                    <span class="perf-value" id="particleCount" style="font-size: 1.2rem;">0</span>
+                </div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,255,136,0.2);">
+                    <div style="font-size: 0.7rem; color: var(--dim); text-align: center;">
+                        MODE: <span id="currentMode" style="color: var(--wasm); font-weight: 700;">WASM</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">Propellant</div>
+            <div class="control-group">
+                <select id="propellantSelect">
+                    <option value="0">LOX/RP-1 (Kerosene)</option>
+                    <option value="1">LOX/LH2 (Hydrogen)</option>
+                    <option value="2">NTO/MMH (Hypergolic)</option>
+                    <option value="3">LOX/CH4 (Methane)</option>
+                </select>
+            </div>
+
+            <div class="section-title">Chamber Conditions</div>
+            <div class="control-group">
+                <label>
+                    Gas/Liquid Ratio
+                    <span class="value-display" id="glrValue">0.10</span>
+                </label>
+                <input type="range" id="glrSlider" min="0.01" max="0.5" step="0.01" value="0.1">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Chamber Pressure
+                    <span class="value-display" id="pressureValue">20</span> atm
+                </label>
+                <input type="range" id="pressureSlider" min="5" max="100" step="1" value="20">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Simulation Speed
+                    <span class="value-display" id="speedValue">1.0</span>x
+                </label>
+                <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1">
+            </div>
+        </div>
+
+        <!-- Center: Visualization -->
+        <div>
+            <div class="canvas-container">
+                <div id="loadingMsg" class="loading">
+                    🚀 Loading WebAssembly Module...<br>
+                    <span style="font-size: 0.8rem;">Compiling C++ physics engine...</span>
+                </div>
+                <canvas id="dpepCanvas" width="1000" height="700" style="display:none;"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: Stats -->
+        <div class="panel">
+            <div class="section-title">Engine Performance</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Thrust</div>
+                <div class="stat-value">
+                    <span id="thrustValue">0.0</span> <span style="font-size:0.8rem;">kN</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Specific Impulse</div>
+                <div class="stat-value">
+                    <span id="ispValue">0</span> <span style="font-size:0.8rem;">s</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Exhaust Velocity</div>
+                <div class="stat-value">
+                    <span id="exhaustVelValue">0</span> <span style="font-size:0.8rem;">m/s</span>
+                </div>
+            </div>
+
+            <div class="section-title">Flow State</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Void Fraction</div>
+                <div class="stat-value">
+                    <span id="voidValue">0.0</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Mixture Density</div>
+                <div class="stat-value">
+                    <span id="densityValue">0</span> <span style="font-size:0.8rem;">kg/m³</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Mach Number</div>
+                <div class="stat-value">
+                    <span id="machValue">0.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // WASM MODULE LOADER
+        // ====================================================================
+
+        let dpepEngine = null;
+        let useWASM = true;
+        let isWASMReady = false;
+
+        const canvas = document.getElementById('dpepCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Performance tracking
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 60;
+        let frameTimes = [];
+
+        // Load WASM module
+        async function loadWASM() {
+            try {
+                const createModule = (await import('./dpep_engine.js')).default;
+                const Module = await createModule();
+                
+                dpepEngine = new Module.DPEPEngine(canvas.width, canvas.height);
+                isWASMReady = true;
+                
+                document.getElementById('loadingMsg').style.display = 'none';
+                canvas.style.display = 'block';
+                
+                console.log('✅ WASM module loaded successfully!');
+                animate();
+            } catch (error) {
+                console.error('❌ Failed to load WASM:', error);
+                document.getElementById('loadingMsg').innerHTML = 
+                    '⚠️ WASM not available<br><span style="font-size:0.8rem;">Fallback to JavaScript mode</span>';
+                
+                // Fallback to JS mode
+                useWASM = false;
+                document.getElementById('wasmBtn').classList.remove('active');
+                document.getElementById('jsBtn').classList.add('active');
+                document.getElementById('currentMode').textContent = 'JS';
+                document.getElementById('currentMode').style.color = 'var(--js)';
+                
+                setTimeout(() => {
+                    document.getElementById('loadingMsg').style.display = 'none';
+                    canvas.style.display = 'block';
+                    animate();
+                }, 2000);
+            }
+        }
+
+        // ====================================================================
+        // ANIMATION LOOP
+        // ====================================================================
+
+        function animate() {
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            // Update FPS
+            frameTimes.push(deltaTime * 1000);
+            if (frameTimes.length > 60) frameTimes.shift();
+            const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+            fps = Math.round(1000 / avgFrameTime);
+
+            document.getElementById('fpsDisplay').textContent = fps;
+            document.getElementById('frameTimeDisplay').textContent = avgFrameTime.toFixed(1) + 'ms';
+
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (useWASM && isWASMReady && dpepEngine) {
+                updateWASM(deltaTime);
+                renderWASM();
+            } else {
+                updateJS(deltaTime);
+                renderJS();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ====================================================================
+        // WASM UPDATE & RENDER
+        // ====================================================================
+
+        function updateWASM(dt) {
+            dpepEngine.update(dt);
+
+            // Update stats
+            const thrust = dpepEngine.calculateThrust();
+            const isp = dpepEngine.calculateSpecificImpulse();
+            const exhaustVel = dpepEngine.calculateExhaustVelocity();
+            const bubbleCount = dpepEngine.getBubbleCount();
+            const flowState = dpepEngine.getFlowState();
+
+            document.getElementById('thrustValue').textContent = thrust.toFixed(2);
+            document.getElementById('ispValue').textContent = Math.round(isp);
+            document.getElementById('exhaustVelValue').textContent = Math.round(exhaustVel);
+            document.getElementById('particleCount').textContent = bubbleCount;
+            document.getElementById('voidValue').textContent = flowState.voidFraction.toFixed(3);
+            document.getElementById('densityValue').textContent = Math.round(flowState.mixtureDensity);
+            document.getElementById('machValue').textContent = flowState.machNumber.toFixed(2);
+        }
+
+        function renderWASM() {
+            const positions = dpepEngine.getBubblePositions();
+
+            // Draw chamber outline
+            ctx.strokeStyle = 'rgba(0, 170, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(50, canvas.height * 0.2, 200, canvas.height * 0.6);
+
+            // Draw nozzle
+            ctx.beginPath();
+            ctx.moveTo(250, canvas.height * 0.4);
+            ctx.lineTo(450, canvas.height * 0.3);
+            ctx.lineTo(450, canvas.height * 0.7);
+            ctx.lineTo(250, canvas.height * 0.6);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Draw bubbles from WASM
+            for (let i = 0; i < positions.length; i += 4) {
+                const x = positions[i];
+                const y = positions[i + 1];
+                const r = positions[i + 2];
+                const alpha = positions[i + 3];
+
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+                gradient.addColorStop(0, `rgba(150, 220, 255, ${alpha})`);
+                gradient.addColorStop(0.7, `rgba(100, 200, 255, ${alpha * 0.6})`);
+                gradient.addColorStop(1, `rgba(50, 150, 255, 0)`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ====================================================================
+        // JAVASCRIPT FALLBACK (Simplified)
+        // ====================================================================
+
+        let jsBubbles = [];
+
+        function updateJS(dt) {
+            // Simplified JS physics (much slower!)
+            const spawnRate = parseFloat(document.getElementById('glrSlider').value) * 10;
+
+            if (Math.random() < spawnRate * 0.1 && jsBubbles.length < 500) {
+                jsBubbles.push({
+                    x: 70 + Math.random() * 60,
+                    y: canvas.height * 0.3 + Math.random() * 40,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: -Math.abs(Math.random()) * 0.5 - 0.2,
+                    r: 0.5 + Math.random() * 1.5,
+                    alpha: 0.7,
+                    age: 0
+                });
+            }
+
+            jsBubbles.forEach(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+                b.age++;
+                if (b.age > 200) b.alpha -= 0.01;
+            });
+
+            jsBubbles = jsBubbles.filter(b => b.alpha > 0 && b.y > 0);
+
+            document.getElementById('particleCount').textContent = jsBubbles.length;
+            document.getElementById('thrustValue').textContent = '12.5';
+            document.getElementById('ispValue').textContent = '285';
+            document.getElementById('exhaustVelValue').textContent = '2800';
+        }
+
+        function renderJS() {
+            // Draw chamber
+            ctx.strokeStyle = 'rgba(0, 170, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(50, canvas.height * 0.2, 200, canvas.height * 0.6);
+
+            // Draw nozzle
+            ctx.beginPath();
+            ctx.moveTo(250, canvas.height * 0.4);
+            ctx.lineTo(450, canvas.height * 0.3);
+            ctx.lineTo(450, canvas.height * 0.7);
+            ctx.lineTo(250, canvas.height * 0.6);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Draw bubbles
+            jsBubbles.forEach(b => {
+                const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+                gradient.addColorStop(0, `rgba(150, 220, 255, ${b.alpha})`);
+                gradient.addColorStop(1, `rgba(50, 150, 255, 0)`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // ====================================================================
+        // EVENT LISTENERS
+        // ====================================================================
+
+        document.getElementById('wasmBtn').addEventListener('click', () => {
+            useWASM = true;
+            document.getElementById('wasmBtn').classList.add('active');
+            document.getElementById('jsBtn').classList.remove('active');
+            document.getElementById('currentMode').textContent = 'WASM';
+            document.getElementById('currentMode').style.color = 'var(--wasm)';
+        });
+
+        document.getElementById('jsBtn').addEventListener('click', () => {
+            useWASM = false;
+            document.getElementById('wasmBtn').classList.remove('active');
+            document.getElementById('jsBtn').classList.add('active');
+            document.getElementById('currentMode').textContent = 'JS';
+            document.getElementById('currentMode').style.color = 'var(--js)';
+        });
+
+        document.getElementById('glrSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('glrValue').textContent = val.toFixed(2);
+            if (dpepEngine) dpepEngine.setGasToLiquidRatio(val);
+        });
+
+        document.getElementById('pressureSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('pressureValue').textContent = val;
+            if (dpepEngine) dpepEngine.setChamberPressure(val);
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = val.toFixed(1);
+            if (dpepEngine) dpepEngine.setSimulationSpeed(val);
+        });
+
+        document.getElementById('propellantSelect').addEventListener('change', (e) => {
+            if (dpepEngine) dpepEngine.setPropellant(parseInt(e.target.value));
+        });
+
+        // ====================================================================
+        // INITIALIZATION
+        // ====================================================================
+
+        loadWASM();
+    </script>
+</body>
+</html>
