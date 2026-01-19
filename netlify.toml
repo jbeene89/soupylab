@@ -1,6 +1,6 @@
 [build]
   # No build command needed - this is a static HTML site
-  command = ""
+  command = "echo 'No build required - static HTML site'"
 
   # Publish from the root directory
   publish = "."
