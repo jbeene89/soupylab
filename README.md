@@ -1,9 +1,26 @@
 # SOUPY LABS - Technical Physics Simulation Suite
 
-**Version:** 2.0  
-**Author:** John Beene  
-**Location:** Glen St. Mary, FL  
+**Version:** 2.0
+**Author:** John Beene
+**Location:** Glen St. Mary, FL
 **Date:** December 2024
+
+---
+
+## ☕ Support This Project
+
+**Love these free physics simulations?** Help keep them running and support more awesome content!
+
+### **[☕ Buy Me a Coffee on Ko-fi](https://ko-fi.com/soupylab)** ⚡
+
+Your support helps fund:
+- New simulator development (quantum mechanics, relativity, particle physics)
+- Server costs and domain hosting
+- Advanced GPU visualization features
+- Educational content and tutorials
+- More physics awesomeness!
+
+Every coffee counts! Even $3 helps keep the physics flowing. 🚀
 
 ---
 

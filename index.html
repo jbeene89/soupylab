@@ -41,6 +41,29 @@
         }
         .header p { color: var(--dim); font-size: 0.9rem; }
         .header .subtitle { color: #444; font-size: 0.75rem; margin-top: 8px; }
+        .kofi-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #ff5e5b 0%, #ff1744 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255,23,68,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        .kofi-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255,23,68,0.5);
+            background: linear-gradient(135deg, #ff1744 0%, #ff5e5b 100%);
+        }
+        .kofi-btn::before {
+            content: '☕ ';
+            font-size: 1.1rem;
+        }
         
         .section-title {
             font-family: 'Orbitron', sans-serif;
@@ -153,6 +176,8 @@
         <h1>SOUPY LABS</h1>
         <p>Technical Physics Simulation Modules</p>
         <p class="subtitle">18 interactive simulations • Fusion reactors • Plasma physics • Chemistry & materials • Navigation systems • GPU visualization • Gemini AI assistant</p>
+        <a href="https://ko-fi.com/soupylab" target="_blank" class="kofi-btn">Support SOUPY LABS - Buy Me a Coffee!</a>
+        <p style="color: #888; font-size: 0.75rem; margin-top: 8px;">Help keep these free simulations running and support more physics awesomeness! ⚡</p>
     </div>
     
     <div class="section-title fusion">☢️ FUSION & REACTOR CONCEPTS</div>
