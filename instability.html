@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MHD Instability Sandbox - Soupy Labs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -143,6 +144,9 @@
         }
         .status-item.danger .value { color: #ff4444; }
         .status-item.warning .value { color: #ffaa00; }
+        #canvasContainer {
+            position: relative;
+        }
         canvas {
             width: 100%;
             height: 100%;
@@ -167,10 +171,10 @@
 </head>
 <body>
     <header>
-        <h1>🌀 MHD INSTABILITY SANDBOX</h1>
+        <h1>🌀 MHD INSTABILITY SANDBOX - 3D CGI</h1>
         <a href="index.html">← BACK TO LAB</a>
     </header>
-    
+
     <div class="container">
         <div class="controls">
             <div class="section">
@@ -196,7 +200,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <div class="section">
                 <h3>PLASMA PARAMETERS</h3>
                 <div class="slider-row">
@@ -216,7 +220,7 @@
                     <input type="range" id="shear" min="0" max="1" step="0.05" value="0.3" oninput="updateParam()">
                 </div>
             </div>
-            
+
             <div class="section">
                 <h3>PERTURBATION</h3>
                 <div class="slider-row">
@@ -232,10 +236,10 @@
                     <input type="range" id="gamma" min="0.1" max="3" step="0.1" value="1" oninput="updateParam()">
                 </div>
             </div>
-            
+
             <button class="btn-action" onclick="triggerInstability()">⚡ TRIGGER INSTABILITY</button>
             <button class="btn-action btn-reset" onclick="resetPlasma()">↺ RESET PLASMA</button>
-            
+
             <div class="status-panel">
                 <div class="status-item" id="stabilityStatus">
                     <div class="label">STABILITY</div>
@@ -254,26 +258,32 @@
                     <div class="value">23%</div>
                 </div>
             </div>
-            
+
             <div class="info-box" id="modeInfo">
                 <h4>KINK INSTABILITY (m=1)</h4>
                 <p>Helical deformation of plasma column. Occurs when q &lt; 1 (Kruskal-Shafranov limit). Current-driven instability that can lead to major disruptions.</p>
             </div>
         </div>
-        
-        <canvas id="canvas"></canvas>
+
+        <div id="canvasContainer"></div>
     </div>
-    
+
     <script>
-        const canvas = document.getElementById('canvas');
-        const gl = canvas.getContext('webgl2');
-        
+        // ==========================================
+        // THREE.JS SETUP FOR 3D MHD INSTABILITIES
+        // ==========================================
+
+        let scene, camera, renderer;
+        let plasmaCylinder, plasmaParticles;
+        let fieldLines = [];
+        let vesselWall;
+
         let currentMode = 'kink';
         let time = 0;
         let instabilityActive = false;
         let instabilityTime = 0;
         let instabilityEnergy = 1.0;
-        
+
         const params = {
             beta: 5,
             q: 2.0,
@@ -283,7 +293,7 @@
             m: 1,
             gamma: 1.0
         };
-        
+
         const modeInfo = {
             kink: {
                 title: 'KINK INSTABILITY (m=1)',
@@ -310,234 +320,336 @@
                 desc: 'Periodic instability at plasma edge in H-mode. Releases 5-15% of stored energy in milliseconds. Major concern for ITER divertor erosion.'
             }
         };
-        
-        // Shader sources
-        const vsSource = `#version 300 es
-            in vec2 aPosition;
-            void main() {
-                gl_Position = vec4(aPosition, 0.0, 1.0);
+
+        // Initialize Three.js
+        function init() {
+            const container = document.getElementById('canvasContainer');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0f);
+            scene.fog = new THREE.FogExp2(0x0a0a0f, 0.02);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 8, 12);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0x404060, 0.4);
+            scene.add(ambient);
+
+            const key = new THREE.PointLight(0xff6633, 2, 50);
+            key.position.set(5, 10, 10);
+            scene.add(key);
+
+            const fill = new THREE.PointLight(0x00aaff, 1, 40);
+            fill.position.set(-8, 5, -5);
+            scene.add(fill);
+
+            // Create plasma cylinder
+            createPlasmaCylinder();
+
+            // Create plasma particles
+            createPlasmaParticles();
+
+            // Create field lines
+            createFieldLines();
+
+            // Create vessel wall
+            createVesselWall();
+
+            // Animation loop
+            animate();
+        }
+
+        // Create 3D plasma cylinder
+        function createPlasmaCylinder() {
+            if (plasmaCylinder) scene.remove(plasmaCylinder);
+
+            const geometry = new THREE.CylinderGeometry(1.5, 1.5, 8, 64, 128);
+
+            // Store original positions for deformation
+            const positions = geometry.attributes.position;
+            const originalPositions = new Float32Array(positions.count * 3);
+            for (let i = 0; i < positions.count; i++) {
+                originalPositions[i * 3] = positions.getX(i);
+                originalPositions[i * 3 + 1] = positions.getY(i);
+                originalPositions[i * 3 + 2] = positions.getZ(i);
             }
-        `;
-        
-        const fsSource = `#version 300 es
-            precision highp float;
-            
-            uniform float uTime;
-            uniform float uInstabilityTime;
-            uniform float uInstabilityActive;
-            uniform int uMode;
-            uniform float uBeta;
-            uniform float uQ;
-            uniform float uGrad;
-            uniform float uShear;
-            uniform float uAmp;
-            uniform float uM;
-            uniform float uGamma;
-            uniform vec2 uResolution;
-            
-            out vec4 fragColor;
-            
-            #define PI 3.14159265359
-            
-            vec3 plasmaColor(float t, float temp) {
-                vec3 cool = vec3(0.1, 0.2, 0.8);
-                vec3 warm = vec3(1.0, 0.4, 0.1);
-                vec3 hot = vec3(1.0, 1.0, 0.8);
-                
-                if (temp < 0.5) {
-                    return mix(cool, warm, temp * 2.0);
-                } else {
-                    return mix(warm, hot, (temp - 0.5) * 2.0);
+            geometry.userData.originalPositions = originalPositions;
+
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xff6633,
+                emissive: 0xff3300,
+                emissiveIntensity: 0.4,
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide
+            });
+
+            plasmaCylinder = new THREE.Mesh(geometry, material);
+            scene.add(plasmaCylinder);
+
+            // Add inner glow
+            const glowGeometry = new THREE.CylinderGeometry(1.3, 1.3, 7.5, 32, 64);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffff88,
+                transparent: true,
+                opacity: 0.3
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            plasmaCylinder.add(glow);
+        }
+
+        // Create GPU-accelerated plasma particles
+        function createPlasmaParticles() {
+            if (plasmaParticles) scene.remove(plasmaParticles);
+
+            const particleCount = 20000;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+            const velocities = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                const r = Math.random() * 1.4;
+                const theta = Math.random() * Math.PI * 2;
+                const y = (Math.random() - 0.5) * 7.5;
+
+                positions[i * 3] = r * Math.cos(theta);
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = r * Math.sin(theta);
+
+                // Temperature gradient (hot core)
+                const temp = 1 - (r / 1.5);
+                colors[i * 3] = 1.0;
+                colors[i * 3 + 1] = 0.3 + temp * 0.7;
+                colors[i * 3 + 2] = 0.1 + temp * 0.3;
+
+                sizes[i] = 0.08 + Math.random() * 0.12;
+
+                velocities[i * 3] = (Math.random() - 0.5) * 0.01;
+                velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.01;
+                velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            geometry.userData.velocities = velocities;
+            geometry.userData.originalPositions = positions.slice();
+
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            plasmaParticles = new THREE.Points(geometry, material);
+            scene.add(plasmaParticles);
+        }
+
+        // Create 3D magnetic field lines
+        function createFieldLines() {
+            fieldLines.forEach(line => scene.remove(line));
+            fieldLines = [];
+
+            const numLines = 12;
+            for (let i = 0; i < numLines; i++) {
+                const r = 0.5 + i * 0.15;
+                const points = [];
+
+                for (let j = 0; j <= 128; j++) {
+                    const y = (j / 128 - 0.5) * 8;
+                    const theta = (j / 128) * Math.PI * 2 * params.q;
+
+                    points.push(new THREE.Vector3(
+                        r * Math.cos(theta),
+                        y,
+                        r * Math.sin(theta)
+                    ));
                 }
+
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0x0088ff,
+                    transparent: true,
+                    opacity: 0.3
+                });
+
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                fieldLines.push(line);
             }
-            
-            float noise(vec2 p) {
-                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-            }
-            
-            void main() {
-                vec2 uv = gl_FragCoord.xy / uResolution;
-                vec2 p = (uv - 0.5) * 2.0;
-                p.x *= uResolution.x / uResolution.y;
-                
-                float r = length(p);
-                float theta = atan(p.y, p.x);
-                
-                // Base plasma column
-                float plasmaRadius = 0.6;
-                float edge = smoothstep(plasmaRadius + 0.1, plasmaRadius - 0.05, r);
-                
-                // Temperature profile (peaked in center)
-                float temp = pow(max(0.0, 1.0 - r / plasmaRadius), 0.5) * (0.5 + uBeta / 20.0);
-                
-                // Instability perturbation
-                float perturbation = 0.0;
-                float growthFactor = uInstabilityActive > 0.5 ? 
-                    exp(uGamma * uInstabilityTime * 2.0) - 1.0 : 0.0;
-                growthFactor = min(growthFactor, 5.0);
-                
-                float m = uM;
-                float phase = uTime * 0.5;
-                
-                if (uMode == 0) { // Kink
-                    // Helical displacement
-                    float kinkAmp = uAmp * growthFactor;
-                    float displacement = kinkAmp * cos(m * theta - phase);
-                    plasmaRadius += displacement * (1.0 - uQ / 3.0);
-                    
-                    // Add helical structure
-                    perturbation = sin(m * theta + r * 5.0 - phase * 2.0) * kinkAmp;
-                    
-                } else if (uMode == 1) { // Sausage
-                    // m=0 axisymmetric pinch
-                    float z = p.y * 3.0 + phase;
-                    float sausageAmp = uAmp * growthFactor;
-                    plasmaRadius *= 1.0 + sausageAmp * sin(z * PI);
-                    
-                    perturbation = sin(z * PI) * sausageAmp * 0.5;
-                    
-                } else if (uMode == 2) { // Ballooning
-                    // Outward bulge on bad curvature side
-                    float balloonAmp = uAmp * growthFactor * uGrad * 2.0;
-                    float badSide = max(0.0, cos(theta)); // Outside of torus
-                    plasmaRadius += balloonAmp * badSide * (1.0 + sin(theta * 5.0 + phase) * 0.3);
-                    
-                    perturbation = badSide * balloonAmp;
-                    
-                } else if (uMode == 3) { // Tearing
-                    // Magnetic island formation
-                    float islandWidth = uAmp * growthFactor * 2.0;
-                    float resonantSurface = 0.4;
-                    float islandPhase = m * theta - phase;
-                    
-                    float dr = r - resonantSurface;
-                    float island = islandWidth * cos(islandPhase) * exp(-dr * dr * 20.0);
-                    
-                    perturbation = island;
-                    temp *= 1.0 - abs(island) * 0.5; // Islands flatten temperature
-                    
-                } else if (uMode == 4) { // Rayleigh-Taylor
+        }
+
+        // Create vessel wall
+        function createVesselWall() {
+            const geometry = new THREE.CylinderGeometry(2.5, 2.5, 9, 32, 1, true);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x334455,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.DoubleSide,
+                wireframe: true
+            });
+
+            vesselWall = new THREE.Mesh(geometry, material);
+            scene.add(vesselWall);
+        }
+
+        // Apply instability deformation
+        function applyInstabilityDeformation() {
+            if (!plasmaCylinder || !instabilityActive) return;
+
+            const geometry = plasmaCylinder.geometry;
+            const positions = geometry.attributes.position;
+            const originalPositions = geometry.userData.originalPositions;
+
+            const growthFactor = Math.min(instabilityEnergy - 1, 3);
+            const amplitude = params.amp * growthFactor;
+
+            for (let i = 0; i < positions.count; i++) {
+                const x0 = originalPositions[i * 3];
+                const y0 = originalPositions[i * 3 + 1];
+                const z0 = originalPositions[i * 3 + 2];
+
+                const r = Math.sqrt(x0 * x0 + z0 * z0);
+                const theta = Math.atan2(z0, x0);
+                const yNorm = y0 / 4;
+
+                let dx = 0, dy = 0, dz = 0;
+
+                if (currentMode === 'kink') {
+                    // Helical displacement (m=1)
+                    const phase = params.m * theta + yNorm * Math.PI * 2 - time;
+                    const kinkAmp = amplitude * (1 - params.q / 3);
+                    dx = kinkAmp * Math.cos(phase) * Math.cos(theta);
+                    dz = kinkAmp * Math.cos(phase) * Math.sin(theta);
+
+                } else if (currentMode === 'sausage') {
+                    // Axisymmetric pinch (m=0)
+                    const sausageAmp = amplitude * Math.sin(yNorm * Math.PI * 3 + time);
+                    const scale = 1 + sausageAmp;
+                    dx = x0 * (scale - 1);
+                    dz = z0 * (scale - 1);
+
+                } else if (currentMode === 'ballooning') {
+                    // Outward bulge
+                    const balloonAmp = amplitude * params.grad * 2;
+                    const outwardSide = Math.max(0, Math.cos(theta + time * 0.5));
+                    dx = balloonAmp * outwardSide * Math.cos(theta);
+                    dz = balloonAmp * outwardSide * Math.sin(theta);
+
+                } else if (currentMode === 'tearing') {
+                    // Magnetic islands
+                    if (Math.abs(yNorm) < 0.3) {
+                        const islandPhase = params.m * theta - time;
+                        const islandAmp = amplitude * Math.cos(islandPhase);
+                        dx = islandAmp * Math.cos(theta);
+                        dz = islandAmp * Math.sin(theta);
+                    }
+
+                } else if (currentMode === 'rayleigh') {
                     // Finger-like structures
-                    float rtAmp = uAmp * growthFactor;
-                    float fingers = 0.0;
-                    for (float i = 1.0; i < 6.0; i++) {
-                        float k = i * 2.0;
-                        float growth = exp(sqrt(k * uGrad) * uInstabilityTime * uGamma);
-                        fingers += sin(theta * k + noise(vec2(i, 0.0)) * 6.28) * rtAmp / i * min(growth, 3.0);
+                    let fingers = 0;
+                    for (let k = 1; k <= 5; k++) {
+                        fingers += Math.sin(theta * k + time * k * 0.2) * amplitude / k;
                     }
-                    plasmaRadius += fingers * 0.3;
-                    perturbation = fingers;
-                    
-                } else if (uMode == 5) { // ELM
-                    // Edge localized burst
-                    float elmPhase = mod(uInstabilityTime * 3.0, 1.0);
-                    float elmBurst = elmPhase < 0.3 ? sin(elmPhase * PI / 0.3) : 0.0;
-                    
-                    float elmAmp = uAmp * growthFactor * elmBurst;
-                    float edgeRegion = smoothstep(plasmaRadius - 0.15, plasmaRadius, r);
-                    
-                    // Filamentary structure
-                    float filaments = sin(theta * 8.0 - phase * 5.0) * sin(theta * 12.0 + phase * 3.0);
-                    perturbation = elmAmp * edgeRegion * (1.0 + filaments);
-                    
-                    // ELMs eject hot plasma
-                    if (r > plasmaRadius && r < plasmaRadius + elmAmp * 2.0) {
-                        temp = 0.3 * elmBurst * (1.0 + filaments * 0.5);
+                    dx = fingers * Math.cos(theta);
+                    dz = fingers * Math.sin(theta);
+
+                } else if (currentMode === 'elm') {
+                    // Edge localized mode
+                    if (r > 1.2) {
+                        const elmPhase = (instabilityTime * 3) % 1;
+                        const elmBurst = elmPhase < 0.3 ? Math.sin(elmPhase * Math.PI / 0.3) : 0;
+                        const filaments = Math.sin(theta * 8 - time * 5) * Math.sin(theta * 12 + time * 3);
+                        const elmAmp = amplitude * elmBurst * (1 + filaments);
+                        dx = elmAmp * Math.cos(theta);
+                        dz = elmAmp * Math.sin(theta);
                     }
                 }
-                
-                // Recompute edge with perturbation
-                edge = smoothstep(plasmaRadius + 0.1, plasmaRadius - 0.05, r);
-                
-                // Base color
-                vec3 col = vec3(0.02, 0.02, 0.05);
-                
-                // Plasma core
-                if (r < plasmaRadius + 0.15) {
-                    vec3 plasmaCol = plasmaColor(0.0, temp);
-                    
-                    // Add perturbation coloring
-                    plasmaCol += vec3(perturbation * 0.5, 0.0, -perturbation * 0.3);
-                    
-                    // Magnetic field line hints
-                    float fieldLines = sin(theta * 10.0 / max(0.5, uQ) + r * 15.0 - uTime) * 0.5 + 0.5;
-                    plasmaCol += vec3(0.0, 0.1, 0.2) * fieldLines * 0.2 * edge;
-                    
-                    col = mix(col, plasmaCol, edge);
-                }
-                
-                // Instability visualization
-                if (uInstabilityActive > 0.5 && perturbation > 0.02) {
-                    col += vec3(1.0, 0.3, 0.0) * perturbation * 0.5;
-                }
-                
-                // Vessel wall
-                float wall = smoothstep(0.02, 0.0, abs(r - 0.75));
-                col = mix(col, vec3(0.2, 0.2, 0.25), wall);
-                
-                // Grid overlay
-                float grid = 0.0;
-                grid += smoothstep(0.02, 0.0, abs(mod(r, 0.2) - 0.1)) * 0.1;
-                grid += smoothstep(0.02, 0.0, abs(mod(theta, PI/6.0) - PI/12.0)) * 0.1 * step(r, 0.7);
-                col += vec3(grid) * 0.3;
-                
-                fragColor = vec4(col, 1.0);
+
+                positions.setXYZ(i, x0 + dx, y0 + dy, z0 + dz);
             }
-        `;
-        
-        function createShader(gl, type, source) {
-            const shader = gl.createShader(type);
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.error(gl.getShaderInfoLog(shader));
-                return null;
+
+            positions.needsUpdate = true;
+            geometry.computeVertexNormals();
+        }
+
+        // Update plasma particles based on instability
+        function updatePlasmaParticles() {
+            if (!plasmaParticles || !instabilityActive) return;
+
+            const positions = plasmaParticles.geometry.attributes.position;
+            const originalPositions = plasmaParticles.geometry.userData.originalPositions;
+            const velocities = plasmaParticles.geometry.userData.velocities;
+
+            const growthFactor = Math.min(instabilityEnergy - 1, 2);
+
+            for (let i = 0; i < positions.count; i++) {
+                const x0 = originalPositions[i * 3];
+                const y0 = originalPositions[i * 3 + 1];
+                const z0 = originalPositions[i * 3 + 2];
+
+                const r = Math.sqrt(x0 * x0 + z0 * z0);
+                const theta = Math.atan2(z0, x0);
+
+                // Add perturbation velocity
+                if (currentMode === 'kink') {
+                    velocities[i * 3] += Math.cos(params.m * theta - time) * 0.001 * growthFactor;
+                    velocities[i * 3 + 2] += Math.sin(params.m * theta - time) * 0.001 * growthFactor;
+                } else if (currentMode === 'elm' && r > 1.2) {
+                    const elmPhase = (instabilityTime * 3) % 1;
+                    if (elmPhase < 0.3) {
+                        velocities[i * 3] += Math.cos(theta) * 0.003;
+                        velocities[i * 3 + 2] += Math.sin(theta) * 0.003;
+                    }
+                }
+
+                // Update positions
+                let x = positions.getX(i) + velocities[i * 3];
+                let y = positions.getY(i) + velocities[i * 3 + 1];
+                let z = positions.getZ(i) + velocities[i * 3 + 2];
+
+                // Boundary check
+                const currentR = Math.sqrt(x * x + z * z);
+                if (currentR > 2.3) {
+                    x = x0;
+                    y = y0;
+                    z = z0;
+                    velocities[i * 3] = (Math.random() - 0.5) * 0.01;
+                    velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.01;
+                    velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+                }
+
+                positions.setXYZ(i, x, y, z);
             }
-            return shader;
+
+            positions.needsUpdate = true;
         }
-        
-        function createProgram(gl, vs, fs) {
-            const program = gl.createProgram();
-            gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, vs));
-            gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, fs));
-            gl.linkProgram(program);
-            return program;
-        }
-        
-        const program = createProgram(gl, vsSource, fsSource);
-        
-        // Fullscreen quad
-        const positions = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
-        const buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-        
-        const vao = gl.createVertexArray();
-        gl.bindVertexArray(vao);
-        const posLoc = gl.getAttribLocation(program, 'aPosition');
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        
-        // Uniform locations
-        const uniforms = {};
-        ['uTime', 'uInstabilityTime', 'uInstabilityActive', 'uMode', 'uBeta', 'uQ', 
-         'uGrad', 'uShear', 'uAmp', 'uM', 'uGamma', 'uResolution'].forEach(name => {
-            uniforms[name] = gl.getUniformLocation(program, name);
-        });
-        
-        const modeIndex = { kink: 0, sausage: 1, ballooning: 2, tearing: 3, rayleigh: 4, elm: 5 };
-        
+
+        // Set instability mode
         function setMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.mode === mode);
             });
-            
-            // Update info box
+
             const info = modeInfo[mode];
             document.getElementById('modeInfo').innerHTML = `<h4>${info.title}</h4><p>${info.desc}</p>`;
-            
-            // Set appropriate m value
+
             if (mode === 'sausage') {
                 document.getElementById('m').value = 0;
                 params.m = 0;
@@ -546,10 +658,11 @@
                 params.m = 1;
             }
             document.getElementById('mVal').textContent = params.m;
-            
+
             resetPlasma();
         }
-        
+
+        // Update parameters
         function updateParam() {
             params.beta = parseFloat(document.getElementById('beta').value);
             params.q = parseFloat(document.getElementById('q').value);
@@ -558,7 +671,7 @@
             params.amp = parseFloat(document.getElementById('amp').value);
             params.m = parseFloat(document.getElementById('m').value);
             params.gamma = parseFloat(document.getElementById('gamma').value);
-            
+
             document.getElementById('betaVal').textContent = params.beta;
             document.getElementById('qVal').textContent = params.q.toFixed(1);
             document.getElementById('gradVal').textContent = params.grad.toFixed(2);
@@ -566,25 +679,23 @@
             document.getElementById('ampVal').textContent = params.amp.toFixed(2);
             document.getElementById('mVal').textContent = params.m;
             document.getElementById('gammaVal').textContent = params.gamma.toFixed(1);
-            
+
             updateStatus();
+            createFieldLines();
         }
-        
+
+        // Update status display
         function updateStatus() {
-            // Calculate stability metrics
             let growthRate = 0;
             let stable = true;
-            
+
             if (currentMode === 'kink') {
-                // Kruskal-Shafranov: unstable if q < 1
                 growthRate = Math.max(0, (1 - params.q) * params.gamma);
                 stable = params.q > 1;
             } else if (currentMode === 'sausage') {
-                // Bennett relation
                 growthRate = Math.max(0, (params.beta / 10 - params.shear) * params.gamma);
                 stable = params.shear > params.beta / 10;
             } else if (currentMode === 'ballooning') {
-                // Troyon limit
                 growthRate = Math.max(0, (params.beta - 3 * params.q) * params.grad * params.gamma / 10);
                 stable = params.beta < 3 * params.q;
             } else if (currentMode === 'tearing') {
@@ -597,78 +708,118 @@
                 growthRate = params.grad * params.beta / 5 * params.gamma;
                 stable = params.grad * params.beta < 2;
             }
-            
-            // Update status display
+
             const stabilityEl = document.getElementById('stabilityStatus');
             stabilityEl.querySelector('.value').textContent = stable ? 'STABLE' : 'UNSTABLE';
             stabilityEl.className = 'status-item ' + (stable ? '' : 'danger');
-            
-            document.getElementById('growthStatus').querySelector('.value').textContent = 
+
+            document.getElementById('growthStatus').querySelector('.value').textContent =
                 'γ = ' + growthRate.toFixed(2);
-            
-            // Disruption probability
+
             const disruptProb = Math.min(100, growthRate * 50 + (instabilityActive ? instabilityEnergy * 20 : 0));
             const disruptEl = document.getElementById('disruptStatus');
             disruptEl.querySelector('.value').textContent = disruptProb.toFixed(0) + '%';
             disruptEl.className = 'status-item ' + (disruptProb > 50 ? 'danger' : disruptProb > 25 ? 'warning' : '');
         }
-        
+
+        // Trigger instability
         function triggerInstability() {
+            if (instabilityActive) return;
+
             instabilityActive = true;
             instabilityTime = 0;
             instabilityEnergy = 1.0;
         }
-        
+
+        // Reset plasma
         function resetPlasma() {
             instabilityActive = false;
             instabilityTime = 0;
             instabilityEnergy = 1.0;
+
+            // Reset geometry
+            if (plasmaCylinder) {
+                const geometry = plasmaCylinder.geometry;
+                const positions = geometry.attributes.position;
+                const originalPositions = geometry.userData.originalPositions;
+
+                for (let i = 0; i < positions.count; i++) {
+                    positions.setXYZ(i,
+                        originalPositions[i * 3],
+                        originalPositions[i * 3 + 1],
+                        originalPositions[i * 3 + 2]
+                    );
+                }
+                positions.needsUpdate = true;
+            }
+
+            // Reset particles
+            if (plasmaParticles) {
+                const positions = plasmaParticles.geometry.attributes.position;
+                const originalPositions = plasmaParticles.geometry.userData.originalPositions;
+                const velocities = plasmaParticles.geometry.userData.velocities;
+
+                for (let i = 0; i < positions.count; i++) {
+                    positions.setXYZ(i,
+                        originalPositions[i * 3],
+                        originalPositions[i * 3 + 1],
+                        originalPositions[i * 3 + 2]
+                    );
+                    velocities[i * 3] = (Math.random() - 0.5) * 0.01;
+                    velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.01;
+                    velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
+                }
+                positions.needsUpdate = true;
+            }
+
             updateStatus();
         }
-        
-        function resize() {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        }
-        
-        function render() {
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
             time += 0.016;
+
             if (instabilityActive) {
                 instabilityTime += 0.016;
                 instabilityEnergy = Math.min(5, 1 + instabilityTime * params.gamma);
+
+                applyInstabilityDeformation();
+                updatePlasmaParticles();
+
+                document.getElementById('energyStatus').querySelector('.value').textContent =
+                    instabilityEnergy.toFixed(2);
+
+                updateStatus();
             }
-            
-            gl.useProgram(program);
-            gl.bindVertexArray(vao);
-            
-            gl.uniform1f(uniforms.uTime, time);
-            gl.uniform1f(uniforms.uInstabilityTime, instabilityTime);
-            gl.uniform1f(uniforms.uInstabilityActive, instabilityActive ? 1.0 : 0.0);
-            gl.uniform1i(uniforms.uMode, modeIndex[currentMode]);
-            gl.uniform1f(uniforms.uBeta, params.beta);
-            gl.uniform1f(uniforms.uQ, params.q);
-            gl.uniform1f(uniforms.uGrad, params.grad);
-            gl.uniform1f(uniforms.uShear, params.shear);
-            gl.uniform1f(uniforms.uAmp, params.amp);
-            gl.uniform1f(uniforms.uM, params.m);
-            gl.uniform1f(uniforms.uGamma, params.gamma);
-            gl.uniform2f(uniforms.uResolution, canvas.width, canvas.height);
-            
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            
-            // Update energy display
-            document.getElementById('energyStatus').querySelector('.value').textContent = 
-                instabilityEnergy.toFixed(2);
-            
-            updateStatus();
-            requestAnimationFrame(render);
+
+            // Rotate camera slightly
+            camera.position.x = Math.sin(time * 0.1) * 12;
+            camera.position.z = Math.cos(time * 0.1) * 12;
+            camera.lookAt(0, 0, 0);
+
+            // Rotate plasma
+            if (plasmaCylinder) {
+                plasmaCylinder.rotation.y += 0.003;
+            }
+
+            renderer.render(scene, camera);
         }
-        
-        window.addEventListener('resize', resize);
-        resize();
-        updateParam();
-        render();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const container = document.getElementById('canvasContainer');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            init();
+            updateParam();
+        });
     </script>
 </body>
 </html>

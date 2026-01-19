@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fusion Reactor Comparison - Soupy Labs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+
         :root {
             --bg: #0a0a0f;
             --panel: #12121a;
@@ -17,7 +18,7 @@
             --text: #e0e0e0;
             --dim: #606080;
         }
-        
+
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
             background: var(--bg);
@@ -25,7 +26,7 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
-        
+
         header {
             background: linear-gradient(180deg, rgba(0,255,157,0.1) 0%, transparent 100%);
             border-bottom: 1px solid rgba(0,255,157,0.2);
@@ -34,13 +35,13 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         header h1 {
             font-size: 1.2rem;
             color: var(--accent);
             font-weight: 600;
         }
-        
+
         header a {
             color: var(--accent);
             text-decoration: none;
@@ -49,7 +50,7 @@
             border: 1px solid rgba(0,255,157,0.3);
             border-radius: 4px;
         }
-        
+
         .main-container {
             display: grid;
             grid-template-columns: 280px 1fr 1fr 280px;
@@ -57,7 +58,7 @@
             padding: 12px;
             height: calc(100vh - 60px);
         }
-        
+
         .controls-panel {
             background: var(--panel);
             border-radius: 8px;
@@ -65,7 +66,7 @@
             overflow-y: auto;
             border: 1px solid rgba(255,255,255,0.05);
         }
-        
+
         .controls-panel h2 {
             font-size: 0.9rem;
             color: var(--accent);
@@ -73,18 +74,18 @@
             padding-bottom: 8px;
             border-bottom: 1px solid rgba(0,255,157,0.2);
         }
-        
+
         .param-group {
             margin-bottom: 16px;
         }
-        
+
         .param-group-header {
             display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 8px;
         }
-        
+
         .param-group-header select {
             flex: 1;
             background: rgba(0,0,0,0.3);
@@ -94,17 +95,17 @@
             border-radius: 4px;
             font-size: 0.75rem;
         }
-        
+
         .param-group-header label {
             font-size: 0.7rem;
             color: var(--dim);
             text-transform: uppercase;
         }
-        
+
         .slider-row {
             margin-bottom: 10px;
         }
-        
+
         .slider-row label {
             display: flex;
             justify-content: space-between;
@@ -112,12 +113,12 @@
             color: var(--dim);
             margin-bottom: 3px;
         }
-        
+
         .slider-row label span {
             color: var(--accent);
             font-family: monospace;
         }
-        
+
         .slider-row input[type="range"] {
             width: 100%;
             height: 4px;
@@ -126,7 +127,7 @@
             border-radius: 2px;
             outline: none;
         }
-        
+
         .slider-row input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 14px;
@@ -135,15 +136,15 @@
             border-radius: 50%;
             cursor: pointer;
         }
-        
+
         .tokamak-slider input[type="range"]::-webkit-slider-thumb {
             background: var(--tokamak);
         }
-        
+
         .stellarator-slider input[type="range"]::-webkit-slider-thumb {
             background: var(--stellarator);
         }
-        
+
         .canvas-container {
             background: var(--panel);
             border-radius: 8px;
@@ -151,12 +152,12 @@
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.05);
         }
-        
+
         .canvas-container canvas {
             width: 100%;
             height: 100%;
         }
-        
+
         .reactor-label {
             position: absolute;
             top: 12px;
@@ -167,19 +168,19 @@
             border-radius: 4px;
             z-index: 10;
         }
-        
+
         .tokamak-label {
             background: rgba(0,170,255,0.2);
             color: var(--tokamak);
             border: 1px solid var(--tokamak);
         }
-        
+
         .stellarator-label {
             background: rgba(255,0,170,0.2);
             color: var(--stellarator);
             border: 1px solid var(--stellarator);
         }
-        
+
         .stats-overlay {
             position: absolute;
             bottom: 12px;
@@ -191,32 +192,32 @@
             font-size: 0.65rem;
             font-family: monospace;
         }
-        
+
         .stats-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 4px;
         }
-        
+
         .stats-row:last-child { margin-bottom: 0; }
-        
+
         .good { color: #00ff88; }
         .warn { color: #ffaa00; }
         .bad { color: #ff4444; }
-        
+
         .comparison-bar {
             margin-top: 8px;
             padding-top: 8px;
             border-top: 1px solid rgba(255,255,255,0.1);
         }
-        
+
         .bar-label {
             display: flex;
             justify-content: space-between;
             font-size: 0.6rem;
             margin-bottom: 3px;
         }
-        
+
         .bar-track {
             height: 6px;
             background: rgba(255,255,255,0.1);
@@ -224,16 +225,16 @@
             overflow: hidden;
             position: relative;
         }
-        
+
         .bar-fill {
             height: 100%;
             border-radius: 3px;
             transition: width 0.3s;
         }
-        
+
         .tokamak-bar .bar-fill { background: var(--tokamak); }
         .stellarator-bar .bar-fill { background: var(--stellarator); }
-        
+
         .info-section {
             margin-top: 16px;
             padding: 12px;
@@ -243,15 +244,15 @@
             line-height: 1.5;
             color: var(--dim);
         }
-        
+
         .info-section h4 {
             color: var(--accent);
             margin-bottom: 6px;
             font-size: 0.75rem;
         }
-        
+
         .hidden { display: none !important; }
-        
+
         @media (max-width: 1200px) {
             .main-container {
                 grid-template-columns: 1fr 1fr;
@@ -268,15 +269,15 @@
 </head>
 <body>
     <header>
-        <h1>⚛ FUSION REACTOR COMPARISON</h1>
+        <h1>⚛ FUSION REACTOR COMPARISON - 3D CGI</h1>
         <a href="index.html">← BACK TO LAB</a>
     </header>
-    
+
     <div class="main-container">
         <!-- Tokamak Controls -->
         <div class="controls-panel">
             <h2 style="color: var(--tokamak);">TOKAMAK PARAMETERS</h2>
-            
+
             <div class="param-group">
                 <div class="param-group-header">
                     <label>Category:</label>
@@ -289,7 +290,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <!-- Geometry params -->
             <div class="param-set tokamak-geometry">
                 <div class="slider-row tokamak-slider">
@@ -309,7 +310,7 @@
                     <input type="range" id="tok_delta" min="0" max="0.8" step="0.01" value="0.33" oninput="updateTokamak()">
                 </div>
             </div>
-            
+
             <!-- Plasma params -->
             <div class="param-set tokamak-plasma hidden">
                 <div class="slider-row tokamak-slider">
@@ -329,7 +330,7 @@
                     <input type="range" id="tok_Zeff" min="1" max="4" step="0.1" value="1.5" oninput="updateTokamak()">
                 </div>
             </div>
-            
+
             <!-- Magnetic params -->
             <div class="param-set tokamak-magnetic hidden">
                 <div class="slider-row tokamak-slider">
@@ -345,7 +346,7 @@
                     <input type="range" id="tok_betaN" min="0.5" max="4" step="0.1" value="2" oninput="updateTokamak()">
                 </div>
             </div>
-            
+
             <!-- Heating params -->
             <div class="param-set tokamak-heating hidden">
                 <div class="slider-row tokamak-slider">
@@ -361,7 +362,7 @@
                     <input type="range" id="tok_ECRH" min="0" max="50" step="1" value="20" oninput="updateTokamak()">
                 </div>
             </div>
-            
+
             <!-- Stability params -->
             <div class="param-set tokamak-stability hidden">
                 <div class="slider-row tokamak-slider">
@@ -377,17 +378,17 @@
                     <input type="range" id="tok_H" min="0.5" max="1.5" step="0.05" value="1" oninput="updateTokamak()">
                 </div>
             </div>
-            
+
             <div class="info-section">
                 <h4>TOKAMAK</h4>
                 Uses plasma current for rotational transform. Simpler coils but inherently pulsed operation. Risk of disruptions when q &lt; 2.
             </div>
         </div>
-        
+
         <!-- Tokamak Canvas -->
         <div class="canvas-container">
-            <div class="reactor-label tokamak-label">TOKAMAK</div>
-            <canvas id="tokamakCanvas"></canvas>
+            <div class="reactor-label tokamak-label">TOKAMAK (3D)</div>
+            <div id="tokamakContainer"></div>
             <div class="stats-overlay">
                 <div class="stats-row">
                     <span>Aspect Ratio (A)</span>
@@ -419,11 +420,11 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Stellarator Canvas -->
         <div class="canvas-container">
-            <div class="reactor-label stellarator-label">STELLARATOR</div>
-            <canvas id="stellaratorCanvas"></canvas>
+            <div class="reactor-label stellarator-label">STELLARATOR (3D)</div>
+            <div id="stellaratorContainer"></div>
             <div class="stats-overlay">
                 <div class="stats-row">
                     <span>Aspect Ratio (A)</span>
@@ -455,11 +456,11 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Stellarator Controls -->
         <div class="controls-panel">
             <h2 style="color: var(--stellarator);">STELLARATOR PARAMETERS</h2>
-            
+
             <div class="param-group">
                 <div class="param-group-header">
                     <label>Category:</label>
@@ -472,7 +473,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <!-- Geometry params -->
             <div class="param-set stellarator-geometry">
                 <div class="slider-row stellarator-slider">
@@ -492,7 +493,7 @@
                     <input type="range" id="stel_iota" min="0.1" max="2" step="0.1" value="1" oninput="updateStellarator()">
                 </div>
             </div>
-            
+
             <!-- Plasma params -->
             <div class="param-set stellarator-plasma hidden">
                 <div class="slider-row stellarator-slider">
@@ -508,7 +509,7 @@
                     <input type="range" id="stel_Zeff" min="1" max="4" step="0.1" value="1.3" oninput="updateStellarator()">
                 </div>
             </div>
-            
+
             <!-- Magnetic params -->
             <div class="param-set stellarator-magnetic hidden">
                 <div class="slider-row stellarator-slider">
@@ -524,7 +525,7 @@
                     <input type="range" id="stel_beta" min="0.5" max="10" step="0.5" value="4" oninput="updateStellarator()">
                 </div>
             </div>
-            
+
             <!-- Heating params -->
             <div class="param-set stellarator-heating hidden">
                 <div class="slider-row stellarator-slider">
@@ -540,7 +541,7 @@
                     <input type="range" id="stel_ICRH" min="0" max="20" step="1" value="0" oninput="updateStellarator()">
                 </div>
             </div>
-            
+
             <!-- Coil params -->
             <div class="param-set stellarator-coils hidden">
                 <div class="slider-row stellarator-slider">
@@ -556,23 +557,19 @@
                     <input type="range" id="stel_gap" min="0.1" max="1" step="0.05" value="0.3" oninput="updateStellarator()">
                 </div>
             </div>
-            
+
             <div class="info-section">
                 <h4>STELLARATOR</h4>
                 External coils provide all rotational transform. Complex 3D geometry but inherently steady-state. No disruptions, but challenging engineering.
             </div>
         </div>
     </div>
-    
+
     <script>
-        // WebGL setup for both canvases
-        const tokCanvas = document.getElementById('tokamakCanvas');
-        const stelCanvas = document.getElementById('stellaratorCanvas');
-        
-        let tokGL, stelGL;
-        let tokProgram, stelProgram;
-        let time = 0;
-        
+        // ==========================================
+        // THREE.JS SETUP FOR 3D FUSION REACTORS
+        // ==========================================
+
         // Tokamak parameters
         const tokamak = {
             R0: 6.0, a: 2.0, kappa: 1.7, delta: 0.33,
@@ -581,7 +578,7 @@
             NBI: 33, ICRH: 20, ECRH: 20,
             ELM: 10, disrupt: 15, H: 1.0
         };
-        
+
         // Stellarator parameters
         const stellarator = {
             R0: 5.5, a: 0.55, periods: 5, iota: 1.0,
@@ -590,273 +587,522 @@
             ECRH: 10, NBI: 5, ICRH: 0,
             complexity: 5, coils: 50, gap: 0.3
         };
-        
-        function initWebGL(canvas) {
-            const gl = canvas.getContext('webgl2');
-            if (!gl) return null;
-            
-            const vsSource = `#version 300 es
-                in vec2 aPosition;
-                void main() {
-                    gl_Position = vec4(aPosition, 0.0, 1.0);
-                }
-            `;
-            
-            const fsTokamak = `#version 300 es
-                precision highp float;
-                uniform float uTime;
-                uniform float uR0, uA, uKappa, uDelta;
-                uniform float uBT, uIp, uT;
-                out vec4 fragColor;
-                
-                vec3 plasma(float t) {
-                    return vec3(
-                        0.5 + 0.5 * sin(6.28318 * (t + 0.0)),
-                        0.5 + 0.5 * sin(6.28318 * (t + 0.33)),
-                        0.5 + 0.5 * sin(6.28318 * (t + 0.67))
-                    );
-                }
-                
-                void main() {
-                    vec2 uv = gl_FragCoord.xy / vec2(800.0, 600.0);
-                    uv = uv * 2.0 - 1.0;
-                    uv.x *= 1.33;
-                    
-                    // Tokamak cross-section (D-shaped)
-                    float aspect = uR0 / uA;
-                    float theta = atan(uv.y * uKappa, uv.x);
-                    float r = length(vec2(uv.x, uv.y / uKappa));
-                    
-                    // Plasma boundary with triangularity
-                    float boundary = 0.4 + 0.1 * uDelta * cos(theta);
-                    
-                    // Core temperature profile
-                    float rNorm = r / boundary;
-                    float tempProfile = pow(max(0.0, 1.0 - rNorm * rNorm), 0.5);
-                    
-                    // Plasma glow
-                    vec3 col = vec3(0.02, 0.01, 0.03);
-                    
-                    if (r < boundary) {
-                        // Hot core
-                        float temp = tempProfile * uT / 15.0;
-                        vec3 plasmaCol = mix(
-                            vec3(1.0, 0.3, 0.1),  // Edge (cooler)
-                            vec3(1.0, 1.0, 0.9),   // Core (hotter)
-                            temp
-                        );
-                        
-                        // Add turbulent structure
-                        float turb = sin(theta * 8.0 + uTime * 2.0) * 0.1;
-                        turb += sin(r * 20.0 - uTime * 3.0) * 0.05;
-                        
-                        col = plasmaCol * (0.5 + 0.5 * tempProfile + turb);
-                        
-                        // Field line hints
-                        float fieldLine = sin(theta * uIp / 5.0 + r * 10.0) * 0.5 + 0.5;
-                        col += vec3(0.0, 0.5, 1.0) * fieldLine * 0.1 * (1.0 - rNorm);
-                    }
-                    
-                    // Vessel wall
-                    float wall = smoothstep(0.02, 0.0, abs(r - boundary - 0.05));
-                    col = mix(col, vec3(0.3, 0.3, 0.35), wall);
-                    
-                    // Magnetic coils (simplified)
-                    float coilAngle = mod(theta + 3.14159, 0.5) - 0.25;
-                    float coil = smoothstep(0.03, 0.0, abs(coilAngle)) * smoothstep(0.0, 0.02, abs(r - boundary - 0.12));
-                    col = mix(col, vec3(0.0, 0.6, 1.0), coil * 0.5);
-                    
-                    fragColor = vec4(col, 1.0);
-                }
-            `;
-            
-            const fsStellarator = `#version 300 es
-                precision highp float;
-                uniform float uTime;
-                uniform float uR0, uA, uPeriods, uIota;
-                uniform float uB, uT, uComplexity;
-                out vec4 fragColor;
-                
-                void main() {
-                    vec2 uv = gl_FragCoord.xy / vec2(800.0, 600.0);
-                    uv = uv * 2.0 - 1.0;
-                    uv.x *= 1.33;
-                    
-                    // 3D projection of stellarator
-                    float phi = uTime * 0.3; // Rotation
-                    float toroidalAngle = atan(uv.y, uv.x);
-                    
-                    // Stellarator has twisted, bean-shaped cross-section
-                    float twist = sin(toroidalAngle * uPeriods + phi) * 0.3 * uIota;
-                    vec2 twisted = vec2(
-                        uv.x * cos(twist) - uv.y * sin(twist),
-                        uv.x * sin(twist) + uv.y * cos(twist)
-                    );
-                    
-                    // Bean shape (stellarator cross-section varies)
-                    float r = length(twisted);
-                    float theta = atan(twisted.y, twisted.x);
-                    float boundary = 0.25 + 0.08 * cos(theta * 2.0 + toroidalAngle * uPeriods);
-                    boundary *= 0.8 + 0.2 * sin(toroidalAngle * uPeriods * 2.0 + phi);
-                    
-                    vec3 col = vec3(0.02, 0.01, 0.03);
-                    
-                    if (r < boundary) {
-                        float rNorm = r / boundary;
-                        float tempProfile = pow(max(0.0, 1.0 - rNorm * rNorm), 0.7);
-                        
-                        // Stellarator plasma (different color scheme)
-                        vec3 plasmaCol = mix(
-                            vec3(1.0, 0.2, 0.5),   // Edge
-                            vec3(1.0, 0.9, 1.0),   // Core
-                            tempProfile * uT / 10.0
-                        );
-                        
-                        // Helical structure from rotational transform
-                        float helix = sin(theta * uIota * 10.0 + toroidalAngle * uPeriods + uTime) * 0.5 + 0.5;
-                        
-                        col = plasmaCol * (0.4 + 0.4 * tempProfile + 0.2 * helix);
-                    }
-                    
-                    // Modular coils (complex 3D shape)
-                    for (float i = 0.0; i < 10.0; i++) {
-                        float coilPhi = i * 6.28318 / uPeriods / 2.0;
-                        float coilTwist = sin(coilPhi * uPeriods) * 0.3 * uComplexity / 5.0;
-                        
-                        vec2 coilPos = vec2(
-                            (boundary + 0.1) * cos(coilPhi + phi),
-                            (boundary + 0.1) * sin(coilPhi + phi) * (1.0 + coilTwist)
-                        );
-                        
-                        float coilDist = length(uv - coilPos * 0.8);
-                        float coil = smoothstep(0.04, 0.02, coilDist);
-                        col = mix(col, vec3(1.0, 0.0, 0.7), coil * 0.6);
-                    }
-                    
-                    // Wall
-                    float wall = smoothstep(0.02, 0.0, abs(r - boundary - 0.03));
-                    col = mix(col, vec3(0.3, 0.25, 0.35), wall);
-                    
-                    fragColor = vec4(col, 1.0);
-                }
-            `;
-            
-            return { gl, vsSource, fsTokamak, fsStellarator };
-        }
-        
-        function createShader(gl, type, source) {
-            const shader = gl.createShader(type);
-            gl.shaderSource(shader, source);
-            gl.compileShader(shader);
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.error(gl.getShaderInfoLog(shader));
-                gl.deleteShader(shader);
-                return null;
-            }
-            return shader;
-        }
-        
-        function createProgram(gl, vsSource, fsSource) {
-            const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
-            const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
-            const program = gl.createProgram();
-            gl.attachShader(program, vs);
-            gl.attachShader(program, fs);
-            gl.linkProgram(program);
-            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                console.error(gl.getProgramInfoLog(program));
-                return null;
-            }
-            return program;
-        }
-        
-        function setupRenderer(canvas, fsSource, vsSource) {
-            const gl = canvas.getContext('webgl2');
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            
-            const program = createProgram(gl, vsSource, fsSource);
-            
-            // Fullscreen quad
-            const positions = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
-            const buffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-            
-            const vao = gl.createVertexArray();
-            gl.bindVertexArray(vao);
-            const posLoc = gl.getAttribLocation(program, 'aPosition');
-            gl.enableVertexAttribArray(posLoc);
-            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-            
-            return { gl, program, vao };
-        }
-        
+
+        let tokScene, stelScene;
+        let tokCamera, stelCamera;
         let tokRenderer, stelRenderer;
-        
-        function init() {
-            const setup = initWebGL(tokCanvas);
-            if (!setup) {
-                console.error('WebGL2 not supported');
-                return;
-            }
-            
-            tokRenderer = setupRenderer(tokCanvas, setup.fsTokamak, setup.vsSource);
-            stelRenderer = setupRenderer(stelCanvas, setup.fsStellarator, setup.vsSource);
-            
-            animate();
+        let tokPlasma, stelPlasma;
+        let tokParticles, stelParticles;
+        let tokCoils = [], stelCoils = [];
+        let tokFieldLines = [], stelFieldLines = [];
+
+        // Initialize Tokamak 3D Scene
+        function initTokamak() {
+            const container = document.getElementById('tokamakContainer');
+
+            // Scene
+            tokScene = new THREE.Scene();
+            tokScene.background = new THREE.Color(0x0a0a0f);
+            tokScene.fog = new THREE.FogExp2(0x0a0a0f, 0.01);
+
+            // Camera
+            tokCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            tokCamera.position.set(15, 10, 15);
+            tokCamera.lookAt(0, 0, 0);
+
+            // Renderer
+            tokRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            tokRenderer.setSize(container.clientWidth, container.clientHeight);
+            tokRenderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(tokRenderer.domElement);
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0x404060, 0.3);
+            tokScene.add(ambient);
+
+            const key = new THREE.PointLight(0x00aaff, 1.5, 50);
+            key.position.set(10, 10, 10);
+            tokScene.add(key);
+
+            const fill = new THREE.PointLight(0xff6600, 0.8, 50);
+            fill.position.set(-10, 5, -10);
+            tokScene.add(fill);
+
+            // Create Tokamak Plasma (D-shaped torus)
+            createTokamakPlasma();
+
+            // Create Toroidal Field Coils
+            createTokamakCoils();
+
+            // Create Plasma Particles
+            createTokamakParticles();
+
+            // Create Field Lines
+            createTokamakFieldLines();
         }
-        
-        function render(renderer, params, isTokamak) {
-            const { gl, program, vao } = renderer;
-            
-            gl.useProgram(program);
-            gl.bindVertexArray(vao);
-            
-            gl.uniform1f(gl.getUniformLocation(program, 'uTime'), time);
-            
-            if (isTokamak) {
-                gl.uniform1f(gl.getUniformLocation(program, 'uR0'), params.R0);
-                gl.uniform1f(gl.getUniformLocation(program, 'uA'), params.a);
-                gl.uniform1f(gl.getUniformLocation(program, 'uKappa'), params.kappa);
-                gl.uniform1f(gl.getUniformLocation(program, 'uDelta'), params.delta);
-                gl.uniform1f(gl.getUniformLocation(program, 'uBT'), params.BT);
-                gl.uniform1f(gl.getUniformLocation(program, 'uIp'), params.Ip);
-                gl.uniform1f(gl.getUniformLocation(program, 'uT'), params.T);
-            } else {
-                gl.uniform1f(gl.getUniformLocation(program, 'uR0'), params.R0);
-                gl.uniform1f(gl.getUniformLocation(program, 'uA'), params.a);
-                gl.uniform1f(gl.getUniformLocation(program, 'uPeriods'), params.periods);
-                gl.uniform1f(gl.getUniformLocation(program, 'uIota'), params.iota);
-                gl.uniform1f(gl.getUniformLocation(program, 'uB'), params.B);
-                gl.uniform1f(gl.getUniformLocation(program, 'uT'), params.T);
-                gl.uniform1f(gl.getUniformLocation(program, 'uComplexity'), params.complexity);
-            }
-            
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        // Initialize Stellarator 3D Scene
+        function initStellarator() {
+            const container = document.getElementById('stellaratorContainer');
+
+            // Scene
+            stelScene = new THREE.Scene();
+            stelScene.background = new THREE.Color(0x0a0a0f);
+            stelScene.fog = new THREE.FogExp2(0x0a0a0f, 0.01);
+
+            // Camera
+            stelCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            stelCamera.position.set(15, 10, 15);
+            stelCamera.lookAt(0, 0, 0);
+
+            // Renderer
+            stelRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            stelRenderer.setSize(container.clientWidth, container.clientHeight);
+            stelRenderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(stelRenderer.domElement);
+
+            // Lighting
+            const ambient = new THREE.AmbientLight(0x604060, 0.3);
+            stelScene.add(ambient);
+
+            const key = new THREE.PointLight(0xff00aa, 1.5, 50);
+            key.position.set(10, 10, 10);
+            stelScene.add(key);
+
+            const fill = new THREE.PointLight(0xff6600, 0.8, 50);
+            fill.position.set(-10, 5, -10);
+            stelScene.add(fill);
+
+            // Create Stellarator Plasma (twisted torus)
+            createStellaratorPlasma();
+
+            // Create Modular Coils
+            createStellaratorCoils();
+
+            // Create Plasma Particles
+            createStellaratorParticles();
+
+            // Create Field Lines
+            createStellaratorFieldLines();
         }
-        
+
+        // Create Tokamak Plasma (D-shaped torus)
+        function createTokamakPlasma() {
+            // Clear existing
+            if (tokPlasma) tokScene.remove(tokPlasma);
+
+            const R0 = tokamak.R0;
+            const a = tokamak.a;
+            const kappa = tokamak.kappa;
+            const delta = tokamak.delta;
+
+            // Create D-shaped cross-section path
+            const crossSection = new THREE.Shape();
+            const segments = 64;
+
+            for (let i = 0; i <= segments; i++) {
+                const theta = (i / segments) * Math.PI * 2;
+
+                // D-shape with elongation and triangularity
+                const r = a;
+                const x = r * Math.cos(theta + delta * Math.sin(theta));
+                const y = r * kappa * Math.sin(theta);
+
+                if (i === 0) crossSection.moveTo(x, y);
+                else crossSection.lineTo(x, y);
+            }
+
+            // Extrude around major radius
+            const extrudeSettings = {
+                steps: 128,
+                bevelEnabled: false,
+                extrudePath: new THREE.CatmullRomCurve3(
+                    Array.from({ length: 65 }, (_, i) => {
+                        const phi = (i / 64) * Math.PI * 2;
+                        return new THREE.Vector3(R0 * Math.cos(phi), 0, R0 * Math.sin(phi));
+                    })
+                )
+            };
+
+            const geometry = new THREE.ExtrudeGeometry(crossSection, extrudeSettings);
+
+            // Volumetric plasma material with temperature gradient
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xff6633,
+                emissive: 0xff3300,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+
+            tokPlasma = new THREE.Mesh(geometry, material);
+            tokScene.add(tokPlasma);
+
+            // Add inner glow
+            const glowGeometry = geometry.clone();
+            glowGeometry.scale(0.95, 0.95, 0.95);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffff88,
+                transparent: true,
+                opacity: 0.3
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            tokPlasma.add(glow);
+        }
+
+        // Create Stellarator Plasma (twisted torus)
+        function createStellaratorPlasma() {
+            // Clear existing
+            if (stelPlasma) stelScene.remove(stelPlasma);
+
+            const R0 = stellarator.R0;
+            const a = stellarator.a;
+            const periods = stellarator.periods;
+            const iota = stellarator.iota;
+
+            // Create path for twisted torus
+            const path = new THREE.CatmullRomCurve3(
+                Array.from({ length: 257 }, (_, i) => {
+                    const t = (i / 256) * Math.PI * 2;
+
+                    // Helical twist
+                    const twist = iota * periods * t / (2 * Math.PI);
+                    const wobble = a * 0.3 * Math.sin(periods * t);
+
+                    const r = R0 + wobble;
+                    const x = r * Math.cos(t);
+                    const y = r * Math.sin(t);
+                    const z = a * 0.5 * Math.sin(periods * t + twist);
+
+                    return new THREE.Vector3(x, z, y);
+                }),
+                true
+            );
+
+            // Create tube geometry
+            const geometry = new THREE.TubeGeometry(path, 256, a, 32, true);
+
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xff00aa,
+                emissive: 0xaa0066,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.6
+            });
+
+            stelPlasma = new THREE.Mesh(geometry, material);
+            stelScene.add(stelPlasma);
+
+            // Add glow
+            const glowGeometry = geometry.clone();
+            glowGeometry.scale(0.9, 0.9, 0.9);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffaaff,
+                transparent: true,
+                opacity: 0.3
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            stelPlasma.add(glow);
+        }
+
+        // Create Tokamak Toroidal Field Coils
+        function createTokamakCoils() {
+            // Clear existing
+            tokCoils.forEach(coil => tokScene.remove(coil));
+            tokCoils = [];
+
+            const R0 = tokamak.R0;
+            const a = tokamak.a;
+            const numCoils = 18;
+
+            for (let i = 0; i < numCoils; i++) {
+                const angle = (i / numCoils) * Math.PI * 2;
+
+                // D-shaped coil
+                const coilShape = new THREE.Shape();
+                const coilR = a + 0.8;
+
+                for (let j = 0; j <= 64; j++) {
+                    const theta = (j / 64) * Math.PI * 2;
+                    const x = coilR * Math.cos(theta);
+                    const y = coilR * tokamak.kappa * Math.sin(theta);
+
+                    if (j === 0) coilShape.moveTo(x, y);
+                    else coilShape.lineTo(x, y);
+                }
+
+                const coilGeometry = new THREE.ShapeGeometry(coilShape);
+                const coilMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x0088ff,
+                    emissive: 0x004488,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.7
+                });
+
+                const coil = new THREE.Mesh(coilGeometry, coilMaterial);
+                coil.position.set(R0 * Math.cos(angle), 0, R0 * Math.sin(angle));
+                coil.lookAt(0, 0, 0);
+
+                tokScene.add(coil);
+                tokCoils.push(coil);
+            }
+        }
+
+        // Create Stellarator Modular Coils
+        function createStellaratorCoils() {
+            // Clear existing
+            stelCoils.forEach(coil => stelScene.remove(coil));
+            stelCoils = [];
+
+            const R0 = stellarator.R0;
+            const a = stellarator.a;
+            const periods = stellarator.periods;
+            const numCoils = Math.floor(stellarator.coils / periods);
+
+            for (let p = 0; p < periods; p++) {
+                for (let i = 0; i < numCoils; i++) {
+                    const t = (i / numCoils + p / periods) * Math.PI * 2;
+                    const twist = stellarator.iota * periods * t / (2 * Math.PI);
+
+                    // Helical coil path
+                    const wobble = a * 0.3 * Math.sin(periods * t);
+                    const r = R0 + wobble + stellarator.gap;
+
+                    const x = r * Math.cos(t);
+                    const y = r * Math.sin(t);
+                    const z = a * 0.5 * Math.sin(periods * t + twist);
+
+                    // Create coil ring
+                    const coilGeometry = new THREE.TorusGeometry(a * 0.4, 0.08, 8, 16);
+                    const coilMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xff0088,
+                        emissive: 0x880044,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+
+                    const coil = new THREE.Mesh(coilGeometry, coilMaterial);
+                    coil.position.set(x, z, y);
+                    coil.rotation.y = t;
+
+                    stelScene.add(coil);
+                    stelCoils.push(coil);
+                }
+            }
+        }
+
+        // Create Tokamak Plasma Particles (GPU accelerated)
+        function createTokamakParticles() {
+            if (tokParticles) tokScene.remove(tokParticles);
+
+            const particleCount = 15000;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+
+            for (let i = 0; i < particleCount; i++) {
+                const phi = Math.random() * Math.PI * 2;
+                const theta = Math.random() * Math.PI * 2;
+                const r = tokamak.a * (0.3 + Math.random() * 0.7);
+
+                // D-shaped cross-section
+                const x = r * Math.cos(theta);
+                const y = r * tokamak.kappa * Math.sin(theta);
+
+                // Position around torus
+                const R = tokamak.R0 + x;
+                positions[i * 3] = R * Math.cos(phi);
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = R * Math.sin(phi);
+
+                // Temperature-based color (hot core)
+                const temp = 1 - (r / tokamak.a);
+                colors[i * 3] = 1.0;
+                colors[i * 3 + 1] = 0.4 + temp * 0.6;
+                colors[i * 3 + 2] = 0.1 + temp * 0.4;
+
+                sizes[i] = 0.1 + Math.random() * 0.2;
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            tokParticles = new THREE.Points(geometry, material);
+            tokScene.add(tokParticles);
+        }
+
+        // Create Stellarator Plasma Particles
+        function createStellaratorParticles() {
+            if (stelParticles) stelScene.remove(stelParticles);
+
+            const particleCount = 12000;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+
+            for (let i = 0; i < particleCount; i++) {
+                const t = Math.random() * Math.PI * 2;
+                const r = stellarator.a * Math.random();
+                const theta = Math.random() * Math.PI * 2;
+
+                // Twisted torus
+                const twist = stellarator.iota * stellarator.periods * t / (2 * Math.PI);
+                const wobble = stellarator.a * 0.3 * Math.sin(stellarator.periods * t);
+
+                const R = stellarator.R0 + wobble + r * Math.cos(theta);
+                const x = R * Math.cos(t);
+                const y = R * Math.sin(t);
+                const z = stellarator.a * 0.5 * Math.sin(stellarator.periods * t + twist) + r * Math.sin(theta);
+
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = z;
+                positions[i * 3 + 2] = y;
+
+                // Temperature gradient
+                const temp = 1 - (r / stellarator.a);
+                colors[i * 3] = 1.0;
+                colors[i * 3 + 1] = 0.2 + temp * 0.5;
+                colors[i * 3 + 2] = 0.6 + temp * 0.4;
+
+                sizes[i] = 0.1 + Math.random() * 0.2;
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            stelParticles = new THREE.Points(geometry, material);
+            stelScene.add(stelParticles);
+        }
+
+        // Create Tokamak Field Lines
+        function createTokamakFieldLines() {
+            tokFieldLines.forEach(line => tokScene.remove(line));
+            tokFieldLines = [];
+
+            for (let i = 0; i < 10; i++) {
+                const r = tokamak.a * (0.2 + i * 0.08);
+                const points = [];
+
+                for (let j = 0; j <= 128; j++) {
+                    const phi = (j / 128) * Math.PI * 2 * tokamak.q95;
+                    const theta = (j / 128) * Math.PI * 2;
+
+                    const x = r * Math.cos(theta);
+                    const y = r * tokamak.kappa * Math.sin(theta);
+
+                    const R = tokamak.R0 + x;
+                    points.push(new THREE.Vector3(
+                        R * Math.cos(phi),
+                        y,
+                        R * Math.sin(phi)
+                    ));
+                }
+
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0x0088ff,
+                    transparent: true,
+                    opacity: 0.3
+                });
+
+                const line = new THREE.Line(geometry, material);
+                tokScene.add(line);
+                tokFieldLines.push(line);
+            }
+        }
+
+        // Create Stellarator Field Lines
+        function createStellaratorFieldLines() {
+            stelFieldLines.forEach(line => stelScene.remove(line));
+            stelFieldLines = [];
+
+            for (let i = 0; i < 8; i++) {
+                const r = stellarator.a * (0.2 + i * 0.1);
+                const points = [];
+
+                for (let j = 0; j <= 256; j++) {
+                    const t = (j / 256) * Math.PI * 2;
+                    const theta = stellarator.iota * t;
+
+                    const twist = stellarator.iota * stellarator.periods * t / (2 * Math.PI);
+                    const wobble = stellarator.a * 0.3 * Math.sin(stellarator.periods * t);
+
+                    const R = stellarator.R0 + wobble + r * Math.cos(theta);
+                    const x = R * Math.cos(t);
+                    const y = R * Math.sin(t);
+                    const z = stellarator.a * 0.5 * Math.sin(stellarator.periods * t + twist) + r * Math.sin(theta);
+
+                    points.push(new THREE.Vector3(x, z, y));
+                }
+
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xff0088,
+                    transparent: true,
+                    opacity: 0.3
+                });
+
+                const line = new THREE.Line(geometry, material);
+                stelScene.add(line);
+                stelFieldLines.push(line);
+            }
+        }
+
+        // Animation loop
+        let time = 0;
         function animate() {
-            time += 0.016;
-            
-            if (tokRenderer) render(tokRenderer, tokamak, true);
-            if (stelRenderer) render(stelRenderer, stellarator, false);
-            
             requestAnimationFrame(animate);
+            time += 0.01;
+
+            // Rotate plasmas
+            if (tokPlasma) {
+                tokPlasma.rotation.y += 0.002;
+                tokParticles.rotation.y += 0.003;
+            }
+
+            if (stelPlasma) {
+                stelPlasma.rotation.y += 0.002;
+                stelParticles.rotation.y += 0.003;
+            }
+
+            // Render
+            if (tokRenderer) tokRenderer.render(tokScene, tokCamera);
+            if (stelRenderer) stelRenderer.render(stelScene, stelCamera);
         }
-        
+
         // Parameter visibility
         function updateParamVisibility(type) {
             const category = document.getElementById(type + 'Category').value;
             const sets = document.querySelectorAll(`.param-set.${type}-geometry, .param-set.${type}-plasma, .param-set.${type}-magnetic, .param-set.${type}-heating, .param-set.${type}-stability, .param-set.${type}-coils`);
-            
+
             sets.forEach(s => s.classList.add('hidden'));
             const active = document.querySelector(`.param-set.${type}-${category}`);
             if (active) active.classList.remove('hidden');
         }
-        
-        // Update functions
+
+        // Update Tokamak
         function updateTokamak() {
             // Read all sliders
             tokamak.R0 = parseFloat(document.getElementById('tok_R0').value);
@@ -876,7 +1122,7 @@
             tokamak.ELM = parseFloat(document.getElementById('tok_ELM').value);
             tokamak.disrupt = parseFloat(document.getElementById('tok_disrupt').value);
             tokamak.H = parseFloat(document.getElementById('tok_H').value);
-            
+
             // Update value displays
             document.getElementById('tok_R0_val').textContent = tokamak.R0.toFixed(1);
             document.getElementById('tok_a_val').textContent = tokamak.a.toFixed(1);
@@ -895,28 +1141,22 @@
             document.getElementById('tok_ELM_val').textContent = tokamak.ELM;
             document.getElementById('tok_disrupt_val').textContent = tokamak.disrupt;
             document.getElementById('tok_H_val').textContent = tokamak.H.toFixed(2);
-            
-            // Calculate derived quantities
+
+            // Calculate derived quantities (ITER scaling)
             const aspect = tokamak.R0 / tokamak.a;
             const volume = 2 * Math.PI * Math.PI * tokamak.R0 * tokamak.a * tokamak.a * tokamak.kappa;
-            
-            // ITER scaling for confinement time
+
             const Pheat = tokamak.NBI + tokamak.ICRH + tokamak.ECRH;
-            const tau = 0.145 * tokamak.H * Math.pow(tokamak.Ip, 0.93) * Math.pow(tokamak.BT, 0.15) * 
-                       Math.pow(tokamak.n * 0.1, 0.41) * Math.pow(Pheat, -0.69) * 
+            const tau = 0.145 * tokamak.H * Math.pow(tokamak.Ip, 0.93) * Math.pow(tokamak.BT, 0.15) *
+                       Math.pow(tokamak.n * 0.1, 0.41) * Math.pow(Pheat, -0.69) *
                        Math.pow(tokamak.R0, 1.97) * Math.pow(tokamak.a / tokamak.R0, 0.58) *
                        Math.pow(tokamak.kappa, 0.78);
-            
-            // Lawson parameter
-            const lawson = tokamak.n * 1e20 * tau * tokamak.T * 1000; // in keV s m^-3
-            
-            // Fusion power (simplified)
-            const Pfus = 0.001 * tokamak.n * tokamak.n * Math.pow(tokamak.T, 2) * volume * 
-                        Math.exp(-20 / tokamak.T); // Rough scaling
-            
-            // Q factor
+
+            const lawson = tokamak.n * 1e20 * tau * tokamak.T * 1000;
+            const Pfus = 0.001 * tokamak.n * tokamak.n * Math.pow(tokamak.T, 2) * volume *
+                        Math.exp(-20 / tokamak.T);
             const Q = Pfus / Math.max(1, Pheat);
-            
+
             // Update stats
             document.getElementById('tok_aspect').textContent = aspect.toFixed(1);
             document.getElementById('tok_volume').textContent = volume.toFixed(0) + ' m³';
@@ -924,20 +1164,25 @@
             document.getElementById('tok_lawson').textContent = (lawson / 1e21).toFixed(1) + '×10²¹';
             document.getElementById('tok_Pfus').textContent = Pfus.toFixed(0) + ' MW';
             document.getElementById('tok_Q').textContent = Q.toFixed(1);
-            
-            // Color coding
+
             const lawsonEl = document.getElementById('tok_lawson');
             lawsonEl.className = lawson > 3e21 ? 'good' : lawson > 1e21 ? 'warn' : 'bad';
-            
+
             const qEl = document.getElementById('tok_Q');
             qEl.className = Q > 5 ? 'good' : Q > 1 ? 'warn' : 'bad';
-            
-            // Score
+
             const score = Math.min(100, (Q * 5 + (1 - tokamak.disrupt/100) * 30 + (lawson/5e21) * 40));
             document.getElementById('tok_score').textContent = score.toFixed(0) + '%';
             document.getElementById('tok_bar').style.width = score + '%';
+
+            // Rebuild 3D geometry
+            createTokamakPlasma();
+            createTokamakCoils();
+            createTokamakParticles();
+            createTokamakFieldLines();
         }
-        
+
+        // Update Stellarator
         function updateStellarator() {
             // Read all sliders
             stellarator.R0 = parseFloat(document.getElementById('stel_R0').value);
@@ -956,7 +1201,7 @@
             stellarator.complexity = parseFloat(document.getElementById('stel_complexity').value);
             stellarator.coils = parseFloat(document.getElementById('stel_coils').value);
             stellarator.gap = parseFloat(document.getElementById('stel_gap').value);
-            
+
             // Update displays
             document.getElementById('stel_R0_val').textContent = stellarator.R0.toFixed(1);
             document.getElementById('stel_a_val').textContent = stellarator.a.toFixed(2);
@@ -974,24 +1219,21 @@
             document.getElementById('stel_complexity_val').textContent = stellarator.complexity;
             document.getElementById('stel_coils_val').textContent = stellarator.coils;
             document.getElementById('stel_gap_val').textContent = stellarator.gap.toFixed(2);
-            
-            // Derived quantities
+
+            // Derived quantities (ISS04 scaling)
             const aspect = stellarator.R0 / stellarator.a;
             const volume = 2 * Math.PI * Math.PI * stellarator.R0 * stellarator.a * stellarator.a;
-            
-            // ISS04 scaling for stellarators
+
             const Pheat = stellarator.ECRH + stellarator.NBI + stellarator.ICRH;
             const tau = 0.134 * Math.pow(stellarator.a, 2.28) * Math.pow(stellarator.R0, 0.64) *
                        Math.pow(Pheat, -0.61) * Math.pow(stellarator.n * 0.1, 0.54) *
                        Math.pow(stellarator.B, 0.84) * Math.pow(stellarator.iota, 0.41);
-            
+
             const lawson = stellarator.n * 1e20 * tau * stellarator.T * 1000;
-            
             const Pfus = 0.0008 * stellarator.n * stellarator.n * Math.pow(stellarator.T, 2) * volume *
                         Math.exp(-20 / stellarator.T);
-            
             const Q = Pfus / Math.max(1, Pheat);
-            
+
             // Update stats
             document.getElementById('stel_aspect').textContent = aspect.toFixed(1);
             document.getElementById('stel_volume').textContent = volume.toFixed(0) + ' m³';
@@ -999,37 +1241,49 @@
             document.getElementById('stel_lawson').textContent = (lawson / 1e21).toFixed(1) + '×10²¹';
             document.getElementById('stel_Pfus').textContent = Pfus.toFixed(0) + ' MW';
             document.getElementById('stel_Q').textContent = Q.toFixed(1);
-            
+
             const lawsonEl = document.getElementById('stel_lawson');
             lawsonEl.className = lawson > 3e21 ? 'good' : lawson > 1e21 ? 'warn' : 'bad';
-            
+
             const qEl = document.getElementById('stel_Q');
             qEl.className = Q > 5 ? 'good' : Q > 1 ? 'warn' : 'bad';
-            
-            // Score (stellarators get bonus for no disruptions)
+
             const score = Math.min(100, (Q * 5 + 30 + (lawson/5e21) * 40 - stellarator.complexity * 2));
             document.getElementById('stel_score').textContent = score.toFixed(0) + '%';
             document.getElementById('stel_bar').style.width = score + '%';
+
+            // Rebuild 3D geometry
+            createStellaratorPlasma();
+            createStellaratorCoils();
+            createStellaratorParticles();
+            createStellaratorFieldLines();
         }
-        
-        // Initialize
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const tokContainer = document.getElementById('tokamakContainer');
+            const stelContainer = document.getElementById('stellaratorContainer');
+
+            if (tokCamera && tokRenderer) {
+                tokCamera.aspect = tokContainer.clientWidth / tokContainer.clientHeight;
+                tokCamera.updateProjectionMatrix();
+                tokRenderer.setSize(tokContainer.clientWidth, tokContainer.clientHeight);
+            }
+
+            if (stelCamera && stelRenderer) {
+                stelCamera.aspect = stelContainer.clientWidth / stelContainer.clientHeight;
+                stelCamera.updateProjectionMatrix();
+                stelRenderer.setSize(stelContainer.clientWidth, stelContainer.clientHeight);
+            }
+        });
+
+        // Initialize on load
         window.addEventListener('load', () => {
-            init();
+            initTokamak();
+            initStellarator();
             updateTokamak();
             updateStellarator();
-        });
-        
-        window.addEventListener('resize', () => {
-            if (tokRenderer) {
-                tokCanvas.width = tokCanvas.clientWidth;
-                tokCanvas.height = tokCanvas.clientHeight;
-                tokRenderer.gl.viewport(0, 0, tokCanvas.width, tokCanvas.height);
-            }
-            if (stelRenderer) {
-                stelCanvas.width = stelCanvas.clientWidth;
-                stelCanvas.height = stelCanvas.clientHeight;
-                stelRenderer.gl.viewport(0, 0, stelCanvas.width, stelCanvas.height);
-            }
+            animate();
         });
     </script>
 </body>
