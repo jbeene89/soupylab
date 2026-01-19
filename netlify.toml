@@ -1,8 +1,6 @@
 [build]
-  # No build command needed - this is a static HTML site
-  command = "echo 'No build required - static HTML site'"
-
-  # Publish from the root directory
+  # Static HTML site - no build needed
+  command = "true"
   publish = "."
 
 # Headers for CDN caching
