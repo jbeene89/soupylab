@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laser Optics & Ray Tracer - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&display=swap');
+
+        :root {
+            --bg: #000510;
+            --panel: #0a0a1a;
+            --accent: #ff0055;
+            --laser-red: #ff0033;
+            --laser-green: #00ff44;
+            --laser-blue: #0088ff;
+            --laser-violet: #aa00ff;
+            --text: #e0e0e0;
+            --dim: #6688aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #0a0520 0%, var(--bg) 100%);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            background: linear-gradient(180deg, rgba(255, 0, 85, 0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(255, 0, 85, 0.2);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #ff0055 0%, #00ff44 50%, #0088ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(255, 0, 85, 0.5);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: var(--dim);
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(10, 10, 26, 0.9);
+            border: 1px solid rgba(255, 0, 85, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 0, 85, 0.3);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(255, 0, 85, 0.2) 0%, rgba(0, 255, 68, 0.2) 100%);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #ff0055 0%, #ff4488 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(255, 0, 85, 0.8);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 1);
+        }
+
+        .slider-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 8px rgba(255, 0, 85, 0.6);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(255, 0, 85, 0.05);
+            border: 1px solid rgba(255, 0, 85, 0.2);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            background: rgba(255, 0, 85, 0.1);
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #ff0055 0%, #ff4488 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 15px rgba(255, 0, 85, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 0, 85, 0.6);
+        }
+
+        .optics-btn {
+            background: linear-gradient(135deg, #0088ff 0%, #00aaff 100%);
+            margin-bottom: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 136, 255, 0.3);
+        }
+
+        .optics-btn:hover {
+            box-shadow: 0 6px 25px rgba(0, 136, 255, 0.6);
+        }
+
+        .stat-box {
+            background: rgba(255, 0, 85, 0.05);
+            border: 1px solid rgba(255, 0, 85, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            background: rgba(255, 0, 85, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ff0055 0%, #ff4488 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin-left: 0.3rem;
+        }
+
+        .canvas-container {
+            background: rgba(0, 5, 16, 0.95);
+            border: 1px solid rgba(255, 0, 85, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+                        inset 0 0 60px rgba(255, 0, 85, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            background: linear-gradient(135deg, #ff0055 0%, #00ff44 50%, #0088ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            cursor: crosshair;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(10, 10, 26, 0.9);
+            border: 1px solid rgba(255, 0, 85, 0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-link:hover {
+            background: rgba(255, 0, 85, 0.2);
+            border-color: var(--accent);
+            transform: translateX(-3px);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
+        }
+
+        .color-selector {
+            display: flex;
+            gap: 8px;
+            margin-top: 0.5rem;
+        }
+
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+
+        .color-btn.active {
+            border-color: white;
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .color-btn.red { background: #ff0033; color: #ff0033; }
+        .color-btn.green { background: #00ff44; color: #00ff44; }
+        .color-btn.blue { background: #0088ff; color: #0088ff; }
+        .color-btn.violet { background: #aa00ff; color: #aa00ff; }
+
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 280px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>🔬 LASER OPTICS & RAY TRACER 🔬</h1>
+        <p>Interactive optical bench with real-time ray tracing. Explore laser propagation through lenses, prisms, and mirrors. Design optical systems, visualize beam paths, and observe interference patterns with photorealistic rendering.</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <div class="section-title">Laser Source</div>
+
+            <div class="control-group">
+                <label>Laser Type</label>
+                <select id="laserType">
+                    <option value="single">Single Diode</option>
+                    <option value="array">Laser Array (3x3)</option>
+                    <option value="line">Line Laser (5 beams)</option>
+                    <option value="gaussian">Gaussian Beam</option>
+                    <option value="focused">Pre-focused</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Laser Color</label>
+                <div class="color-selector">
+                    <div class="color-btn red active" data-color="red"></div>
+                    <div class="color-btn green" data-color="green"></div>
+                    <div class="color-btn blue" data-color="blue"></div>
+                    <div class="color-btn violet" data-color="violet"></div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Beam Divergence
+                    <span style="font-size: 0.7rem; color: var(--dim);">mrad</span>
+                </label>
+                <input type="range" id="divergence" min="0" max="50" step="1" value="5">
+                <div class="slider-value">
+                    <span>Collimated</span>
+                    <span class="value-display" id="divergenceValue">5 mrad</span>
+                    <span>Divergent</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Power
+                    <span style="font-size: 0.7rem; color: var(--dim);">mW</span>
+                </label>
+                <input type="range" id="power" min="1" max="1000" step="10" value="100">
+                <div class="slider-value">
+                    <span>1 mW</span>
+                    <span class="value-display" id="powerValue">100 mW</span>
+                    <span>1000 mW</span>
+                </div>
+            </div>
+
+            <div class="section-title">Add Optical Elements</div>
+
+            <button class="optics-btn" id="addConvexBtn">➕ Convex Lens (f = +100mm)</button>
+            <button class="optics-btn" id="addConcaveBtn">➕ Concave Lens (f = -100mm)</button>
+            <button class="optics-btn" id="addPrismBtn">➕ Prism (60°)</button>
+            <button class="optics-btn" id="addMirrorBtn">➕ Mirror (Flat)</button>
+            <button class="optics-btn" id="addSplitterBtn">➕ Beam Splitter</button>
+
+            <div class="section-title">Visualization</div>
+
+            <div class="control-group">
+                <label>
+                    Rays per Beam
+                </label>
+                <input type="range" id="rayCount" min="5" max="100" step="5" value="30">
+                <div class="slider-value">
+                    <span>5</span>
+                    <span class="value-display" id="rayCountValue">30</span>
+                    <span>100</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showCaustics" checked style="width: auto; margin-right: 8px;">
+                    Show Caustics
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showBeamProfile" checked style="width: auto; margin-right: 8px;">
+                    Show Beam Profile
+                </label>
+            </div>
+
+            <button id="clearOpticsBtn" style="background: linear-gradient(135deg, #ff4400 0%, #ff6600 100%);">🗑️ Clear All Optics</button>
+            <button id="resetBtn">🔄 Reset Scene</button>
+        </div>
+
+        <!-- Center Panel: Optical Bench -->
+        <div>
+            <div class="canvas-container">
+                <div class="canvas-title">OPTICAL BENCH & RAY TRACER</div>
+                <canvas id="opticsCanvas" width="1000" height="700"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff0033; color: #ff0033;"></div>
+                        <span>Red Laser (635nm)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ff44; color: #00ff44;"></div>
+                        <span>Green Laser (532nm)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0088ff; color: #0088ff;"></div>
+                        <span>Blue Laser (445nm)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #aa00ff; color: #aa00ff;"></div>
+                        <span>Violet Laser (405nm)</span>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--dim);">
+                    💡 Drag optics to reposition • Click optics to rotate • Right-click to delete
+                </p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Stats -->
+        <div class="panel">
+            <div class="section-title">Laser Properties</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Wavelength (λ)</div>
+                <div class="stat-value">
+                    <span id="wavelengthValue">635</span>
+                    <span class="stat-unit">nm</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Beam Waist (w₀)</div>
+                <div class="stat-value">
+                    <span id="waistValue">0.5</span>
+                    <span class="stat-unit">mm</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Rayleigh Range</div>
+                <div class="stat-value">
+                    <span id="rayleighValue">0</span>
+                    <span class="stat-unit">mm</span>
+                </div>
+            </div>
+
+            <div class="section-title">System Analysis</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Optical Elements</div>
+                <div class="stat-value">
+                    <span id="opticsCountValue">0</span>
+                    <span class="stat-unit">elements</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Active Rays</div>
+                <div class="stat-value">
+                    <span id="rayCountDisplay">30</span>
+                    <span class="stat-unit">rays</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Total Bounces</div>
+                <div class="stat-value">
+                    <span id="bouncesValue">0</span>
+                    <span class="stat-unit">reflections</span>
+                </div>
+            </div>
+
+            <div class="section-title">Beam Path</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Path Length</div>
+                <div class="stat-value">
+                    <span id="pathLengthValue">0</span>
+                    <span class="stat-unit">mm</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Focal Point</div>
+                <div class="stat-value" style="font-size: 1.1rem;">
+                    <span id="focalPointValue">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONSTANTS ==========
+        const canvas = document.getElementById('opticsCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const LASER_COLORS = {
+            red: { wavelength: 635, r: 255, g: 0, b: 51, name: 'Red' },
+            green: { wavelength: 532, r: 0, g: 255, b: 68, name: 'Green' },
+            blue: { wavelength: 445, r: 0, g: 136, b: 255, name: 'Blue' },
+            violet: { wavelength: 405, r: 170, g: 0, b: 255, name: 'Violet' }
+        };
+
+        const n_air = 1.0;
+        const n_glass = 1.52;
+
+        // ========== STATE VARIABLES ==========
+        let laserType = 'single';
+        let laserColor = 'red';
+        let divergence = 5e-3; // radians
+        let power = 100; // mW
+        let rayCount = 30;
+        let showCaustics = true;
+        let showBeamProfile = true;
+
+        let opticalElements = [];
+        let rays = [];
+        let draggedElement = null;
+        let totalBounces = 0;
+
+        // ========== OPTICAL ELEMENT CLASSES ==========
+
+        class OpticalElement {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.angle = 0;
+                this.isDragging = false;
+            }
+
+            isPointInside(px, py) {
+                return false; // Override in subclasses
+            }
+
+            interact(ray) {
+                return null; // Override in subclasses
+            }
+
+            draw(ctx) {
+                // Override in subclasses
+            }
+        }
+
+        class Lens extends OpticalElement {
+            constructor(x, y, focalLength) {
+                super(x, y, focalLength > 0 ? 'convex' : 'concave');
+                this.focalLength = focalLength;
+                this.width = 80;
+                this.height = 15;
+            }
+
+            isPointInside(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return Math.abs(dx) < this.width / 2 && Math.abs(dy) < this.height / 2;
+            }
+
+            interact(ray) {
+                // Simplified thin lens equation
+                const dx = ray.x - this.x;
+                const dy = ray.y - this.y;
+
+                // Check if ray hits lens
+                if (Math.abs(dx) < this.width / 2) {
+                    const distToCenter = dy;
+                    const deflectionAngle = -distToCenter / this.focalLength;
+
+                    // Apply lens refraction
+                    const newAngle = Math.atan2(ray.dy, ray.dx) + deflectionAngle;
+                    return {
+                        x: ray.x,
+                        y: ray.y,
+                        angle: newAngle
+                    };
+                }
+                return null;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Lens body
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                ctx.lineWidth = 3;
+
+                if (this.type === 'convex') {
+                    // Convex lens shape
+                    ctx.beginPath();
+                    ctx.arc(-this.width/2, 0, 60, -Math.PI/3, Math.PI/3);
+                    ctx.arc(this.width/2, 0, 60, Math.PI*2/3, Math.PI*4/3);
+                    ctx.closePath();
+                } else {
+                    // Concave lens shape
+                    ctx.beginPath();
+                    ctx.arc(this.width/2, 0, 40, Math.PI*2/3, Math.PI*4/3, true);
+                    ctx.arc(-this.width/2, 0, 40, -Math.PI/3, Math.PI/3, true);
+                    ctx.closePath();
+                }
+
+                ctx.fillStyle = 'rgba(100, 200, 255, 0.1)';
+                ctx.fill();
+                ctx.stroke();
+
+                // Focal points
+                if (this.type === 'convex') {
+                    ctx.fillStyle = 'rgba(100, 200, 255, 0.5)';
+                    ctx.fillRect(this.focalLength - 2, -2, 4, 4);
+                    ctx.fillRect(-this.focalLength - 2, -2, 4, 4);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Prism extends OpticalElement {
+            constructor(x, y) {
+                super(x, y, 'prism');
+                this.size = 60;
+            }
+
+            isPointInside(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return Math.abs(dx) < this.size && Math.abs(dy) < this.size;
+            }
+
+            interact(ray) {
+                // Simplified prism refraction (dispersive)
+                const wavelength = LASER_COLORS[laserColor].wavelength;
+                const n = 1.5 + (600 - wavelength) / 10000; // Wavelength-dependent
+
+                // Basic Snell's law at entry and exit
+                const hitAngle = Math.atan2(ray.dy, ray.dx);
+                const refractedAngle = Math.asin(Math.sin(hitAngle) / n);
+
+                return {
+                    x: ray.x,
+                    y: ray.y,
+                    angle: refractedAngle
+                };
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                ctx.strokeStyle = 'rgba(255, 100, 200, 0.8)';
+                ctx.fillStyle = 'rgba(255, 100, 200, 0.15)';
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size);
+                ctx.lineTo(-this.size * 0.866, this.size / 2);
+                ctx.lineTo(this.size * 0.866, this.size / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        class Mirror extends OpticalElement {
+            constructor(x, y) {
+                super(x, y, 'mirror');
+                this.width = 80;
+            }
+
+            isPointInside(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return Math.abs(dx) < this.width / 2 && Math.abs(dy) < 10;
+            }
+
+            interact(ray) {
+                // Reflection
+                const normal = this.angle + Math.PI / 2;
+                const inAngle = Math.atan2(ray.dy, ray.dx);
+                const outAngle = 2 * normal - inAngle;
+
+                totalBounces++;
+
+                return {
+                    x: ray.x,
+                    y: ray.y,
+                    angle: outAngle
+                };
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Mirror surface
+                const gradient = ctx.createLinearGradient(0, -5, 0, 5);
+                gradient.addColorStop(0, 'rgba(200, 200, 255, 0.3)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(1, 'rgba(200, 200, 255, 0.3)');
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(-this.width / 2, -5, this.width, 10);
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-this.width / 2, -5, this.width, 10);
+
+                ctx.restore();
+            }
+        }
+
+        class BeamSplitter extends OpticalElement {
+            constructor(x, y) {
+                super(x, y, 'splitter');
+                this.size = 60;
+            }
+
+            isPointInside(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return Math.abs(dx) < this.size / 2 && Math.abs(dy) < this.size / 2;
+            }
+
+            interact(ray) {
+                // Split beam: 50% transmission, 50% reflection
+                const transmitted = {
+                    x: ray.x,
+                    y: ray.y,
+                    angle: Math.atan2(ray.dy, ray.dx),
+                    intensity: ray.intensity * 0.5
+                };
+
+                const normal = this.angle;
+                const inAngle = Math.atan2(ray.dy, ray.dx);
+                const reflected = {
+                    x: ray.x,
+                    y: ray.y,
+                    angle: 2 * normal - inAngle,
+                    intensity: ray.intensity * 0.5
+                };
+
+                totalBounces++;
+
+                return [transmitted, reflected];
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                ctx.strokeStyle = 'rgba(100, 255, 200, 0.8)';
+                ctx.fillStyle = 'rgba(100, 255, 200, 0.2)';
+                ctx.lineWidth = 3;
+
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size);
+
+                // Diagonal line
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(-this.size / 2, -this.size / 2);
+                ctx.lineTo(this.size / 2, this.size / 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // ========== RAY CLASS ==========
+        class Ray {
+            constructor(x, y, angle, intensity = 1) {
+                this.x = x;
+                this.y = y;
+                this.dx = Math.cos(angle);
+                this.dy = Math.sin(angle);
+                this.intensity = intensity;
+                this.path = [{ x, y }];
+                this.maxSteps = 500;
+                this.steps = 0;
+            }
+
+            propagate() {
+                if (this.steps >= this.maxSteps) return false;
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) return false;
+
+                this.x += this.dx * 2;
+                this.y += this.dy * 2;
+                this.path.push({ x: this.x, y: this.y });
+                this.steps++;
+
+                // Check interactions with optical elements
+                for (let element of opticalElements) {
+                    if (element.isPointInside(this.x, this.y)) {
+                        const result = element.interact(this);
+                        if (result) {
+                            if (Array.isArray(result)) {
+                                // Beam splitter returns multiple rays
+                                for (let r of result) {
+                                    if (r.angle !== undefined) {
+                                        this.dx = Math.cos(r.angle);
+                                        this.dy = Math.sin(r.angle);
+                                        if (r.intensity !== undefined) {
+                                            this.intensity = r.intensity;
+                                        }
+                                    }
+                                }
+                            } else {
+                                this.dx = Math.cos(result.angle);
+                                this.dy = Math.sin(result.angle);
+                            }
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            draw(ctx) {
+                if (this.path.length < 2) return;
+
+                const color = LASER_COLORS[laserColor];
+                const alpha = this.intensity * (power / 1000);
+
+                // Draw beam with glow
+                ctx.save();
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.strokeStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                ctx.lineWidth = 8;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+
+                ctx.beginPath();
+                ctx.moveTo(this.path[0].x, this.path[0].y);
+                for (let i = 1; i < this.path.length; i++) {
+                    ctx.lineTo(this.path[i].x, this.path[i].y);
+                }
+                ctx.stroke();
+
+                // Core beam
+                ctx.globalAlpha = alpha;
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // ========== RAY GENERATION ==========
+        function generateRays() {
+            rays = [];
+            const startX = 50;
+            const startY = canvas.height / 2;
+
+            switch (laserType) {
+                case 'single':
+                    for (let i = 0; i < rayCount; i++) {
+                        const offset = (i - rayCount / 2) * 0.5;
+                        const angle = divergence * offset / rayCount;
+                        rays.push(new Ray(startX, startY + offset, angle));
+                    }
+                    break;
+
+                case 'array':
+                    for (let row = -1; row <= 1; row++) {
+                        for (let col = -1; col <= 1; col++) {
+                            for (let i = 0; i < rayCount / 9; i++) {
+                                const offsetY = row * 40 + (i - rayCount / 18) * 0.5;
+                                const angle = divergence * (i - rayCount / 18) / (rayCount / 9);
+                                rays.push(new Ray(startX, startY + offsetY, angle));
+                            }
+                        }
+                    }
+                    break;
+
+                case 'line':
+                    for (let beam = 0; beam < 5; beam++) {
+                        for (let i = 0; i < rayCount / 5; i++) {
+                            const offsetY = (beam - 2) * 30;
+                            const offset = (i - rayCount / 10) * 0.3;
+                            const angle = divergence * offset / (rayCount / 5);
+                            rays.push(new Ray(startX, startY + offsetY + offset, angle));
+                        }
+                    }
+                    break;
+
+                case 'gaussian':
+                    for (let i = 0; i < rayCount; i++) {
+                        const gaussian = (Math.random() + Math.random() + Math.random() - 1.5) * 10;
+                        const angle = divergence * gaussian / rayCount;
+                        rays.push(new Ray(startX, startY + gaussian, angle, Math.exp(-gaussian * gaussian / 100)));
+                    }
+                    break;
+
+                case 'focused':
+                    for (let i = 0; i < rayCount; i++) {
+                        const offset = (i - rayCount / 2) * 0.5;
+                        const angle = -offset / 200; // Converging
+                        rays.push(new Ray(startX, startY + offset, angle));
+                    }
+                    break;
+            }
+        }
+
+        // ========== ANIMATION ==========
+        function animate() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 0, 85, 0.05)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Reset bounce counter
+            totalBounces = 0;
+
+            // Propagate and draw rays
+            rays.forEach(ray => {
+                for (let step = 0; step < 5; step++) {
+                    if (!ray.propagate()) break;
+                }
+            });
+
+            rays.forEach(ray => ray.draw(ctx));
+
+            // Draw optical elements
+            opticalElements.forEach(element => element.draw(ctx));
+
+            // Draw caustics
+            if (showCaustics) {
+                drawCaustics();
+            }
+
+            // Update UI
+            updateUI();
+
+            requestAnimationFrame(animate);
+        }
+
+        function drawCaustics() {
+            const color = LASER_COLORS[laserColor];
+
+            rays.forEach(ray => {
+                if (ray.path.length > 10) {
+                    const endPoint = ray.path[ray.path.length - 1];
+                    const gradient = ctx.createRadialGradient(endPoint.x, endPoint.y, 0, endPoint.x, endPoint.y, 20);
+                    gradient.addColorStop(0, `rgba(${color.r}, ${color.g}, ${color.b}, ${ray.intensity * 0.5})`);
+                    gradient.addColorStop(1, 'transparent');
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(endPoint.x - 20, endPoint.y - 20, 40, 40);
+                }
+            });
+        }
+
+        function updateUI() {
+            const color = LASER_COLORS[laserColor];
+
+            document.getElementById('wavelengthValue').textContent = color.wavelength;
+            document.getElementById('waistValue').textContent = (1 / (divergence * 1000)).toFixed(2);
+            document.getElementById('opticsCountValue').textContent = opticalElements.length;
+            document.getElementById('rayCountDisplay').textContent = rays.length;
+            document.getElementById('bouncesValue').textContent = totalBounces;
+
+            // Calculate path length
+            let totalLength = 0;
+            rays.forEach(ray => {
+                for (let i = 1; i < ray.path.length; i++) {
+                    const dx = ray.path[i].x - ray.path[i - 1].x;
+                    const dy = ray.path[i].y - ray.path[i - 1].y;
+                    totalLength += Math.sqrt(dx * dx + dy * dy);
+                }
+            });
+            document.getElementById('pathLengthValue').textContent = (totalLength / 2).toFixed(0);
+        }
+
+        // ========== EVENT LISTENERS ==========
+
+        document.getElementById('laserType').addEventListener('change', (e) => {
+            laserType = e.target.value;
+            generateRays();
+        });
+
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                laserColor = e.target.dataset.color;
+                generateRays();
+            });
+        });
+
+        document.getElementById('divergence').addEventListener('input', (e) => {
+            divergence = parseFloat(e.target.value) * 1e-3;
+            document.getElementById('divergenceValue').textContent = e.target.value + ' mrad';
+            generateRays();
+        });
+
+        document.getElementById('power').addEventListener('input', (e) => {
+            power = parseFloat(e.target.value);
+            document.getElementById('powerValue').textContent = power + ' mW';
+        });
+
+        document.getElementById('rayCount').addEventListener('input', (e) => {
+            rayCount = parseInt(e.target.value);
+            document.getElementById('rayCountValue').textContent = rayCount;
+            generateRays();
+        });
+
+        document.getElementById('showCaustics').addEventListener('change', (e) => {
+            showCaustics = e.target.checked;
+        });
+
+        document.getElementById('showBeamProfile').addEventListener('change', (e) => {
+            showBeamProfile = e.target.checked;
+        });
+
+        document.getElementById('addConvexBtn').addEventListener('click', () => {
+            opticalElements.push(new Lens(canvas.width / 2, canvas.height / 2, 100));
+        });
+
+        document.getElementById('addConcaveBtn').addEventListener('click', () => {
+            opticalElements.push(new Lens(canvas.width / 2, canvas.height / 2, -100));
+        });
+
+        document.getElementById('addPrismBtn').addEventListener('click', () => {
+            opticalElements.push(new Prism(canvas.width / 2, canvas.height / 2));
+        });
+
+        document.getElementById('addMirrorBtn').addEventListener('click', () => {
+            opticalElements.push(new Mirror(canvas.width / 2, canvas.height / 2));
+        });
+
+        document.getElementById('addSplitterBtn').addEventListener('click', () => {
+            opticalElements.push(new BeamSplitter(canvas.width / 2, canvas.height / 2));
+        });
+
+        document.getElementById('clearOpticsBtn').addEventListener('click', () => {
+            opticalElements = [];
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            opticalElements = [];
+            laserType = 'single';
+            laserColor = 'red';
+            divergence = 5e-3;
+            power = 100;
+            rayCount = 30;
+
+            document.getElementById('laserType').value = 'single';
+            document.getElementById('divergence').value = '5';
+            document.getElementById('power').value = '100';
+            document.getElementById('rayCount').value = '30';
+
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.color-btn.red').classList.add('active');
+
+            generateRays();
+        });
+
+        // Mouse interactions
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for (let element of opticalElements) {
+                if (element.isPointInside(x, y)) {
+                    draggedElement = element;
+                    draggedElement.isDragging = true;
+                    break;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (draggedElement && draggedElement.isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                draggedElement.x = e.clientX - rect.left;
+                draggedElement.y = e.clientY - rect.top;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (draggedElement) {
+                draggedElement.isDragging = false;
+                draggedElement = null;
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (!draggedElement) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                for (let element of opticalElements) {
+                    if (element.isPointInside(x, y)) {
+                        element.angle += Math.PI / 8;
+                        break;
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for (let i = 0; i < opticalElements.length; i++) {
+                if (opticalElements[i].isPointInside(x, y)) {
+                    opticalElements.splice(i, 1);
+                    break;
+                }
+            }
+        });
+
+        // ========== INITIALIZATION ==========
+        window.addEventListener('load', () => {
+            generateRays();
+            animate();
+        });
+    </script>
+</body>
+</html>
