@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Downforce Simulator - WebAssembly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a0a0a 50%, #2a0505 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(255, 0, 0, 0.2), rgba(255, 100, 0, 0.2));
+            padding: 15px 20px;
+            border-bottom: 2px solid rgba(255, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 2em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #ff0000 0%, #ff6600 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #ff0000, #ff6600);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.7);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 100px);
+        }
+
+        .container.fullscreen-mode {
+            grid-template-columns: 1fr;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .container.fullscreen-mode .panel {
+            display: none;
+        }
+
+        .container.fullscreen-mode .canvas-container {
+            border-radius: 0;
+            border: none;
+        }
+
+        .panel {
+            background: rgba(20, 10, 10, 0.8);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(255, 0, 0, 0.2);
+        }
+
+        .panel h2 {
+            color: #ff0000;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+            border-bottom: 2px solid rgba(255, 0, 0, 0.3);
+            padding-bottom: 8px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(5, 5, 10, 0.9);
+            border: 2px solid rgba(255, 0, 0, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0f;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .camera-btn {
+            background: rgba(255, 0, 0, 0.3);
+            border: 1px solid rgba(255, 0, 0, 0.6);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .camera-btn:hover {
+            background: rgba(255, 0, 0, 0.5);
+            transform: scale(1.05);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #ff0000;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 0, 0, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0000, #ff6600);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0000, #ff6600);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+        }
+
+        .value-display {
+            float: right;
+            color: #ff6600;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #ff0000, #ff6600);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.5);
+        }
+
+        button.drs-button {
+            background: linear-gradient(135deg, #00ff00, #00aa00);
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
+        }
+
+        button.drs-button.active {
+            background: linear-gradient(135deg, #00aa00, #005500);
+            animation: pulse 0.5s infinite;
+        }
+
+        button.drs-button:disabled {
+            background: #444;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .stat-box {
+            background: rgba(255, 0, 0, 0.05);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.7em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #ff6600;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.75em;
+            margin-left: 2px;
+        }
+
+        .tire-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tire-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .tire-label {
+            color: #888;
+            font-size: 0.7em;
+            margin-bottom: 5px;
+        }
+
+        .tire-value {
+            color: #ff0000;
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        .tire-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .tire-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff6600);
+            transition: width 0.3s;
+        }
+
+        .aero-display {
+            background: rgba(255, 0, 0, 0.05);
+            border: 1px solid rgba(255, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+        }
+
+        .aero-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+            font-size: 0.85em;
+        }
+
+        .aero-label {
+            color: #888;
+        }
+
+        .aero-value {
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 5px;
+            color: #e0e0e0;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .balance-indicator {
+            width: 100%;
+            height: 30px;
+            background: linear-gradient(90deg, #0080ff 0%, #ffffff 50%, #ff0000 100%);
+            border-radius: 5px;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        .balance-marker {
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background: black;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            transition: left 0.3s;
+        }
+
+        .balance-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7em;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .help-text {
+            background: rgba(255, 100, 0, 0.1);
+            border-left: 3px solid #ff6600;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 0.75em;
+            color: #aaa;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏎️ VEHICLE DOWNFORCE SIMULATOR</h1>
+        <p class="subtitle">Formula 1 • NASCAR • LMP1 • Ground Effect • DRS • Real-Time Aerodynamics • C++ WebAssembly</p>
+        <button class="fullscreen-btn" id="fullscreenBtn" onclick="toggleFullscreen()">📺 FULLSCREEN</button>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Left Panel: Vehicle Controls -->
+        <div class="panel">
+            <h2>Vehicle Configuration</h2>
+
+            <label style="color: #ff0000; font-size: 0.85em; display: block; margin-bottom: 5px;">Vehicle Type</label>
+            <select id="vehicleType">
+                <option value="0">Formula 1 (L/D ~3.5)</option>
+                <option value="1">NASCAR (L/D ~1.5)</option>
+                <option value="2">LMP1 (L/D ~3.0)</option>
+                <option value="3">Road Car (Lift)</option>
+            </select>
+
+            <button id="resetBtn">🔄 Reset Vehicle</button>
+            <button class="drs-button" id="drsBtn" disabled>⚡ DRS (Not Available)</button>
+
+            <div class="help-text">
+                💡 DRS reduces rear wing angle to lower drag on straights
+            </div>
+
+            <h2 style="margin-top: 15px;">Aerodynamic Setup</h2>
+
+            <div class="control-group">
+                <label>
+                    Front Wing Angle
+                    <span class="value-display" id="frontWingValue">0°</span>
+                </label>
+                <input type="range" id="frontWingSlider" min="-10" max="15" step="0.5" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Rear Wing Angle
+                    <span class="value-display" id="rearWingValue">0°</span>
+                </label>
+                <input type="range" id="rearWingSlider" min="-5" max="20" step="0.5" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Ride Height
+                    <span class="value-display" id="rideHeightValue">30 mm</span>
+                </label>
+                <input type="range" id="rideHeightSlider" min="10" max="150" step="1" value="30">
+            </div>
+
+            <div class="help-text">
+                🏁 Lower ride height increases ground effect but risks bottoming out
+            </div>
+
+            <h2 style="margin-top: 15px;">Ground Effect</h2>
+            <div class="aero-display">
+                <div class="aero-row">
+                    <span class="aero-label">Effect Strength:</span>
+                    <span class="aero-value" id="groundEffectValue">100%</span>
+                </div>
+                <div class="aero-row">
+                    <span class="aero-label">Optimal Height:</span>
+                    <span class="aero-value" id="optimalHeightValue">30 mm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Canvas with Camera Controls -->
+        <div class="panel" style="padding: 0; position: relative;">
+            <div class="canvas-container">
+                <canvas id="vehicleCanvas" width="1200" height="800"></canvas>
+
+                <div class="camera-controls">
+                    <button class="camera-btn" onclick="zoomIn()">🔍 Zoom In</button>
+                    <button class="camera-btn" onclick="zoomOut()">🔍 Zoom Out</button>
+                    <button class="camera-btn" onclick="resetCamera()">🎯 Reset View</button>
+                    <button class="camera-btn" onclick="toggleViewMode()">👁️ <span id="viewModeText">Track</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Telemetry -->
+        <div class="panel">
+            <h2>Live Telemetry</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">SPEED</div>
+                    <div class="stat-value">
+                        <span id="speedStat">180</span>
+                        <span class="stat-unit">km/h</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DOWNFORCE</div>
+                    <div class="stat-value">
+                        <span id="downforceStat">5000</span>
+                        <span class="stat-unit">N</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DRAG</div>
+                    <div class="stat-value">
+                        <span id="dragStat">1200</span>
+                        <span class="stat-unit">N</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">L/D RATIO</div>
+                    <div class="stat-value">
+                        <span id="ldRatioStat">4.2</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;">Aerodynamic Balance</h2>
+
+            <div class="balance-indicator">
+                <div class="balance-marker" id="balanceMarker" style="left: 50%;"></div>
+            </div>
+            <div class="balance-labels">
+                <span>← FRONT</span>
+                <span>CENTER</span>
+                <span>REAR →</span>
+            </div>
+
+            <div class="aero-display">
+                <div class="aero-row">
+                    <span class="aero-label">Front Downforce:</span>
+                    <span class="aero-value" id="frontDownforce">2500 N</span>
+                </div>
+                <div class="aero-row">
+                    <span class="aero-label">Rear Downforce:</span>
+                    <span class="aero-value" id="rearDownforce">2500 N</span>
+                </div>
+                <div class="aero-row">
+                    <span class="aero-label">CoP Position:</span>
+                    <span class="aero-value" id="copPosition">50%</span>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;">Tire Loads</h2>
+
+            <div class="tire-grid">
+                <div class="tire-box">
+                    <div class="tire-label">FRONT LEFT</div>
+                    <div class="tire-value" id="tireFLValue">2500 N</div>
+                    <div class="tire-bar"><div class="tire-fill" id="tireFLBar" style="width: 50%;"></div></div>
+                </div>
+                <div class="tire-box">
+                    <div class="tire-label">FRONT RIGHT</div>
+                    <div class="tire-value" id="tireFRValue">2500 N</div>
+                    <div class="tire-bar"><div class="tire-fill" id="tireFRBar" style="width: 50%;"></div></div>
+                </div>
+                <div class="tire-box">
+                    <div class="tire-label">REAR LEFT</div>
+                    <div class="tire-value" id="tireRLValue">3000 N</div>
+                    <div class="tire-bar"><div class="tire-fill" id="tireRLBar" style="width: 60%;"></div></div>
+                </div>
+                <div class="tire-box">
+                    <div class="tire-label">REAR RIGHT</div>
+                    <div class="tire-value" id="tireRRValue">3000 N</div>
+                    <div class="tire-bar"><div class="tire-fill" id="tireRRBar" style="width: 60%;"></div></div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 15px;">Session Statistics</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">MAX SPEED</div>
+                    <div class="stat-value">
+                        <span id="maxSpeedStat">280</span>
+                        <span class="stat-unit">km/h</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MAX DOWNFORCE</div>
+                    <div class="stat-value">
+                        <span id="maxDownforceStat">8000</span>
+                        <span class="stat-unit">N</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MAX LATERAL G</div>
+                    <div class="stat-value">
+                        <span id="maxLateralGStat">4.2</span>
+                        <span class="stat-unit">g</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">AVG L/D</div>
+                    <div class="stat-value">
+                        <span id="avgLDStat">3.8</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createVehicleModule from './vehicle_aero_engine.js';
+
+        let Module, vehicle;
+        let canvas, ctx;
+        let isRunning = false;
+
+        // Camera state
+        let cameraX = 0;
+        let cameraY = 0;
+        let cameraZoom = 1.0;
+        let viewMode = 'track'; // 'track', 'closeup', 'pressure'
+
+        // Pan state
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        async function init() {
+            try {
+                Module = await createVehicleModule();
+                vehicle = new Module.RaceVehicle();
+
+                canvas = document.getElementById('vehicleCanvas');
+                ctx = canvas.getContext('2d');
+
+                setupControls();
+                setupMouseControls();
+                animate();
+                isRunning = true;
+
+                console.log('🏎️ Vehicle aerodynamics simulator initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                canvas = document.getElementById('vehicleCanvas');
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile vehicle_aero_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupMouseControls() {
+            canvas.addEventListener('mousedown', (e) => {
+                isPanning = true;
+                panStartX = cameraX;
+                panStartY = cameraY;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                canvas.style.cursor = 'grabbing';
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isPanning) {
+                    const dx = (e.clientX - lastMouseX) / cameraZoom;
+                    const dy = (e.clientY - lastMouseY) / cameraZoom;
+                    cameraX = panStartX - dx;
+                    cameraY = panStartY - dy;
+                    panStartX = cameraX;
+                    panStartY = cameraY;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isPanning = false;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isPanning = false;
+                canvas.style.cursor = 'default';
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                cameraZoom *= zoomFactor;
+                cameraZoom = Math.max(0.3, Math.min(cameraZoom, 5.0));
+            });
+
+            canvas.style.cursor = 'grab';
+        }
+
+        window.zoomIn = () => {
+            cameraZoom *= 1.2;
+            cameraZoom = Math.min(cameraZoom, 5.0);
+        };
+
+        window.zoomOut = () => {
+            cameraZoom *= 0.8;
+            cameraZoom = Math.max(cameraZoom, 0.3);
+        };
+
+        window.resetCamera = () => {
+            cameraX = 0;
+            cameraY = 0;
+            cameraZoom = 1.0;
+        };
+
+        window.toggleViewMode = () => {
+            const modes = ['track', 'closeup', 'pressure'];
+            const currentIndex = modes.indexOf(viewMode);
+            viewMode = modes[(currentIndex + 1) % modes.length];
+            document.getElementById('viewModeText').textContent = viewMode.charAt(0).toUpperCase() + viewMode.slice(1);
+        };
+
+        window.toggleFullscreen = () => {
+            const container = document.getElementById('mainContainer');
+            const btn = document.getElementById('fullscreenBtn');
+
+            if (!document.fullscreenElement) {
+                container.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen();
+                btn.textContent = '❌ EXIT FULLSCREEN';
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.exitFullscreen();
+                btn.textContent = '📺 FULLSCREEN';
+            }
+        };
+
+        document.addEventListener('fullscreenchange', () => {
+            const container = document.getElementById('mainContainer');
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                container.classList.remove('fullscreen-mode');
+                btn.textContent = '📺 FULLSCREEN';
+            }
+        });
+
+        function setupControls() {
+            const vehicleType = document.getElementById('vehicleType');
+            const frontWingSlider = document.getElementById('frontWingSlider');
+            const rearWingSlider = document.getElementById('rearWingSlider');
+            const rideHeightSlider = document.getElementById('rideHeightSlider');
+            const drsBtn = document.getElementById('drsBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            vehicleType.addEventListener('change', (e) => {
+                vehicle.setVehicleType(parseInt(e.target.value));
+                updateDRSButton();
+            });
+
+            frontWingSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                vehicle.setFrontWingAngle(value);
+                document.getElementById('frontWingValue').textContent = value.toFixed(1) + '°';
+            });
+
+            rearWingSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                vehicle.setRearWingAngle(value);
+                document.getElementById('rearWingValue').textContent = value.toFixed(1) + '°';
+            });
+
+            rideHeightSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                vehicle.setRideHeight(value / 1000);  // Convert to meters
+                document.getElementById('rideHeightValue').textContent = value + ' mm';
+            });
+
+            drsBtn.addEventListener('click', () => {
+                if (vehicle.hasDRSAvailable()) {
+                    const newState = !vehicle.isDRSActive();
+                    vehicle.setDRS(newState);
+                    updateDRSButton();
+                }
+            });
+
+            resetBtn.addEventListener('click', () => {
+                vehicle.reset();
+                vehicle.setVehicleType(parseInt(vehicleType.value));
+                vehicle.setFrontWingAngle(parseFloat(frontWingSlider.value));
+                vehicle.setRearWingAngle(parseFloat(rearWingSlider.value));
+                vehicle.setRideHeight(parseFloat(rideHeightSlider.value) / 1000);
+                resetCamera();
+            });
+
+            updateDRSButton();
+        }
+
+        function updateDRSButton() {
+            const drsBtn = document.getElementById('drsBtn');
+            if (vehicle.hasDRSAvailable()) {
+                drsBtn.disabled = false;
+                if (vehicle.isDRSActive()) {
+                    drsBtn.textContent = '⚡ DRS ACTIVE';
+                    drsBtn.classList.add('active');
+                } else {
+                    drsBtn.textContent = '⚡ ACTIVATE DRS';
+                    drsBtn.classList.remove('active');
+                }
+            } else {
+                drsBtn.disabled = true;
+                drsBtn.textContent = '⚡ DRS (Not Available)';
+                drsBtn.classList.remove('active');
+            }
+        }
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Update physics
+            for (let i = 0; i < 2; i++) {
+                vehicle.update(0.016);
+            }
+
+            updateTelemetry();
+            drawScene();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateTelemetry() {
+            const speed = vehicle.getVelocityKMH();
+            const downforce = vehicle.getTotalDownforce();
+            const drag = vehicle.getDragForce();
+            const ldRatio = vehicle.getAeroEfficiency();
+
+            const frontDF = vehicle.getDownforceFront();
+            const rearDF = vehicle.getDownforceRear();
+            const cop = vehicle.getCenterOfPressure();
+
+            const tireFL = vehicle.getTireFrontLeft();
+            const tireFR = vehicle.getTireFrontRight();
+            const tireRL = vehicle.getTireRearLeft();
+            const tireRR = vehicle.getTireRearRight();
+
+            const groundEffect = vehicle.getGroundEffectPercent();
+
+            // Update displays
+            document.getElementById('speedStat').textContent = speed.toFixed(0);
+            document.getElementById('downforceStat').textContent = downforce.toFixed(0);
+            document.getElementById('dragStat').textContent = drag.toFixed(0);
+            document.getElementById('ldRatioStat').textContent = ldRatio.toFixed(2);
+
+            document.getElementById('frontDownforce').textContent = frontDF.toFixed(0) + ' N';
+            document.getElementById('rearDownforce').textContent = rearDF.toFixed(0) + ' N';
+            document.getElementById('copPosition').textContent = cop.toFixed(1) + '%';
+
+            // Balance marker
+            document.getElementById('balanceMarker').style.left = cop + '%';
+
+            // Tire loads
+            const maxTire = Math.max(tireFL, tireFR, tireRL, tireRR);
+            document.getElementById('tireFLValue').textContent = tireFL.toFixed(0) + ' N';
+            document.getElementById('tireFRValue').textContent = tireFR.toFixed(0) + ' N';
+            document.getElementById('tireRLValue').textContent = tireRL.toFixed(0) + ' N';
+            document.getElementById('tireRRValue').textContent = tireRR.toFixed(0) + ' N';
+
+            document.getElementById('tireFLBar').style.width = (tireFL / maxTire * 100) + '%';
+            document.getElementById('tireFRBar').style.width = (tireFR / maxTire * 100) + '%';
+            document.getElementById('tireRLBar').style.width = (tireRL / maxTire * 100) + '%';
+            document.getElementById('tireRRBar').style.width = (tireRR / maxTire * 100) + '%';
+
+            // Ground effect
+            document.getElementById('groundEffectValue').textContent = groundEffect.toFixed(0) + '%';
+
+            // Statistics
+            document.getElementById('maxSpeedStat').textContent = vehicle.getMaxSpeed().toFixed(0);
+            document.getElementById('maxDownforceStat').textContent = vehicle.getMaxDownforce().toFixed(0);
+            document.getElementById('maxLateralGStat').textContent = vehicle.getMaxLateralG().toFixed(1);
+            document.getElementById('avgLDStat').textContent = vehicle.getAvgAeroEfficiency().toFixed(2);
+
+            updateDRSButton();
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+
+            // Apply camera transform
+            ctx.translate(w / 2, h / 2);
+            ctx.scale(cameraZoom, cameraZoom);
+            ctx.translate(-cameraX, -cameraY);
+
+            if (viewMode === 'track') {
+                drawTrackView();
+            } else if (viewMode === 'closeup') {
+                drawCloseupView();
+            } else {
+                drawPressureView();
+            }
+
+            ctx.restore();
+
+            // Draw HUD
+            drawHUD();
+        }
+
+        function drawTrackView() {
+            // Draw track
+            const track = vehicle.getTrack();
+            const trackLen = track.length / 5;
+
+            ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+            ctx.lineWidth = 80;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            for (let i = 0; i < trackLen; i++) {
+                const x = track[i * 5];
+                const y = track[i * 5 + 1];
+                const length = track[i * 5 + 2];
+                const radius = track[i * 5 + 3];
+                const isCorner = track[i * 5 + 4] > 0.5;
+
+                if (i === 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw trail (speed colored)
+            const trail = vehicle.getTrail();
+            const speeds = vehicle.getTrailSpeed();
+            const trailLen = trail.length / 2;
+
+            for (let i = 1; i < trailLen; i++) {
+                const x1 = trail[(i - 1) * 2];
+                const y1 = trail[(i - 1) * 2 + 1];
+                const x2 = trail[i * 2];
+                const y2 = trail[i * 2 + 1];
+                const speed = speeds[i];
+
+                // Color based on speed
+                const speedNorm = Math.min(1, speed / 300);
+                const r = Math.floor(255 * speedNorm);
+                const g = Math.floor(255 * (1 - speedNorm));
+
+                ctx.strokeStyle = `rgba(${r}, ${g}, 0, 0.6)`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+
+            // Draw vehicle
+            const vx = vehicle.getX();
+            const vy = vehicle.getY();
+            const heading = vehicle.getHeading() * Math.PI / 180;
+
+            ctx.save();
+            ctx.translate(vx, vy);
+            ctx.rotate(heading);
+
+            // Car body
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(-15, -8, 30, 16);
+
+            // Wheels
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-12, -10, 6, 4);
+            ctx.fillRect(-12, 6, 6, 4);
+            ctx.fillRect(6, -10, 6, 4);
+            ctx.fillRect(6, 6, 6, 4);
+
+            // Front wing
+            ctx.strokeStyle = '#ff6600';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(15, -12);
+            ctx.lineTo(15, 12);
+            ctx.stroke();
+
+            // Rear wing
+            ctx.beginPath();
+            ctx.moveTo(-15, -10);
+            ctx.lineTo(-15, 10);
+            ctx.stroke();
+
+            // DRS indicator
+            if (vehicle.isDRSActive()) {
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(-17, -8, 2, 16);
+            }
+
+            ctx.restore();
+        }
+
+        function drawCloseupView() {
+            const vx = vehicle.getX();
+            const vy = vehicle.getY();
+
+            // Center on vehicle
+            cameraX = vx;
+            cameraY = vy;
+
+            // Draw vehicle with aero visualization
+            ctx.save();
+            ctx.translate(0, 0);
+
+            const heading = vehicle.getHeading() * Math.PI / 180;
+            ctx.rotate(heading);
+
+            // Scale up for closeup
+            ctx.scale(3, 3);
+
+            // Downforce arrows
+            const frontDF = vehicle.getDownforceFront();
+            const rearDF = vehicle.getDownforceRear();
+
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(10, frontDF / 200);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(-10, 0);
+            ctx.lineTo(-10, rearDF / 200);
+            ctx.stroke();
+
+            // Car body
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(-15, -8, 30, 16);
+
+            ctx.restore();
+        }
+
+        function drawPressureView() {
+            // Pressure distribution visualization
+            const w = 400;
+            const h = 200;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(-w/2, -h/2, w, h);
+
+            // Front wing pressure
+            const frontDF = vehicle.getDownforceFront();
+            const rearDF = vehicle.getDownforceRear();
+
+            ctx.fillStyle = `rgba(255, 0, 0, ${Math.min(1, frontDF / 5000)})`;
+            ctx.fillRect(-w/2 + 50, -h/2, 100, h);
+
+            ctx.fillStyle = `rgba(255, 0, 0, ${Math.min(1, rearDF / 5000)})`;
+            ctx.fillRect(w/2 - 150, -h/2, 100, h);
+
+            // Labels
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Orbitron';
+            ctx.fillText('Front Wing', -w/2 + 60, -h/2 + 30);
+            ctx.fillText('Rear Wing', w/2 - 140, -h/2 + 30);
+        }
+
+        function drawHUD() {
+            // Speed indicator
+            ctx.fillStyle = '#ff0000';
+            ctx.font = 'bold 40px Orbitron';
+            ctx.fillText(vehicle.getVelocityKMH().toFixed(0) + ' km/h', 20, 50);
+
+            // Downforce bar
+            const df = vehicle.getTotalDownforce();
+            const maxDF = 10000;
+            const barWidth = 200;
+            const barHeight = 20;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(20, 70, barWidth, barHeight);
+
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(20, 70, (df / maxDF) * barWidth, barHeight);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Orbitron';
+            ctx.fillText('DOWNFORCE', 20, 65);
+
+            // Ground effect indicator
+            const ge = vehicle.getGroundEffectPercent();
+            ctx.fillText(`Ground Effect: ${ge.toFixed(0)}%`, 20, 110);
+
+            // Zoom level
+            ctx.fillText(`Zoom: ${(cameraZoom * 100).toFixed(0)}%`, canvas.width - 120, 30);
+        }
+
+        init();
+    </script>
+</body>
+</html>
