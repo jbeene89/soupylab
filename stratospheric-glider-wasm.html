@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stratospheric Glider - WebAssembly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #2a1f3a 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+            padding: 20px;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(20, 25, 45, 0.8);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .panel h2 {
+            color: #4facfe;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(10, 14, 39, 0.9);
+            border: 2px solid rgba(79, 172, 254, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            background: linear-gradient(180deg, #0a0520 0%, #1a1a40 50%, #4a3020 100%);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #4facfe;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(79, 172, 254, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(79, 172, 254, 0.8);
+        }
+
+        .value-display {
+            display: inline-block;
+            float: right;
+            color: #00f2fe;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(79, 172, 254, 0.05);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.75em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #00f2fe;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.8em;
+            margin-left: 3px;
+        }
+
+        .atmosphere-data {
+            background: rgba(79, 172, 254, 0.05);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .atmosphere-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .atmosphere-label {
+            color: #888;
+        }
+
+        .atmosphere-value {
+            color: #4facfe;
+            font-weight: bold;
+        }
+
+        .thermal-indicator {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 100, 100, 0.6), rgba(255, 0, 0, 0));
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 0.3; }
+        }
+
+        .energy-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(79, 172, 254, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(68, 255, 68, 0.5);
+        }
+
+        .warning {
+            color: #ff4444;
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 5px;
+            display: none;
+        }
+
+        .warning.active {
+            display: block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⛅ STRATOSPHERIC GLIDER SIMULATOR</h1>
+        <p class="subtitle">ISA Atmosphere Model • Thermal Soaring • Energy Management • C++ WebAssembly</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <h2>Flight Controls</h2>
+
+            <div class="control-group">
+                <label>
+                    Angle of Attack
+                    <span class="value-display" id="aoaValue">5.0°</span>
+                </label>
+                <input type="range" id="aoaSlider" min="-5" max="15" step="0.5" value="5">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Bank Angle
+                    <span class="value-display" id="bankValue">0°</span>
+                </label>
+                <input type="range" id="bankSlider" min="-45" max="45" step="5" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Initial Altitude
+                    <span class="value-display" id="altValue">15000 m</span>
+                </label>
+                <input type="range" id="altSlider" min="5000" max="25000" step="1000" value="15000">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Initial Velocity
+                    <span class="value-display" id="velValue">30 m/s</span>
+                </label>
+                <input type="range" id="velSlider" min="20" max="80" step="5" value="30">
+            </div>
+
+            <button id="resetBtn">🔄 Reset Flight</button>
+            <button id="thermalBtn">🌡️ Add Thermal Updraft</button>
+
+            <div class="warning" id="stallWarning">
+                ⚠️ STALL WARNING - Reduce angle of attack!
+            </div>
+
+            <div class="atmosphere-data">
+                <h3 style="color: #4facfe; font-size: 1em; margin-bottom: 10px;">Atmospheric Conditions</h3>
+                <div class="atmosphere-row">
+                    <span class="atmosphere-label">Temperature:</span>
+                    <span class="atmosphere-value" id="atmTemp">-40.0°C</span>
+                </div>
+                <div class="atmosphere-row">
+                    <span class="atmosphere-label">Pressure:</span>
+                    <span class="atmosphere-value" id="atmPressure">12.1 kPa</span>
+                </div>
+                <div class="atmosphere-row">
+                    <span class="atmosphere-label">Density:</span>
+                    <span class="atmosphere-value" id="atmDensity">0.195 kg/m³</span>
+                </div>
+                <div class="atmosphere-row">
+                    <span class="atmosphere-label">Mach Number:</span>
+                    <span class="atmosphere-value" id="machNumber">0.089</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Canvas -->
+        <div class="panel" style="padding: 0;">
+            <div class="canvas-container">
+                <canvas id="gliderCanvas" width="900" height="600"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Panel: Statistics -->
+        <div class="panel">
+            <h2>Flight Statistics</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">ALTITUDE</div>
+                    <div class="stat-value">
+                        <span id="altitudeStat">15000</span>
+                        <span class="stat-unit">m</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">VELOCITY</div>
+                    <div class="stat-value">
+                        <span id="velocityStat">30.0</span>
+                        <span class="stat-unit">m/s</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">VERTICAL SPEED</div>
+                    <div class="stat-value">
+                        <span id="vspeedStat">-2.5</span>
+                        <span class="stat-unit">m/s</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">GLIDE RATIO</div>
+                    <div class="stat-value">
+                        <span id="glideRatioStat">12.0</span>
+                        <span class="stat-unit">:1</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MAX ALTITUDE</div>
+                    <div class="stat-value">
+                        <span id="maxAltStat">15000</span>
+                        <span class="stat-unit">m</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DISTANCE</div>
+                    <div class="stat-value">
+                        <span id="distanceStat">0.0</span>
+                        <span class="stat-unit">km</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">BEST L/D</div>
+                    <div class="stat-value">
+                        <span id="bestLDStat">12.0</span>
+                        <span class="stat-unit">:1</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">AoA</div>
+                    <div class="stat-value">
+                        <span id="currentAoA">5.0</span>
+                        <span class="stat-unit">°</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 30px;">Total Energy</h2>
+            <div class="energy-bar">
+                <div class="energy-fill" id="energyBar" style="width: 85%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.8em; color: #888;">
+                <span>Potential</span>
+                <span>Kinetic</span>
+            </div>
+
+            <h2 style="margin-top: 30px;">Flight Profile</h2>
+            <canvas id="profileCanvas" width="310" height="200" style="width: 100%; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(79, 172, 254, 0.2);"></canvas>
+        </div>
+    </div>
+
+    <script type="module">
+        import createGliderModule from './glider_engine.js';
+
+        let Module, glider;
+        let canvas, ctx;
+        let profileCanvas, profileCtx;
+        let isRunning = false;
+        let thermals = [];
+
+        async function init() {
+            try {
+                Module = await createGliderModule();
+                glider = new Module.Glider();
+
+                canvas = document.getElementById('gliderCanvas');
+                ctx = canvas.getContext('2d');
+
+                profileCanvas = document.getElementById('profileCanvas');
+                profileCtx = profileCanvas.getContext('2d');
+
+                setupControls();
+                animate();
+                isRunning = true;
+
+                console.log('✈️ Stratospheric glider initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile glider_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupControls() {
+            const aoaSlider = document.getElementById('aoaSlider');
+            const bankSlider = document.getElementById('bankSlider');
+            const altSlider = document.getElementById('altSlider');
+            const velSlider = document.getElementById('velSlider');
+            const resetBtn = document.getElementById('resetBtn');
+            const thermalBtn = document.getElementById('thermalBtn');
+
+            aoaSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                glider.setAngleOfAttack(value);
+                document.getElementById('aoaValue').textContent = value.toFixed(1) + '°';
+            });
+
+            bankSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                glider.setBankAngle(value);
+                document.getElementById('bankValue').textContent = value.toFixed(0) + '°';
+            });
+
+            altSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('altValue').textContent = value.toFixed(0) + ' m';
+            });
+
+            velSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('velValue').textContent = value.toFixed(0) + ' m/s';
+            });
+
+            resetBtn.addEventListener('click', () => {
+                glider.reset();
+                glider.setAltitude(parseFloat(altSlider.value));
+                glider.setVelocity(parseFloat(velSlider.value));
+                glider.setAngleOfAttack(parseFloat(aoaSlider.value));
+                glider.setBankAngle(parseFloat(bankSlider.value));
+                thermals = [];
+            });
+
+            thermalBtn.addEventListener('click', () => {
+                const x = glider.getX() + Math.random() * 5000 - 2500;
+                const alt = glider.getAltitude() - 1000 + Math.random() * 2000;
+                thermals.push({ x, y: alt, strength: 5 + Math.random() * 5 });
+            });
+        }
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Update physics (multiple steps per frame for smoother simulation)
+            for (let i = 0; i < 5; i++) {
+                glider.update(0.1);
+
+                // Apply thermals
+                for (const thermal of thermals) {
+                    glider.applyThermal(thermal.x, thermal.y, thermal.strength, 0.1);
+                }
+            }
+
+            // Update displays
+            updateStats();
+            updateAtmosphere();
+            drawScene();
+            drawProfile();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateStats() {
+            const altitude = glider.getAltitude();
+            const velocity = glider.getVelocity();
+            const vspeed = glider.getVerticalSpeed();
+            const glideRatio = glider.getGlideRatio();
+            const maxAlt = glider.getMaxAltitude();
+            const distance = glider.getTotalDistance();
+            const bestLD = glider.getBestGlideRatio();
+            const aoa = glider.getAngleOfAttack();
+
+            document.getElementById('altitudeStat').textContent = altitude.toFixed(0);
+            document.getElementById('velocityStat').textContent = velocity.toFixed(1);
+            document.getElementById('vspeedStat').textContent = vspeed.toFixed(1);
+            document.getElementById('glideRatioStat').textContent = glideRatio.toFixed(1);
+            document.getElementById('maxAltStat').textContent = maxAlt.toFixed(0);
+            document.getElementById('distanceStat').textContent = (distance / 1000).toFixed(1);
+            document.getElementById('bestLDStat').textContent = bestLD.toFixed(1);
+            document.getElementById('currentAoA').textContent = aoa.toFixed(1);
+
+            // Stall warning
+            const stallWarning = document.getElementById('stallWarning');
+            if (aoa > 14) {
+                stallWarning.classList.add('active');
+            } else {
+                stallWarning.classList.remove('active');
+            }
+
+            // Energy bar (normalized to initial energy)
+            const initialEnergy = 300 * 9.81 * 15000 + 0.5 * 300 * 30 * 30;
+            const currentEnergy = 300 * 9.81 * altitude + 0.5 * 300 * velocity * velocity;
+            const energyPercent = Math.min(100, (currentEnergy / initialEnergy) * 100);
+            document.getElementById('energyBar').style.width = energyPercent + '%';
+        }
+
+        function updateAtmosphere() {
+            const temp = glider.getAtmosphericTemperature();
+            const pressure = glider.getAtmosphericPressure();
+            const density = glider.getAtmosphericDensity();
+            const mach = glider.getMachNumber();
+
+            document.getElementById('atmTemp').textContent = temp.toFixed(1) + '°C';
+            document.getElementById('atmPressure').textContent = (pressure / 1000).toFixed(1) + ' kPa';
+            document.getElementById('atmDensity').textContent = density.toFixed(3) + ' kg/m³';
+            document.getElementById('machNumber').textContent = mach.toFixed(3);
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear with gradient sky
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            gradient.addColorStop(0, '#0a0520');
+            gradient.addColorStop(0.3, '#1a1a40');
+            gradient.addColorStop(0.7, '#2a2a50');
+            gradient.addColorStop(1, '#4a3020');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw altitude grid
+            ctx.strokeStyle = 'rgba(79, 172, 254, 0.1)';
+            ctx.lineWidth = 1;
+            for (let alt = 0; alt <= 25000; alt += 2500) {
+                const y = h - (alt / 25000) * h;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(79, 172, 254, 0.5)';
+                ctx.font = '10px Orbitron';
+                ctx.fillText(alt + 'm', 5, y - 2);
+            }
+
+            // Draw trail
+            const trail = glider.getTrail();
+            const trailLen = trail.length / 2;
+
+            if (trailLen > 1) {
+                ctx.strokeStyle = 'rgba(79, 172, 254, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                const x0 = trail[0];
+                const alt0 = trail[1];
+                const canvasX0 = (x0 % 50000) / 50000 * w;
+                const canvasY0 = h - (alt0 / 25000) * h;
+                ctx.moveTo(canvasX0, canvasY0);
+
+                for (let i = 1; i < trailLen; i++) {
+                    const x = trail[i * 2];
+                    const alt = trail[i * 2 + 1];
+                    const canvasX = (x % 50000) / 50000 * w;
+                    const canvasY = h - (alt / 25000) * h;
+                    ctx.lineTo(canvasX, canvasY);
+                }
+                ctx.stroke();
+            }
+
+            // Draw thermals
+            for (const thermal of thermals) {
+                const thermalX = (thermal.x % 50000) / 50000 * w;
+                const thermalY = h - (thermal.y / 25000) * h;
+
+                const radialGrad = ctx.createRadialGradient(thermalX, thermalY, 0, thermalX, thermalY, 50);
+                radialGrad.addColorStop(0, 'rgba(255, 100, 100, 0.3)');
+                radialGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.fillStyle = radialGrad;
+                ctx.beginPath();
+                ctx.arc(thermalX, thermalY, 50, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw glider
+            const gliderX = (glider.getX() % 50000) / 50000 * w;
+            const gliderY = h - (glider.getAltitude() / 25000) * h;
+
+            ctx.save();
+            ctx.translate(gliderX, gliderY);
+
+            // Glider body
+            ctx.fillStyle = '#4facfe';
+            ctx.shadowColor = '#4facfe';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(-20, 0);
+            ctx.lineTo(20, 0);
+            ctx.lineTo(15, -5);
+            ctx.lineTo(-15, -5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Wings
+            ctx.fillStyle = '#00f2fe';
+            ctx.beginPath();
+            ctx.moveTo(-30, 0);
+            ctx.lineTo(30, 0);
+            ctx.lineTo(25, -3);
+            ctx.lineTo(-25, -3);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            // Draw ground
+            ctx.fillStyle = 'rgba(100, 60, 30, 0.8)';
+            ctx.fillRect(0, h - 20, w, 20);
+        }
+
+        function drawProfile() {
+            const w = profileCanvas.width;
+            const h = profileCanvas.height;
+
+            profileCtx.clearRect(0, 0, w, h);
+
+            // Draw grid
+            profileCtx.strokeStyle = 'rgba(79, 172, 254, 0.1)';
+            profileCtx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = (i / 5) * h;
+                profileCtx.beginPath();
+                profileCtx.moveTo(0, y);
+                profileCtx.lineTo(w, y);
+                profileCtx.stroke();
+            }
+
+            // Draw trail
+            const trail = glider.getTrail();
+            const trailLen = trail.length / 2;
+
+            if (trailLen > 1) {
+                profileCtx.strokeStyle = '#4facfe';
+                profileCtx.lineWidth = 2;
+                profileCtx.beginPath();
+
+                const maxDist = Math.max(50000, trail[trail.length - 2]);
+
+                for (let i = 0; i < trailLen; i++) {
+                    const x = trail[i * 2];
+                    const alt = trail[i * 2 + 1];
+                    const canvasX = (x / maxDist) * w;
+                    const canvasY = h - (alt / 25000) * h;
+
+                    if (i === 0) {
+                        profileCtx.moveTo(canvasX, canvasY);
+                    } else {
+                        profileCtx.lineTo(canvasX, canvasY);
+                    }
+                }
+                profileCtx.stroke();
+            }
+
+            // Draw altitude labels
+            profileCtx.fillStyle = 'rgba(79, 172, 254, 0.5)';
+            profileCtx.font = '10px Orbitron';
+            profileCtx.fillText('25km', 5, 12);
+            profileCtx.fillText('0km', 5, h - 5);
+        }
+
+        init();
+    </script>
+</body>
+</html>

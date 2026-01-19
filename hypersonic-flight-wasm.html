@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypersonic Flight - WebAssembly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0e27 0%, #2a0e0e 50%, #3a1a0a 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(255, 69, 0, 0.2), rgba(255, 140, 0, 0.2));
+            padding: 20px;
+            border-bottom: 2px solid rgba(255, 69, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #ff4500 0%, #ff8c00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 69, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1900px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(20, 15, 10, 0.8);
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(255, 69, 0, 0.3);
+        }
+
+        .panel h2 {
+            color: #ff4500;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(255, 69, 0, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(10, 5, 5, 0.9);
+            border: 2px solid rgba(255, 69, 0, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #ff4500;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 69, 0, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff4500, #ff8c00);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff4500, #ff8c00);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+        }
+
+        .value-display {
+            display: inline-block;
+            float: right;
+            color: #ff8c00;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #ff4500, #ff8c00);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(255, 69, 0, 0.05);
+            border: 1px solid rgba(255, 69, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.75em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #ff8c00;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.8em;
+            margin-left: 3px;
+        }
+
+        .heat-meter {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .heat-bar-container {
+            position: relative;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .heat-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ffaa00, #ff4500, #ff0000, #ff00ff);
+            transition: width 0.3s;
+            box-shadow: 0 0 15px rgba(255, 69, 0, 0.8);
+        }
+
+        .heat-label {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.85em;
+            font-weight: bold;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .warning {
+            color: #ff0000;
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 5px;
+            display: none;
+        }
+
+        .warning.active {
+            display: block;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .scenario-btn {
+            padding: 8px;
+            font-size: 0.9em;
+            margin: 3px 0;
+        }
+
+        .plasma-indicator {
+            background: radial-gradient(circle, rgba(255, 0, 255, 0.3), rgba(138, 43, 226, 0));
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .plasma-text {
+            color: #ff00ff;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .tps-status {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .tps-label {
+            color: #888;
+        }
+
+        .tps-value {
+            color: #ff8c00;
+            font-weight: bold;
+        }
+
+        .tps-critical {
+            color: #ff0000 !important;
+            animation: blink 0.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 HYPERSONIC FLIGHT SIMULATOR</h1>
+        <p class="subtitle">Mach 5-25 Flight • Aerothermal Heating • Plasma Sheath • Thermal Protection • C++ WebAssembly</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <h2>Flight Parameters</h2>
+
+            <div class="control-group">
+                <label>
+                    Initial Velocity
+                    <span class="value-display" id="velValue">2000 m/s</span>
+                </label>
+                <input type="range" id="velSlider" min="1000" max="7500" step="100" value="2000">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Initial Altitude
+                    <span class="value-display" id="altValue">50 km</span>
+                </label>
+                <input type="range" id="altSlider" min="20000" max="100000" step="5000" value="50000">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Angle of Attack
+                    <span class="value-display" id="aoaValue">5.0°</span>
+                </label>
+                <input type="range" id="aoaSlider" min="0" max="30" step="1" value="5">
+            </div>
+
+            <button id="resetBtn">🔄 Reset Vehicle</button>
+
+            <h2 style="margin-top: 20px;">Scenarios</h2>
+            <button class="scenario-btn" id="x15Btn">X-15 Research (Mach 6.7)</button>
+            <button class="scenario-btn" id="x43Btn">X-43A Scramjet (Mach 9.6)</button>
+            <button class="scenario-btn" id="reentryBtn">Re-entry Vehicle (Mach 25)</button>
+            <button class="scenario-btn" id="skipperBtn">Skip Re-entry (Mach 20)</button>
+
+            <div class="warning" id="tempWarning">
+                🚨 CRITICAL TPS TEMPERATURE!
+            </div>
+
+            <div class="plasma-indicator" id="plasmaIndicator" style="display: none;">
+                <div class="plasma-text">⚡ PLASMA SHEATH ACTIVE</div>
+                <div style="font-size: 0.8em; color: #888; margin-top: 5px;">
+                    Radio blackout in progress
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Canvas -->
+        <div class="panel" style="padding: 0;">
+            <div class="canvas-container">
+                <canvas id="hypersonicCanvas" width="1000" height="650"></canvas>
+            </div>
+        </div>
+
+        <!-- Right Panel: Statistics & Thermal -->
+        <div class="panel">
+            <h2>Flight Data</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">MACH NUMBER</div>
+                    <div class="stat-value">
+                        <span id="machStat">6.0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">ALTITUDE</div>
+                    <div class="stat-value">
+                        <span id="altitudeStat">50</span>
+                        <span class="stat-unit">km</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">VELOCITY</div>
+                    <div class="stat-value">
+                        <span id="velocityStat">2000</span>
+                        <span class="stat-unit">m/s</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DYN. PRESSURE</div>
+                    <div class="stat-value">
+                        <span id="dynPressureStat">5.0</span>
+                        <span class="stat-unit">kPa</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Thermal Protection System</h2>
+
+            <div class="heat-meter">
+                <div class="tps-status">
+                    <span class="tps-label">Surface Temperature:</span>
+                    <span class="tps-value" id="surfaceTemp">300°C</span>
+                </div>
+
+                <div class="heat-bar-container">
+                    <div class="heat-bar" id="surfaceTempBar" style="width: 15%;"></div>
+                    <div class="heat-label">TPS Outer</div>
+                </div>
+
+                <div class="tps-status">
+                    <span class="tps-label">Internal Temperature:</span>
+                    <span class="tps-value" id="internalTemp">25°C</span>
+                </div>
+
+                <div class="tps-status">
+                    <span class="tps-label">Stagnation Point:</span>
+                    <span class="tps-value" id="stagTemp">500°C</span>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Heat Flux</h2>
+
+            <div class="heat-meter">
+                <div class="tps-status">
+                    <span class="tps-label">Convective:</span>
+                    <span class="tps-value" id="convFlux">100 kW/m²</span>
+                </div>
+
+                <div class="heat-bar-container">
+                    <div class="heat-bar" id="convFluxBar" style="width: 25%;"></div>
+                    <div class="heat-label">Convection</div>
+                </div>
+
+                <div class="tps-status">
+                    <span class="tps-label">Radiative:</span>
+                    <span class="tps-value" id="radFlux">10 kW/m²</span>
+                </div>
+
+                <div class="heat-bar-container">
+                    <div class="heat-bar" id="radFluxBar" style="width: 5%;"></div>
+                    <div class="heat-label">Radiation</div>
+                </div>
+
+                <div class="tps-status">
+                    <span class="tps-label">Total Heat Load:</span>
+                    <span class="tps-value" id="totalHeat">0.0 MJ</span>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Mission Records</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">MAX MACH</div>
+                    <div class="stat-value">
+                        <span id="maxMachStat">6.0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MAX HEAT FLUX</div>
+                    <div class="stat-value">
+                        <span id="maxHeatFluxStat">100</span>
+                        <span class="stat-unit">kW/m²</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MAX TEMP</div>
+                    <div class="stat-value">
+                        <span id="maxTempStat">300</span>
+                        <span class="stat-unit">°C</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MAX Q</div>
+                    <div class="stat-value">
+                        <span id="maxQStat">5.0</span>
+                        <span class="stat-unit">kPa</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createHypersonicModule from './hypersonic_engine.js';
+
+        let Module, vehicle;
+        let canvas, ctx;
+        let isRunning = false;
+
+        async function init() {
+            try {
+                Module = await createHypersonicModule();
+                vehicle = new Module.HypersonicVehicle();
+
+                canvas = document.getElementById('hypersonicCanvas');
+                ctx = canvas.getContext('2d');
+
+                setupControls();
+                animate();
+                isRunning = true;
+
+                console.log('🔥 Hypersonic vehicle initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                canvas = document.getElementById('hypersonicCanvas');
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile hypersonic_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupControls() {
+            const velSlider = document.getElementById('velSlider');
+            const altSlider = document.getElementById('altSlider');
+            const aoaSlider = document.getElementById('aoaSlider');
+            const resetBtn = document.getElementById('resetBtn');
+
+            const x15Btn = document.getElementById('x15Btn');
+            const x43Btn = document.getElementById('x43Btn');
+            const reentryBtn = document.getElementById('reentryBtn');
+            const skipperBtn = document.getElementById('skipperBtn');
+
+            velSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('velValue').textContent = value.toFixed(0) + ' m/s';
+            });
+
+            altSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('altValue').textContent = (value / 1000).toFixed(0) + ' km';
+            });
+
+            aoaSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                vehicle.setAngleOfAttack(value);
+                document.getElementById('aoaValue').textContent = value.toFixed(1) + '°';
+            });
+
+            resetBtn.addEventListener('click', () => {
+                vehicle.reset();
+                vehicle.setAltitude(parseFloat(altSlider.value));
+                vehicle.setVelocity(parseFloat(velSlider.value));
+                vehicle.setAngleOfAttack(parseFloat(aoaSlider.value));
+            });
+
+            x15Btn.addEventListener('click', () => {
+                vehicle.reset();
+                vehicle.setAltitude(30000);
+                vehicle.setVelocity(2020); // Mach 6.7
+                vehicle.setAngleOfAttack(5);
+                altSlider.value = 30000;
+                velSlider.value = 2020;
+                aoaSlider.value = 5;
+                updateSliderDisplays();
+            });
+
+            x43Btn.addEventListener('click', () => {
+                vehicle.reset();
+                vehicle.setAltitude(35000);
+                vehicle.setVelocity(3240); // Mach 9.6
+                vehicle.setAngleOfAttack(3);
+                altSlider.value = 35000;
+                velSlider.value = 3240;
+                aoaSlider.value = 3;
+                updateSliderDisplays();
+            });
+
+            reentryBtn.addEventListener('click', () => {
+                vehicle.reset();
+                vehicle.setAltitude(100000);
+                vehicle.setVelocity(7500); // Orbital velocity
+                vehicle.setAngleOfAttack(40);
+                altSlider.value = 100000;
+                velSlider.value = 7500;
+                aoaSlider.value = 40;
+                updateSliderDisplays();
+            });
+
+            skipperBtn.addEventListener('click', () => {
+                vehicle.reset();
+                vehicle.setAltitude(70000);
+                vehicle.setVelocity(6000); // Mach 20
+                vehicle.setAngleOfAttack(10);
+                altSlider.value = 70000;
+                velSlider.value = 6000;
+                aoaSlider.value = 10;
+                updateSliderDisplays();
+            });
+        }
+
+        function updateSliderDisplays() {
+            document.getElementById('velValue').textContent = velSlider.value + ' m/s';
+            document.getElementById('altValue').textContent = (altSlider.value / 1000).toFixed(0) + ' km';
+            document.getElementById('aoaValue').textContent = aoaSlider.value + '°';
+        }
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Update physics
+            for (let i = 0; i < 3; i++) {
+                vehicle.update(0.05);
+            }
+
+            updateStats();
+            drawScene();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateStats() {
+            const mach = vehicle.getMachNumber();
+            const altitude = vehicle.getAltitude();
+            const velocity = vehicle.getVelocity();
+            const dynPressure = vehicle.getDynamicPressure();
+
+            const surfaceTemp = vehicle.getSurfaceTemperature();
+            const internalTemp = vehicle.getInternalTemperature();
+            const stagTemp = vehicle.getStagnationTemperature();
+
+            const convFlux = vehicle.getConvectiveHeatFlux();
+            const radFlux = vehicle.getRadiativeHeatFlux();
+            const totalHeat = vehicle.getTotalHeatLoad();
+
+            // Update displays
+            document.getElementById('machStat').textContent = mach.toFixed(1);
+            document.getElementById('altitudeStat').textContent = (altitude / 1000).toFixed(1);
+            document.getElementById('velocityStat').textContent = velocity.toFixed(0);
+            document.getElementById('dynPressureStat').textContent = dynPressure.toFixed(1);
+
+            document.getElementById('surfaceTemp').textContent = surfaceTemp.toFixed(0) + '°C';
+            document.getElementById('internalTemp').textContent = internalTemp.toFixed(0) + '°C';
+            document.getElementById('stagTemp').textContent = stagTemp.toFixed(0) + '°C';
+
+            document.getElementById('convFlux').textContent = convFlux.toFixed(0) + ' kW/m²';
+            document.getElementById('radFlux').textContent = radFlux.toFixed(0) + ' kW/m²';
+            document.getElementById('totalHeat').textContent = totalHeat.toFixed(1) + ' MJ';
+
+            // Temperature bars (2000°C max)
+            const surfaceTempPercent = Math.min(100, (surfaceTemp / 2000) * 100);
+            document.getElementById('surfaceTempBar').style.width = surfaceTempPercent + '%';
+
+            // Heat flux bars (5000 kW/m² max)
+            const convFluxPercent = Math.min(100, (convFlux / 5000) * 100);
+            const radFluxPercent = Math.min(100, (radFlux / 5000) * 100);
+            document.getElementById('convFluxBar').style.width = convFluxPercent + '%';
+            document.getElementById('radFluxBar').style.width = radFluxPercent + '%';
+
+            // Warnings
+            const tempWarning = document.getElementById('tempWarning');
+            if (surfaceTemp > 1800) {
+                tempWarning.classList.add('active');
+                document.getElementById('surfaceTemp').classList.add('tps-critical');
+            } else {
+                tempWarning.classList.remove('active');
+                document.getElementById('surfaceTemp').classList.remove('tps-critical');
+            }
+
+            // Plasma indicator (Mach > 10)
+            const plasmaIndicator = document.getElementById('plasmaIndicator');
+            if (mach > 10) {
+                plasmaIndicator.style.display = 'block';
+            } else {
+                plasmaIndicator.style.display = 'none';
+            }
+
+            // Records
+            document.getElementById('maxMachStat').textContent = vehicle.getMaxMach().toFixed(1);
+            document.getElementById('maxHeatFluxStat').textContent = vehicle.getMaxHeatFlux().toFixed(0);
+            document.getElementById('maxTempStat').textContent = vehicle.getMaxTemperature().toFixed(0);
+            document.getElementById('maxQStat').textContent = vehicle.getMaxDynamicPressure().toFixed(1);
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear with gradient (space to atmosphere)
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            gradient.addColorStop(0, '#000000');
+            gradient.addColorStop(0.3, '#0a0520');
+            gradient.addColorStop(0.6, '#2a1a40');
+            gradient.addColorStop(1, '#4a2020');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw altitude grid
+            ctx.strokeStyle = 'rgba(255, 69, 0, 0.1)';
+            ctx.lineWidth = 1;
+            for (let alt = 0; alt <= 100000; alt += 10000) {
+                const y = h - (alt / 100000) * (h - 50);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255, 69, 0, 0.5)';
+                ctx.font = '10px Orbitron';
+                ctx.fillText(alt / 1000 + 'km', 5, y - 2);
+            }
+
+            // Draw trail with temperature gradient
+            const trail = vehicle.getTrail();
+            const temps = vehicle.getTrailTemperature();
+            const trailLen = trail.length / 2;
+
+            for (let i = 1; i < trailLen; i++) {
+                const x1 = trail[(i - 1) * 2];
+                const alt1 = trail[(i - 1) * 2 + 1];
+                const x2 = trail[i * 2];
+                const alt2 = trail[i * 2 + 1];
+                const temp = temps[i];
+
+                const canvasX1 = (x1 % 100000) / 100000 * w;
+                const canvasY1 = h - 50 - (alt1 / 100000) * (h - 50);
+                const canvasX2 = (x2 % 100000) / 100000 * w;
+                const canvasY2 = h - 50 - (alt2 / 100000) * (h - 50);
+
+                // Temperature color
+                const tempNorm = Math.min(1, temp / 2000);
+                const r = Math.floor(255);
+                const g = Math.floor(100 * (1 - tempNorm));
+                const b = Math.floor(50 * (1 - tempNorm));
+
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(canvasX1, canvasY1);
+                ctx.lineTo(canvasX2, canvasY2);
+                ctx.stroke();
+            }
+
+            // Draw vehicle
+            const vehicleX = (vehicle.getX() % 100000) / 100000 * w;
+            const vehicleY = h - 50 - (vehicle.getAltitude() / 100000) * (h - 50);
+
+            ctx.save();
+            ctx.translate(vehicleX, vehicleY);
+
+            // Shock wave / plasma sheath
+            const mach = vehicle.getMachNumber();
+            if (mach > 5) {
+                const intensity = Math.min(1, (mach - 5) / 20);
+                const shockGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40 * intensity);
+                shockGrad.addColorStop(0, `rgba(255, 100, 255, ${0.5 * intensity})`);
+                shockGrad.addColorStop(0.5, `rgba(255, 50, 0, ${0.3 * intensity})`);
+                shockGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                ctx.fillStyle = shockGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, 40 * intensity, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Vehicle body
+            ctx.fillStyle = '#ff4500';
+            ctx.shadowColor = '#ff4500';
+            ctx.shadowBlur = 15;
+
+            // Nose cone
+            ctx.beginPath();
+            ctx.moveTo(30, 0);
+            ctx.lineTo(-20, -8);
+            ctx.lineTo(-20, 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Wings
+            ctx.fillStyle = '#ff8c00';
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.lineTo(-25, -15);
+            ctx.lineTo(-20, -5);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(-15, 0);
+            ctx.lineTo(-25, 15);
+            ctx.lineTo(-20, 5);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            // Draw ground
+            ctx.fillStyle = 'rgba(80, 40, 20, 0.9)';
+            ctx.fillRect(0, h - 50, w, 50);
+        }
+
+        init();
+    </script>
+</body>
+</html>
