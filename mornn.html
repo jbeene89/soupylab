@@ -1,0 +1,41 @@
+<div id="section1" class="section">
+        In the opulent halls of Mount Olympus, the goddess Aphrodite reclines on a bed of silk and rose petals, her divine body nude and radiant under the golden light. Her maidens, a group of ethereal nymphs in their prime, surround her with devotion, ready to begin their worship.
+    </div>
+    <div id="section2" class="section">
+        One maiden, with flowing auburn hair, kneels between Aphrodite's spread thighs, her tongue lapping hungrily at the goddess's swollen, dripping pussy, circling the engorged clit with expert precision. Another sucks greedily on her full, heaving breasts, nipples hardening like diamonds under the assault.
+    </div>
+    <div id="section3" class="section">
+        Fingers from a third maiden plunge deep into her wet cunt, curling to hit that sacred spot, while a fourth rims her tight asshole, tongue probing without mercy. Aphrodite's moans echo like thunder, her hips bucking wildly as pleasure builds to an unbearable peak.
+    </div>
+    <div id="section4" class="section">
+        Her body arches, toes curling, face contorted in raw ecstasy—eyes rolling back, mouth agape in a primal scream. The maidens intensify their efforts, fingers thrusting faster, tongues swirling relentlessly.
+    </div>
+    <div id="section5" class="section">
+        Finally, the orgasm explodes: her pussy contracts violently, squirting arcs of divine nectar across the maidens' faces and bodies, soaking them in her godly release. They lap it up hungrily, their own arousal evident in their flushed skins and wet slits, as Aphrodite collapses in shuddering aftershocks, a smile of satisfied bliss on her lips.
+    </div>
+</div>
+
+<script>
+    let currentSection = 0;
+    function showSection(num) {
+        if (num > currentSection + 1) return; // Prevent skipping
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        const section = document.getElementById(`section${num}`);
+        if (section) section.classList.add('active');
+        currentSection = num;
+        enableNextButton(num);
+    }
+    function enableNextButton(num) {
+        const nextBtn = document.getElementById(`btn${num + 1}`);
+        if (nextBtn) nextBtn.disabled = false;
+    }
+    function resetScene() {
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('button[id^="btn"]').forEach(btn => btn.disabled = true);
+        document.getElementById('btn2').disabled = true;
+        document.getElementById('btn3').disabled = true;
+        document.getElementById('btn4').disabled = true;
+        document.getElementById('btn5').disabled = true;
+        currentSection = 0;
+    }
+</script>

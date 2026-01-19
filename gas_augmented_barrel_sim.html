@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soupy Gas-Boosted Barrel - Multiphysics Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.2em;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 0.95em;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+        
+        .controls-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #48dbfb;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group {
+            margin-bottom: 12px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-size: 0.8em;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #48dbfb;
+            cursor: pointer;
+        }
+        
+        .value-display {
+            font-size: 0.85em;
+            color: #feca57;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
+            color: #000;
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: #fff;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .mode-toggle {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            background: transparent;
+            color: #888;
+        }
+        
+        .mode-btn.active {
+            background: #48dbfb;
+            color: #000;
+        }
+        
+        .visualization-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .viz-panel {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .viz-title {
+            font-size: 0.85em;
+            color: #48dbfb;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+        }
+        
+        .barrel-canvas {
+            height: 200px;
+        }
+        
+        .pressure-map-canvas {
+            height: 150px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .chart-canvas {
+            height: 180px;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.7em;
+            color: #888;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #48dbfb;
+        }
+        
+        .stat-unit {
+            font-size: 0.7em;
+            color: #666;
+        }
+        
+        .comparison-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .comparison-box {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .comparison-title {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .normal-title { color: #ff6b6b; }
+        .augmented-title { color: #48dbfb; }
+        
+        .physics-info {
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75em;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .port-config {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        
+        .port-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        
+        .port-row input {
+            width: 60px;
+            padding: 4px 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 0.8em;
+        }
+        
+        .port-row span {
+            font-size: 0.75em;
+            color: #888;
+            min-width: 80px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .charts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .stats-panel {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 Soupy Gas-Boosted Barrel Simulator</h1>
+            <p class="subtitle">High-Fidelity Multiphysics Internal Ballistics with Compressible Flow, Shock Dynamics & Gas Augmentation</p>
+        </header>
+        
+        <div class="main-grid">
+            <div class="controls-panel">
+                <div class="mode-toggle">
+                    <button class="mode-btn active" onclick="setMode('augmented')">Gas-Augmented</button>
+                    <button class="mode-btn" onclick="setMode('normal')">Standard Barrel</button>
+                </div>
+                
+                <div class="control-section">
+                    <div class="section-title">🎯 Simulation Control</div>
+                    <div class="btn-group">
+                        <button class="btn-primary" onclick="startSimulation()">▶ Start</button>
+                        <button class="btn-secondary" onclick="pauseSimulation()">⏸ Pause</button>
+                        <button class="btn-danger" onclick="resetSimulation()">↺ Reset</button>
+                    </div>
+                    <div class="control-group" style="margin-top: 12px;">
+                        <label>Time Scale</label>
+                        <input type="range" id="timeScale" min="0.01" max="1" step="0.01" value="0.1">
+                        <div class="value-display" id="timeScaleVal">0.1x</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="section-title">💥 Propellant & Chamber</div>
+                    <div class="control-group">
+                        <label>Peak Chamber Pressure (MPa)</label>
+                        <input type="range" id="chamberPressure" min="200" max="500" step="10" value="350">
+                        <div class="value-display" id="chamberPressureVal">350 MPa</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Propellant Burn Rate Coeff (β)</label>
+                        <input type="range" id="burnRate" min="0.5" max="3" step="0.1" value="1.5">
+                        <div class="value-display" id="burnRateVal">1.5</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Initial Gas Temperature (K)</label>
+                        <input type="range" id="gasTemp" min="2500" max="4000" step="100" value="3200">
+                        <div class="value-display" id="gasTempVal">3200 K</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Propellant Mass (g)</label>
+                        <input type="range" id="propellantMass" min="20" max="80" step="2" value="45">
+                        <div class="value-display" id="propellantMassVal">45 g</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="section-title">🔫 Barrel & Bullet</div>
+                    <div class="control-group">
+                        <label>Barrel Length (mm)</label>
+                        <input type="range" id="barrelLength" min="400" max="800" step="20" value="600">
+                        <div class="value-display" id="barrelLengthVal">600 mm</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Bore Diameter (mm)</label>
+                        <input type="range" id="boreDiameter" min="5" max="15" step="0.5" value="7.62">
+                        <div class="value-display" id="boreDiameterVal">7.62 mm</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Bullet Mass (g)</label>
+                        <input type="range" id="bulletMass" min="5" max="25" step="0.5" value="9.5">
+                        <div class="value-display" id="bulletMassVal">9.5 g</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Bullet Length (mm)</label>
+                        <input type="range" id="bulletLength" min="15" max="40" step="1" value="28">
+                        <div class="value-display" id="bulletLengthVal">28 mm</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Obturation Pressure (MPa)</label>
+                        <input type="range" id="obturationPressure" min="10" max="100" step="5" value="30">
+                        <div class="value-display" id="obturationPressureVal">30 MPa</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="section-title">🔧 Gas Port System</div>
+                    <div class="control-group">
+                        <label>Number of Port Stages</label>
+                        <input type="range" id="numPorts" min="1" max="5" step="1" value="3">
+                        <div class="value-display" id="numPortsVal">3 stages</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Port Diameter (mm)</label>
+                        <input type="range" id="portDiameter" min="1" max="5" step="0.25" value="2.5">
+                        <div class="value-display" id="portDiameterVal">2.5 mm</div>
+                    </div>
+                    <div class="control-group">
+                        <label>First Port Position (%)</label>
+                        <input type="range" id="firstPortPos" min="10" max="40" step="2" value="25">
+                        <div class="value-display" id="firstPortPosVal">25%</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Port Spacing (%)</label>
+                        <input type="range" id="portSpacing" min="5" max="25" step="2" value="15">
+                        <div class="value-display" id="portSpacingVal">15%</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="section-title">🚀 Forward Gas Tubes</div>
+                    <div class="control-group">
+                        <label>Tube Inner Diameter (mm)</label>
+                        <input type="range" id="tubeDiameter" min="3" max="10" step="0.5" value="5">
+                        <div class="value-display" id="tubeDiameterVal">5 mm</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Tube Length Offset (mm)</label>
+                        <input type="range" id="tubeOffset" min="50" max="200" step="10" value="100">
+                        <div class="value-display" id="tubeOffsetVal">100 mm</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Re-injection Angle (°)</label>
+                        <input type="range" id="reinjectionAngle" min="0" max="45" step="5" value="15">
+                        <div class="value-display" id="reinjectionAngleVal">15°</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Re-injection Port Area Ratio</label>
+                        <input type="range" id="reinjectionRatio" min="0.5" max="2" step="0.1" value="1.2">
+                        <div class="value-display" id="reinjectionRatioVal">1.2x</div>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="section-title">⚙️ Numerical Parameters</div>
+                    <div class="control-group">
+                        <label>Spatial Cells</label>
+                        <input type="range" id="numCells" min="50" max="300" step="10" value="150">
+                        <div class="value-display" id="numCellsVal">150 cells</div>
+                    </div>
+                    <div class="control-group">
+                        <label>CFL Number</label>
+                        <input type="range" id="cflNumber" min="0.1" max="0.9" step="0.05" value="0.5">
+                        <div class="value-display" id="cflNumberVal">0.5</div>
+                    </div>
+                </div>
+                
+                <div class="physics-info">
+                    <strong>Physics Model:</strong><br>
+                    • 1D Euler equations with source terms<br>
+                    • Roe flux with entropy fix<br>
+                    • MUSCL-Hancock reconstruction<br>
+                    • Moving boundary (bullet)<br>
+                    • Compressible orifice flow (ports)<br>
+                    • Adiabatic gas expansion<br>
+                    • Shock capturing via limiter
+                </div>
+            </div>
+            
+            <div class="visualization-area">
+                <div class="viz-panel">
+                    <div class="viz-title">📍 Barrel Cross-Section & Gas Flow Animation</div>
+                    <canvas id="barrelCanvas" class="barrel-canvas"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-color" style="background:#feca57"></div>Bullet</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#ff6b6b"></div>Propellant Gas</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#48dbfb"></div>Forward Tubes</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#1dd1a1"></div>Re-injection</div>
+                        <div class="legend-item"><div class="legend-color" style="background:#a55eea"></div>Shock Front</div>
+                    </div>
+                </div>
+                
+                <div class="viz-panel">
+                    <div class="viz-title">🌡️ Pressure-Temperature Field (x-t Diagram)</div>
+                    <canvas id="pressureMapCanvas" class="pressure-map-canvas"></canvas>
+                </div>
+                
+                <div class="charts-grid">
+                    <div class="viz-panel">
+                        <div class="viz-title">📈 Pressure vs Position</div>
+                        <canvas id="pressureChart" class="chart-canvas"></canvas>
+                    </div>
+                    <div class="viz-panel">
+                        <div class="viz-title">🚄 Velocity & Mach Number</div>
+                        <canvas id="velocityChart" class="chart-canvas"></canvas>
+                    </div>
+                    <div class="viz-panel">
+                        <div class="viz-title">📊 Chamber & Tube Pressure History</div>
+                        <canvas id="historyChart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+                
+                <div class="stats-panel">
+                    <div class="stat-box">
+                        <div class="stat-label">Bullet Velocity</div>
+                        <div class="stat-value" id="statVelocity">0</div>
+                        <div class="stat-unit">m/s</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Bullet Position</div>
+                        <div class="stat-value" id="statPosition">0</div>
+                        <div class="stat-unit">mm</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Chamber Pressure</div>
+                        <div class="stat-value" id="statChamber">0</div>
+                        <div class="stat-unit">MPa</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Base Pressure</div>
+                        <div class="stat-value" id="statBase">0</div>
+                        <div class="stat-unit">MPa</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Muzzle Mach</div>
+                        <div class="stat-value" id="statMach">0</div>
+                        <div class="stat-unit">M</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Simulation Time</div>
+                        <div class="stat-value" id="statTime">0</div>
+                        <div class="stat-unit">ms</div>
+                    </div>
+                </div>
+                
+                <div class="comparison-panel">
+                    <div class="comparison-box">
+                        <div class="comparison-title normal-title">🔴 Standard Barrel Results</div>
+                        <div id="normalResults">Run simulation to see results...</div>
+                    </div>
+                    <div class="comparison-box">
+                        <div class="comparison-title augmented-title">🔵 Gas-Augmented Results</div>
+                        <div id="augmentedResults">Run simulation to see results...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    // SOUPY GAS-BOOSTED BARREL MULTIPHYSICS SIMULATOR
+    // High-fidelity 1D compressible flow with shock capturing
+    // ============================================================
+
+    // Physical constants
+    const R_UNIVERSAL = 8.314;      // J/(mol·K)
+    const GAMMA = 1.25;             // Ratio of specific heats for propellant gas
+    const M_GAS = 0.025;            // Molar mass of propellant gas (kg/mol)
+    const R_GAS = R_UNIVERSAL / M_GAS; // Specific gas constant
+    const P_ATM = 101325;           // Atmospheric pressure (Pa)
+    const T_ATM = 300;              // Atmospheric temperature (K)
+
+    // Simulation state
+    let simState = {
+        running: false,
+        paused: false,
+        mode: 'augmented',
+        time: 0,
+        dt: 1e-7,
+        finished: false
+    };
+
+    // Parameter state
+    let params = {};
+    
+    // Grid and solution arrays
+    let grid = {
+        N: 150,
+        dx: 0,
+        x: [],
+        // Conservative variables: [rho, rho*u, rho*E]
+        U: [],
+        // Primitive variables: [rho, u, p, T]
+        W: [],
+        // Fluxes
+        F: []
+    };
+
+    // Bullet state
+    let bullet = {
+        x: 0,
+        v: 0,
+        a: 0,
+        mass: 0,
+        area: 0,
+        length: 0,
+        inBarrel: true
+    };
+
+    // Gas port and tube system
+    let gasSystem = {
+        ports: [],
+        tubes: [],
+        reinjectionPorts: []
+    };
+
+    // History data for plots
+    let history = {
+        time: [],
+        chamberP: [],
+        baseP: [],
+        velocity: [],
+        position: [],
+        tubeP: [],
+        muzzleVelocity: 0,
+        muzzleTime: 0
+    };
+
+    // Pressure map data
+    let pressureMap = [];
+    const PRESSURE_MAP_ROWS = 100;
+
+    // Results storage
+    let results = {
+        normal: null,
+        augmented: null
+    };
+
+    // Canvas contexts
+    let ctxBarrel, ctxPressure, ctxPressureChart, ctxVelocity, ctxHistory;
+    let canvasBarrel, canvasPressure, canvasPressureChart, canvasVelocity, canvasHistory;
+
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+
+    function init() {
+        // Get canvas elements
+        canvasBarrel = document.getElementById('barrelCanvas');
+        canvasPressure = document.getElementById('pressureMapCanvas');
+        canvasPressureChart = document.getElementById('pressureChart');
+        canvasVelocity = document.getElementById('velocityChart');
+        canvasHistory = document.getElementById('historyChart');
+
+        // Set up high-DPI canvases
+        setupCanvas(canvasBarrel);
+        setupCanvas(canvasPressure);
+        setupCanvas(canvasPressureChart);
+        setupCanvas(canvasVelocity);
+        setupCanvas(canvasHistory);
+
+        ctxBarrel = canvasBarrel.getContext('2d');
+        ctxPressure = canvasPressure.getContext('2d');
+        ctxPressureChart = canvasPressureChart.getContext('2d');
+        ctxVelocity = canvasVelocity.getContext('2d');
+        ctxHistory = canvasHistory.getContext('2d');
+
+        // Set up event listeners for controls
+        setupControls();
+        
+        // Read initial parameters
+        updateParams();
+        
+        // Initial render
+        resetSimulation();
+    }
+
+    function setupCanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+    }
+
+    function setupControls() {
+        const controls = [
+            'timeScale', 'chamberPressure', 'burnRate', 'gasTemp', 'propellantMass',
+            'barrelLength', 'boreDiameter', 'bulletMass', 'bulletLength', 'obturationPressure',
+            'numPorts', 'portDiameter', 'firstPortPos', 'portSpacing',
+            'tubeDiameter', 'tubeOffset', 'reinjectionAngle', 'reinjectionRatio',
+            'numCells', 'cflNumber'
+        ];
+
+        controls.forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('input', () => {
+                updateParamDisplay(id);
+                updateParams();
+            });
+            updateParamDisplay(id);
+        });
+    }
+
+    function updateParamDisplay(id) {
+        const el = document.getElementById(id);
+        const val = parseFloat(el.value);
+        const display = document.getElementById(id + 'Val');
+        
+        const formats = {
+            timeScale: v => v + 'x',
+            chamberPressure: v => v + ' MPa',
+            burnRate: v => v.toFixed(1),
+            gasTemp: v => v + ' K',
+            propellantMass: v => v + ' g',
+            barrelLength: v => v + ' mm',
+            boreDiameter: v => v.toFixed(2) + ' mm',
+            bulletMass: v => v.toFixed(1) + ' g',
+            bulletLength: v => v + ' mm',
+            obturationPressure: v => v + ' MPa',
+            numPorts: v => v + ' stages',
+            portDiameter: v => v.toFixed(2) + ' mm',
+            firstPortPos: v => v + '%',
+            portSpacing: v => v + '%',
+            tubeDiameter: v => v + ' mm',
+            tubeOffset: v => v + ' mm',
+            reinjectionAngle: v => v + '°',
+            reinjectionRatio: v => v.toFixed(1) + 'x',
+            numCells: v => v + ' cells',
+            cflNumber: v => v.toFixed(2)
+        };
+
+        display.textContent = formats[id](val);
+    }
+
+    function updateParams() {
+        params = {
+            // Chamber and propellant
+            peakPressure: parseFloat(document.getElementById('chamberPressure').value) * 1e6,
+            burnRate: parseFloat(document.getElementById('burnRate').value),
+            gasTemp: parseFloat(document.getElementById('gasTemp').value),
+            propellantMass: parseFloat(document.getElementById('propellantMass').value) * 1e-3,
+            
+            // Barrel and bullet
+            barrelLength: parseFloat(document.getElementById('barrelLength').value) * 1e-3,
+            boreDiameter: parseFloat(document.getElementById('boreDiameter').value) * 1e-3,
+            bulletMass: parseFloat(document.getElementById('bulletMass').value) * 1e-3,
+            bulletLength: parseFloat(document.getElementById('bulletLength').value) * 1e-3,
+            obturationPressure: parseFloat(document.getElementById('obturationPressure').value) * 1e6,
+            
+            // Gas ports
+            numPorts: parseInt(document.getElementById('numPorts').value),
+            portDiameter: parseFloat(document.getElementById('portDiameter').value) * 1e-3,
+            firstPortPos: parseFloat(document.getElementById('firstPortPos').value) / 100,
+            portSpacing: parseFloat(document.getElementById('portSpacing').value) / 100,
+            
+            // Tubes
+            tubeDiameter: parseFloat(document.getElementById('tubeDiameter').value) * 1e-3,
+            tubeOffset: parseFloat(document.getElementById('tubeOffset').value) * 1e-3,
+            reinjectionAngle: parseFloat(document.getElementById('reinjectionAngle').value) * Math.PI / 180,
+            reinjectionRatio: parseFloat(document.getElementById('reinjectionRatio').value),
+            
+            // Numerical
+            numCells: parseInt(document.getElementById('numCells').value),
+            cfl: parseFloat(document.getElementById('cflNumber').value),
+            timeScale: parseFloat(document.getElementById('timeScale').value)
+        };
+
+        // Derived parameters
+        params.boreArea = Math.PI * Math.pow(params.boreDiameter / 2, 2);
+        params.portArea = Math.PI * Math.pow(params.portDiameter / 2, 2);
+        params.tubeArea = Math.PI * Math.pow(params.tubeDiameter / 2, 2);
+        params.chamberVolume = params.boreArea * 0.05; // 50mm chamber
+    }
+
+    // ============================================================
+    // SIMULATION SETUP
+    // ============================================================
+
+    function initializeGrid() {
+        grid.N = params.numCells;
+        grid.dx = params.barrelLength / grid.N;
+        grid.x = [];
+        grid.U = [];
+        grid.W = [];
+        
+        for (let i = 0; i < grid.N; i++) {
+            grid.x.push((i + 0.5) * grid.dx);
+            
+            // Initial conditions: atmospheric
+            const rho = P_ATM / (R_GAS * T_ATM);
+            const u = 0;
+            const p = P_ATM;
+            const E = p / ((GAMMA - 1) * rho) + 0.5 * u * u;
+            
+            grid.U.push([rho, rho * u, rho * E]);
+            grid.W.push([rho, u, p, T_ATM]);
+        }
+    }
+
+    function initializeBullet() {
+        bullet = {
+            x: 0,
+            v: 0,
+            a: 0,
+            mass: params.bulletMass,
+            area: params.boreArea,
+            length: params.bulletLength,
+            inBarrel: true
+        };
+    }
+
+    function initializeGasSystem() {
+        gasSystem.ports = [];
+        gasSystem.tubes = [];
+        gasSystem.reinjectionPorts = [];
+
+        if (simState.mode === 'augmented') {
+            for (let i = 0; i < params.numPorts; i++) {
+                const portPos = params.barrelLength * (params.firstPortPos + i * params.portSpacing);
+                const reinjPos = portPos + params.tubeOffset;
+                
+                if (reinjPos < params.barrelLength) {
+                    gasSystem.ports.push({
+                        position: portPos,
+                        area: params.portArea,
+                        active: false,
+                        massFlow: 0
+                    });
+                    
+                    gasSystem.tubes.push({
+                        startPos: portPos,
+                        endPos: reinjPos,
+                        length: params.tubeOffset,
+                        area: params.tubeArea,
+                        // 1D tube state
+                        cells: 20,
+                        pressure: new Array(20).fill(P_ATM),
+                        temperature: new Array(20).fill(T_ATM),
+                        velocity: new Array(20).fill(0),
+                        density: new Array(20).fill(P_ATM / (R_GAS * T_ATM))
+                    });
+                    
+                    gasSystem.reinjectionPorts.push({
+                        position: reinjPos,
+                        area: params.portArea * params.reinjectionRatio,
+                        angle: params.reinjectionAngle,
+                        active: false,
+                        massFlow: 0
+                    });
+                }
+            }
+        }
+    }
+
+    function initializeHistory() {
+        history = {
+            time: [],
+            chamberP: [],
+            baseP: [],
+            velocity: [],
+            position: [],
+            tubeP: [],
+            muzzleVelocity: 0,
+            muzzleTime: 0
+        };
+        pressureMap = [];
+    }
+
+    // ============================================================
+    // COMPRESSIBLE FLOW SOLVER
+    // ============================================================
+
+    function conservativeToPrimitive(U) {
+        const rho = U[0];
+        const u = U[1] / rho;
+        const E = U[2] / rho;
+        const e = E - 0.5 * u * u;
+        const p = (GAMMA - 1) * rho * e;
+        const T = p / (rho * R_GAS);
+        return [rho, u, Math.max(p, P_ATM * 0.01), Math.max(T, 200)];
+    }
+
+    function primitiveToConservative(W) {
+        const rho = W[0];
+        const u = W[1];
+        const p = W[2];
+        const e = p / ((GAMMA - 1) * rho);
+        const E = e + 0.5 * u * u;
+        return [rho, rho * u, rho * E];
+    }
+
+    function computeFlux(W) {
+        const rho = W[0];
+        const u = W[1];
+        const p = W[2];
+        const E = p / ((GAMMA - 1) * rho) + 0.5 * u * u;
+        return [
+            rho * u,
+            rho * u * u + p,
+            (rho * E + p) * u
+        ];
+    }
+
+    function soundSpeed(W) {
+        return Math.sqrt(GAMMA * W[2] / W[0]);
+    }
+
+    // Roe approximate Riemann solver with entropy fix
+    function roeFlux(WL, WR) {
+        const rhoL = WL[0], uL = WL[1], pL = WL[2];
+        const rhoR = WR[0], uR = WR[1], pR = WR[2];
+        
+        const aL = soundSpeed(WL);
+        const aR = soundSpeed(WR);
+        
+        const HL = GAMMA * pL / ((GAMMA - 1) * rhoL) + 0.5 * uL * uL;
+        const HR = GAMMA * pR / ((GAMMA - 1) * rhoR) + 0.5 * uR * uR;
+        
+        // Roe averages
+        const sqrtRhoL = Math.sqrt(rhoL);
+        const sqrtRhoR = Math.sqrt(rhoR);
+        const denom = sqrtRhoL + sqrtRhoR;
+        
+        const rhoRoe = sqrtRhoL * sqrtRhoR;
+        const uRoe = (sqrtRhoL * uL + sqrtRhoR * uR) / denom;
+        const HRoe = (sqrtRhoL * HL + sqrtRhoR * HR) / denom;
+        const aRoe = Math.sqrt((GAMMA - 1) * (HRoe - 0.5 * uRoe * uRoe));
+        
+        // Wave speeds with entropy fix
+        const eps = 0.1 * aRoe;
+        let lambda1 = uRoe - aRoe;
+        let lambda2 = uRoe;
+        let lambda3 = uRoe + aRoe;
+        
+        // Entropy fix (Harten)
+        if (Math.abs(lambda1) < eps) lambda1 = (lambda1 * lambda1 + eps * eps) / (2 * eps);
+        if (Math.abs(lambda3) < eps) lambda3 = (lambda3 * lambda3 + eps * eps) / (2 * eps);
+        
+        // Jump in primitive variables
+        const drho = rhoR - rhoL;
+        const du = uR - uL;
+        const dp = pR - pL;
+        
+        // Wave strengths
+        const alpha1 = (dp - rhoRoe * aRoe * du) / (2 * aRoe * aRoe);
+        const alpha2 = drho - dp / (aRoe * aRoe);
+        const alpha3 = (dp + rhoRoe * aRoe * du) / (2 * aRoe * aRoe);
+        
+        // Right eigenvectors
+        const r1 = [1, uRoe - aRoe, HRoe - uRoe * aRoe];
+        const r2 = [1, uRoe, 0.5 * uRoe * uRoe];
+        const r3 = [1, uRoe + aRoe, HRoe + uRoe * aRoe];
+        
+        // Compute flux
+        const FL = computeFlux(WL);
+        const FR = computeFlux(WR);
+        
+        const flux = [];
+        for (let k = 0; k < 3; k++) {
+            flux[k] = 0.5 * (FL[k] + FR[k]) - 0.5 * (
+                Math.abs(lambda1) * alpha1 * r1[k] +
+                Math.abs(lambda2) * alpha2 * r2[k] +
+                Math.abs(lambda3) * alpha3 * r3[k]
+            );
+        }
+        
+        return flux;
+    }
+
+    // MUSCL reconstruction with minmod limiter
+    function minmod(a, b) {
+        if (a * b <= 0) return 0;
+        return Math.abs(a) < Math.abs(b) ? a : b;
+    }
+
+    function reconstructStates(i) {
+        // Get neighboring primitive states
+        const Wim1 = i > 0 ? grid.W[i - 1] : grid.W[i];
+        const Wi = grid.W[i];
+        const Wip1 = i < grid.N - 1 ? grid.W[i + 1] : grid.W[i];
+        
+        const WL = [];
+        const WR = [];
+        
+        for (let k = 0; k < 4; k++) {
+            const slopeL = Wi[k] - Wim1[k];
+            const slopeR = Wip1[k] - Wi[k];
+            const slope = minmod(slopeL, slopeR);
+            
+            WL[k] = Wi[k] - 0.5 * slope;
+            WR[k] = Wi[k] + 0.5 * slope;
+        }
+        
+        return { WL, WR };
+    }
+
+    // ============================================================
+    // PROPELLANT COMBUSTION MODEL
+    // ============================================================
+
+    function computePropellantGasGeneration(time) {
+        // Nobel-Abel EOS with progressive burn
+        // Pressure-time curve approximation based on interior ballistics
+        
+        const t_peak = 0.5e-3; // Time to peak pressure
+        const beta = params.burnRate;
+        
+        // Normalized time
+        const tau = time / t_peak;
+        
+        // Burn fraction (progressive grain)
+        let burnFraction;
+        if (tau < 1) {
+            burnFraction = 1 - Math.exp(-beta * tau * tau);
+        } else {
+            burnFraction = 1 - Math.exp(-beta) * Math.exp(-2 * beta * (tau - 1));
+        }
+        burnFraction = Math.min(burnFraction, 1);
+        
+        // Gas mass generated
+        const gasMass = params.propellantMass * burnFraction;
+        
+        // Chamber volume (expands as bullet moves)
+        const chamberVol = params.chamberVolume + bullet.x * params.boreArea;
+        
+        // Gas temperature with cooling
+        const T_gas = params.gasTemp * (1 - 0.1 * burnFraction);
+        
+        // Pressure from ideal gas (simplified Nobel-Abel)
+        const covolume = 0.001; // m³/kg
+        let P_chamber = gasMass * R_GAS * T_gas / (chamberVol - gasMass * covolume);
+        
+        // Limit to peak pressure
+        P_chamber = Math.min(P_chamber, params.peakPressure);
+        
+        // Gas density
+        const rho_gas = gasMass / chamberVol;
+        
+        return {
+            pressure: Math.max(P_chamber, P_ATM),
+            temperature: T_gas,
+            density: rho_gas,
+            burnFraction: burnFraction,
+            massRate: params.propellantMass * beta * 2 * tau * Math.exp(-beta * tau * tau) / t_peak
+        };
+    }
+
+    // ============================================================
+    // COMPRESSIBLE ORIFICE FLOW
+    // ============================================================
+
+    function computeOrificeFlow(P_up, T_up, rho_up, P_down, area, Cd = 0.65) {
+        // Isentropic compressible flow through orifice
+        // Returns mass flow rate (positive = flow from up to down)
+        
+        if (P_up <= P_down) return 0;
+        
+        const pressureRatio = P_down / P_up;
+        const criticalRatio = Math.pow(2 / (GAMMA + 1), GAMMA / (GAMMA - 1));
+        
+        let massFlow;
+        
+        if (pressureRatio <= criticalRatio) {
+            // Choked flow
+            const gamma1 = GAMMA + 1;
+            const gamma2 = (GAMMA + 1) / (2 * (GAMMA - 1));
+            massFlow = Cd * area * P_up * Math.sqrt(GAMMA / (R_GAS * T_up)) * 
+                       Math.pow(2 / gamma1, gamma2);
+        } else {
+            // Subsonic flow
+            const term1 = Math.pow(pressureRatio, 2 / GAMMA);
+            const term2 = Math.pow(pressureRatio, (GAMMA + 1) / GAMMA);
+            massFlow = Cd * area * P_up * Math.sqrt(2 * GAMMA / ((GAMMA - 1) * R_GAS * T_up) * 
+                       (term1 - term2));
+        }
+        
+        return massFlow;
+    }
+
+    // ============================================================
+    // GAS TUBE DYNAMICS
+    // ============================================================
+
+    function updateTubes(dt) {
+        for (let t = 0; t < gasSystem.tubes.length; t++) {
+            const tube = gasSystem.tubes[t];
+            const port = gasSystem.ports[t];
+            const reinj = gasSystem.reinjectionPorts[t];
+            
+            // Get bore conditions at port location
+            const portCell = Math.floor(port.position / grid.dx);
+            if (portCell >= 0 && portCell < grid.N) {
+                const W_bore = grid.W[portCell];
+                
+                // Check if port is active (bullet past port)
+                port.active = bullet.x > port.position;
+                
+                if (port.active) {
+                    // Compute flow into tube
+                    const P_bore = W_bore[2];
+                    const T_bore = W_bore[3];
+                    const rho_bore = W_bore[0];
+                    const P_tube_inlet = tube.pressure[0];
+                    
+                    port.massFlow = computeOrificeFlow(P_bore, T_bore, rho_bore, P_tube_inlet, port.area);
+                    
+                    // Simple 1D wave propagation in tube
+                    const tubeDx = tube.length / tube.cells;
+                    const tubeDt = dt;
+                    
+                    // Update tube cells (simplified method of characteristics)
+                    const newPressure = [...tube.pressure];
+                    const newTemperature = [...tube.temperature];
+                    const newVelocity = [...tube.velocity];
+                    const newDensity = [...tube.density];
+                    
+                    // Inlet boundary (from port)
+                    if (port.massFlow > 0) {
+                        const inletVel = port.massFlow / (tube.density[0] * tube.area);
+                        newVelocity[0] = inletVel;
+                        newPressure[0] = P_bore * 0.9; // Pressure loss through port
+                        newTemperature[0] = T_bore * 0.95;
+                        newDensity[0] = newPressure[0] / (R_GAS * newTemperature[0]);
+                    }
+                    
+                    // Interior cells
+                    for (let i = 1; i < tube.cells - 1; i++) {
+                        const a = Math.sqrt(GAMMA * tube.pressure[i] / tube.density[i]);
+                        const u = tube.velocity[i];
+                        const cfl_local = (Math.abs(u) + a) * tubeDt / tubeDx;
+                        
+                        if (cfl_local < 1) {
+                            // Wave propagation
+                            const dpdx = (tube.pressure[i + 1] - tube.pressure[i - 1]) / (2 * tubeDx);
+                            const dudx = (tube.velocity[i + 1] - tube.velocity[i - 1]) / (2 * tubeDx);
+                            
+                            newVelocity[i] = tube.velocity[i] - tubeDt * (u * dudx + dpdx / tube.density[i]);
+                            newDensity[i] = tube.density[i] - tubeDt * (u * (tube.density[i + 1] - tube.density[i - 1]) / (2 * tubeDx) + 
+                                           tube.density[i] * dudx);
+                            newPressure[i] = tube.pressure[i] * Math.pow(newDensity[i] / tube.density[i], GAMMA);
+                            newTemperature[i] = newPressure[i] / (newDensity[i] * R_GAS);
+                        }
+                    }
+                    
+                    // Outlet boundary (to reinjection)
+                    const reinjCell = Math.floor(reinj.position / grid.dx);
+                    reinj.active = bullet.x > reinj.position && reinjCell < grid.N;
+                    
+                    if (reinj.active && reinjCell >= 0 && reinjCell < grid.N) {
+                        const P_bore_reinj = grid.W[reinjCell][2];
+                        const lastCell = tube.cells - 1;
+                        
+                        reinj.massFlow = computeOrificeFlow(
+                            tube.pressure[lastCell], 
+                            tube.temperature[lastCell],
+                            tube.density[lastCell],
+                            P_bore_reinj, 
+                            reinj.area
+                        );
+                        
+                        // Update outlet cell based on flow
+                        if (reinj.massFlow > 0) {
+                            const outletVel = reinj.massFlow / (tube.density[lastCell] * tube.area);
+                            newVelocity[lastCell] = outletVel;
+                        }
+                    } else {
+                        reinj.massFlow = 0;
+                    }
+                    
+                    tube.pressure = newPressure;
+                    tube.temperature = newTemperature;
+                    tube.velocity = newVelocity;
+                    tube.density = newDensity;
+                }
+            }
+        }
+    }
+
+    // ============================================================
+    // MAIN PHYSICS UPDATE
+    // ============================================================
+
+    function computeTimeStep() {
+        let maxSpeed = 0;
+        for (let i = 0; i < grid.N; i++) {
+            const a = soundSpeed(grid.W[i]);
+            const u = Math.abs(grid.W[i][1]);
+            maxSpeed = Math.max(maxSpeed, u + a);
+        }
+        return params.cfl * grid.dx / maxSpeed;
+    }
+
+    function updateBullet(dt, basePressure) {
+        if (!bullet.inBarrel) return;
+        
+        // Obturation model
+        const effectivePressure = Math.max(0, basePressure - params.obturationPressure * 0.1);
+        
+        // Friction force (simplified Greenwood model)
+        const frictionCoef = 0.15 * Math.exp(-bullet.v / 500);
+        const normalForce = basePressure * bullet.area * 0.1;
+        const frictionForce = frictionCoef * normalForce;
+        
+        // Bore resistance (engraving + friction)
+        const boreResistance = bullet.x < 0.02 ? 5000 : frictionForce;
+        
+        // Net force
+        const propulsiveForce = effectivePressure * bullet.area;
+        const netForce = propulsiveForce - boreResistance;
+        
+        // Update kinematics
+        bullet.a = netForce / bullet.mass;
+        bullet.v += bullet.a * dt;
+        bullet.x += bullet.v * dt;
+        
+        // Check muzzle exit
+        if (bullet.x >= params.barrelLength) {
+            bullet.inBarrel = false;
+            history.muzzleVelocity = bullet.v;
+            history.muzzleTime = simState.time;
+        }
+    }
+
+    function applyReinjectionSources() {
+        // Add mass and momentum from reinjection ports
+        for (let i = 0; i < gasSystem.reinjectionPorts.length; i++) {
+            const reinj = gasSystem.reinjectionPorts[i];
+            if (!reinj.active || reinj.massFlow <= 0) continue;
+            
+            const tube = gasSystem.tubes[i];
+            const cell = Math.floor(reinj.position / grid.dx);
+            
+            if (cell >= 0 && cell < grid.N) {
+                // Add mass
+                const massPerCell = reinj.massFlow * simState.dt / (grid.dx * params.boreArea);
+                const momentumAdd = reinj.massFlow * simState.dt * tube.velocity[tube.cells - 1] * 
+                                   Math.cos(reinj.angle) / (grid.dx * params.boreArea);
+                const energyAdd = reinj.massFlow * simState.dt * (
+                    R_GAS * tube.temperature[tube.cells - 1] / (GAMMA - 1) + 
+                    0.5 * tube.velocity[tube.cells - 1] * tube.velocity[tube.cells - 1]
+                ) / (grid.dx * params.boreArea);
+                
+                grid.U[cell][0] += massPerCell;
+                grid.U[cell][1] += momentumAdd;
+                grid.U[cell][2] += energyAdd;
+            }
+        }
+    }
+
+    function step() {
+        if (!simState.running || simState.paused || simState.finished) return;
+
+        // Compute time step
+        simState.dt = Math.min(computeTimeStep(), 1e-6);
+        
+        // Get propellant gas conditions
+        const combustion = computePropellantGasGeneration(simState.time);
+        
+        // Apply chamber boundary condition
+        const chamberCell = 0;
+        grid.W[chamberCell][0] = combustion.density;
+        grid.W[chamberCell][2] = combustion.pressure;
+        grid.W[chamberCell][3] = combustion.temperature;
+        grid.U[chamberCell] = primitiveToConservative(grid.W[chamberCell]);
+        
+        // Compute fluxes with MUSCL reconstruction
+        const fluxes = [];
+        for (let i = 0; i < grid.N + 1; i++) {
+            if (i === 0) {
+                // Inlet boundary
+                fluxes.push(computeFlux(grid.W[0]));
+            } else if (i === grid.N) {
+                // Outlet boundary (atmospheric)
+                const W_atm = [P_ATM / (R_GAS * T_ATM), grid.W[grid.N - 1][1], P_ATM, T_ATM];
+                fluxes.push(roeFlux(grid.W[grid.N - 1], W_atm));
+            } else {
+                // Interior interfaces
+                const statesL = reconstructStates(i - 1);
+                const statesR = reconstructStates(i);
+                fluxes.push(roeFlux(statesL.WR, statesR.WL));
+            }
+        }
+        
+        // Update conservative variables
+        for (let i = 1; i < grid.N; i++) {
+            for (let k = 0; k < 3; k++) {
+                grid.U[i][k] -= simState.dt / grid.dx * (fluxes[i + 1][k] - fluxes[i][k]);
+            }
+        }
+        
+        // Apply reinjection sources
+        if (simState.mode === 'augmented') {
+            updateTubes(simState.dt);
+            applyReinjectionSources();
+        }
+        
+        // Update primitives
+        for (let i = 0; i < grid.N; i++) {
+            grid.W[i] = conservativeToPrimitive(grid.U[i]);
+        }
+        
+        // Get bullet base pressure (cell just behind bullet)
+        const bulletCell = Math.min(Math.floor(bullet.x / grid.dx), grid.N - 1);
+        const basePressure = grid.W[Math.max(0, bulletCell)][2];
+        
+        // Update bullet
+        updateBullet(simState.dt, basePressure);
+        
+        // Record history
+        if (simState.time * 1000 % 0.01 < simState.dt * 1000) {
+            history.time.push(simState.time * 1000);
+            history.chamberP.push(combustion.pressure / 1e6);
+            history.baseP.push(basePressure / 1e6);
+            history.velocity.push(bullet.v);
+            history.position.push(bullet.x * 1000);
+            
+            if (gasSystem.tubes.length > 0) {
+                history.tubeP.push(gasSystem.tubes[0].pressure[gasSystem.tubes[0].cells - 1] / 1e6);
+            }
+        }
+        
+        // Record pressure map
+        if (pressureMap.length < PRESSURE_MAP_ROWS) {
+            const row = [];
+            for (let i = 0; i < grid.N; i++) {
+                row.push(grid.W[i][2] / 1e6);
+            }
+            pressureMap.push(row);
+        }
+        
+        // Update time
+        simState.time += simState.dt;
+        
+        // Check termination
+        if (!bullet.inBarrel || simState.time > 10e-3) {
+            simState.finished = true;
+            saveResults();
+        }
+        
+        // Schedule next step
+        if (!simState.finished) {
+            const stepsPerFrame = Math.ceil(1e-5 / simState.dt * params.timeScale);
+            for (let s = 0; s < stepsPerFrame - 1 && !simState.finished; s++) {
+                step();
+            }
+            requestAnimationFrame(() => {
+                render();
+                setTimeout(step, 0);
+            });
+        } else {
+            render();
+        }
+    }
+
+    function saveResults() {
+        const result = {
+            muzzleVelocity: history.muzzleVelocity,
+            muzzleTime: history.muzzleTime * 1000,
+            peakPressure: Math.max(...history.chamberP),
+            peakBaseP: Math.max(...history.baseP),
+            muzzleEnergy: 0.5 * bullet.mass * history.muzzleVelocity * history.muzzleVelocity
+        };
+        
+        if (simState.mode === 'normal') {
+            results.normal = result;
+            updateResultsDisplay('normal', result);
+        } else {
+            results.augmented = result;
+            updateResultsDisplay('augmented', result);
+        }
+    }
+
+    function updateResultsDisplay(mode, result) {
+        const el = document.getElementById(mode + 'Results');
+        el.innerHTML = `
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.85em;">
+                <div>Muzzle Velocity:</div><div style="color:#feca57; font-weight:600;">${result.muzzleVelocity.toFixed(1)} m/s</div>
+                <div>Exit Time:</div><div style="color:#feca57;">${result.muzzleTime.toFixed(3)} ms</div>
+                <div>Peak Chamber P:</div><div style="color:#feca57;">${result.peakPressure.toFixed(1)} MPa</div>
+                <div>Peak Base P:</div><div style="color:#feca57;">${result.peakBaseP.toFixed(1)} MPa</div>
+                <div>Muzzle Energy:</div><div style="color:#feca57;">${(result.muzzleEnergy).toFixed(1)} J</div>
+            </div>
+        `;
+        
+        // Show comparison if both results available
+        if (results.normal && results.augmented) {
+            const gain = ((results.augmented.muzzleVelocity - results.normal.muzzleVelocity) / 
+                         results.normal.muzzleVelocity * 100).toFixed(1);
+            const energyGain = ((results.augmented.muzzleEnergy - results.normal.muzzleEnergy) / 
+                               results.normal.muzzleEnergy * 100).toFixed(1);
+            
+            document.getElementById('augmentedResults').innerHTML += `
+                <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1);">
+                    <div style="color:#1dd1a1; font-weight:600;">
+                        ✓ Velocity Gain: ${gain}%<br>
+                        ✓ Energy Gain: ${energyGain}%
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // ============================================================
+    // RENDERING
+    // ============================================================
+
+    function render() {
+        renderBarrel();
+        renderPressureMap();
+        renderCharts();
+        updateStats();
+    }
+
+    function renderBarrel() {
+        const ctx = ctxBarrel;
+        const w = canvasBarrel.getBoundingClientRect().width;
+        const h = canvasBarrel.getBoundingClientRect().height;
+        
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, w, h);
+        
+        const margin = 40;
+        const barrelY = h / 2;
+        const barrelH = 35;
+        const barrelStartX = margin + 50;
+        const barrelEndX = w - margin;
+        const barrelLen = barrelEndX - barrelStartX;
+        const scale = barrelLen / params.barrelLength;
+        
+        // Chamber
+        ctx.fillStyle = '#2a2a3a';
+        ctx.fillRect(margin, barrelY - barrelH * 1.5, 50, barrelH * 3);
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(margin, barrelY - barrelH * 1.5, 50, barrelH * 3);
+        
+        // Barrel outline
+        ctx.fillStyle = '#1a1a25';
+        ctx.fillRect(barrelStartX, barrelY - barrelH, barrelLen, barrelH * 2);
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(barrelStartX, barrelY - barrelH, barrelLen, barrelH * 2);
+        
+        // Bore
+        ctx.fillStyle = '#0f0f18';
+        ctx.fillRect(barrelStartX, barrelY - barrelH * 0.4, barrelLen, barrelH * 0.8);
+        
+        // Pressure coloring in bore
+        if (grid.W.length > 0) {
+            const cellWidth = barrelLen / grid.N;
+            for (let i = 0; i < grid.N; i++) {
+                const p = grid.W[i][2] / 1e6; // MPa
+                const intensity = Math.min(p / 400, 1);
+                const r = Math.floor(255 * intensity);
+                const g = Math.floor(100 * intensity * (1 - intensity));
+                const b = Math.floor(50 * (1 - intensity));
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+                ctx.fillRect(barrelStartX + i * cellWidth, barrelY - barrelH * 0.35, cellWidth + 1, barrelH * 0.7);
+            }
+        }
+        
+        // Gas ports and tubes
+        if (simState.mode === 'augmented') {
+            for (let i = 0; i < gasSystem.ports.length; i++) {
+                const port = gasSystem.ports[i];
+                const tube = gasSystem.tubes[i];
+                const reinj = gasSystem.reinjectionPorts[i];
+                
+                const portX = barrelStartX + port.position * scale;
+                const reinjX = barrelStartX + reinj.position * scale;
+                
+                // Port
+                ctx.fillStyle = port.active ? '#48dbfb' : '#333';
+                ctx.fillRect(portX - 3, barrelY - barrelH - 10, 6, 10);
+                
+                // Tube
+                const tubeY = barrelY - barrelH - 20 - i * 15;
+                ctx.strokeStyle = port.active ? '#48dbfb' : '#333';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(portX, barrelY - barrelH - 10);
+                ctx.lineTo(portX, tubeY);
+                ctx.lineTo(reinjX, tubeY);
+                ctx.lineTo(reinjX, barrelY - barrelH - 10);
+                ctx.stroke();
+                
+                // Tube pressure indicator
+                if (port.active) {
+                    const avgP = tube.pressure.reduce((a, b) => a + b) / tube.cells;
+                    const pIntensity = Math.min(avgP / (100e6), 1);
+                    ctx.strokeStyle = `rgba(72, 219, 251, ${pIntensity})`;
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.moveTo(portX, tubeY);
+                    ctx.lineTo(reinjX, tubeY);
+                    ctx.stroke();
+                }
+                
+                // Reinjection port
+                ctx.fillStyle = reinj.active ? '#1dd1a1' : '#333';
+                ctx.fillRect(reinjX - 3, barrelY - barrelH - 10, 6, 10);
+                
+                // Flow arrows
+                if (reinj.active && reinj.massFlow > 0) {
+                    ctx.fillStyle = '#1dd1a1';
+                    ctx.beginPath();
+                    ctx.moveTo(reinjX, barrelY - barrelH * 0.4);
+                    ctx.lineTo(reinjX - 5, barrelY - barrelH * 0.6);
+                    ctx.lineTo(reinjX + 5, barrelY - barrelH * 0.6);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        // Bullet
+        if (bullet.inBarrel) {
+            const bulletX = barrelStartX + bullet.x * scale;
+            const bulletW = bullet.length * scale;
+            
+            // Bullet body
+            const gradient = ctx.createLinearGradient(bulletX, 0, bulletX + bulletW, 0);
+            gradient.addColorStop(0, '#feca57');
+            gradient.addColorStop(0.5, '#f8b739');
+            gradient.addColorStop(1, '#cd9422');
+            ctx.fillStyle = gradient;
+            
+            // Ogive shape
+            ctx.beginPath();
+            ctx.moveTo(bulletX, barrelY - barrelH * 0.3);
+            ctx.lineTo(bulletX, barrelY + barrelH * 0.3);
+            ctx.lineTo(bulletX + bulletW * 0.7, barrelY + barrelH * 0.3);
+            ctx.quadraticCurveTo(bulletX + bulletW, barrelY, bulletX + bulletW * 0.7, barrelY - barrelH * 0.3);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#a07020';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        
+        // Shock wave indicator
+        if (grid.W.length > 0 && bullet.inBarrel) {
+            const bulletCell = Math.floor(bullet.x / grid.dx);
+            for (let i = 1; i < grid.N; i++) {
+                const pJump = Math.abs(grid.W[i][2] - grid.W[i - 1][2]) / grid.W[i - 1][2];
+                if (pJump > 0.3) {
+                    const shockX = barrelStartX + i * barrelLen / grid.N;
+                    ctx.strokeStyle = 'rgba(165, 94, 234, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(shockX, barrelY - barrelH * 0.35);
+                    ctx.lineTo(shockX, barrelY + barrelH * 0.35);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        }
+        
+        // Labels
+        ctx.fillStyle = '#888';
+        ctx.font = '11px sans-serif';
+        ctx.fillText('Chamber', margin + 5, h - 10);
+        ctx.fillText('Muzzle', barrelEndX - 35, h - 10);
+        ctx.fillText(`${params.barrelLength * 1000}mm`, barrelStartX + barrelLen / 2 - 20, h - 10);
+    }
+
+    function renderPressureMap() {
+        const ctx = ctxPressure;
+        const w = canvasPressure.getBoundingClientRect().width;
+        const h = canvasPressure.getBoundingClientRect().height;
+        
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, w, h);
+        
+        const margin = { left: 50, right: 20, top: 20, bottom: 30 };
+        const plotW = w - margin.left - margin.right;
+        const plotH = h - margin.top - margin.bottom;
+        
+        // Axes
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, h - margin.bottom);
+        ctx.lineTo(w - margin.right, h - margin.bottom);
+        ctx.stroke();
+        
+        // Labels
+        ctx.fillStyle = '#888';
+        ctx.font = '10px sans-serif';
+        ctx.fillText('Position →', w / 2, h - 5);
+        ctx.save();
+        ctx.translate(12, h / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('Time →', 0, 0);
+        ctx.restore();
+        
+        // Pressure map
+        if (pressureMap.length > 0) {
+            const cellW = plotW / grid.N;
+            const cellH = plotH / PRESSURE_MAP_ROWS;
+            
+            for (let t = 0; t < pressureMap.length; t++) {
+                for (let x = 0; x < pressureMap[t].length; x++) {
+                    const p = pressureMap[t][x];
+                    const intensity = Math.min(p / 400, 1);
+                    
+                    // Color map: blue -> yellow -> red
+                    let r, g, b;
+                    if (intensity < 0.5) {
+                        r = Math.floor(intensity * 2 * 255);
+                        g = Math.floor(intensity * 2 * 200);
+                        b = Math.floor((1 - intensity * 2) * 100 + 50);
+                    } else {
+                        r = 255;
+                        g = Math.floor((1 - (intensity - 0.5) * 2) * 200);
+                        b = 0;
+                    }
+                    
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.fillRect(
+                        margin.left + x * cellW,
+                        margin.top + t * cellH,
+                        cellW + 1,
+                        cellH + 1
+                    );
+                }
+            }
+            
+            // Bullet trajectory
+            if (history.position.length > 0) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < Math.min(history.position.length, pressureMap.length); i++) {
+                    const x = margin.left + (history.position[i] / (params.barrelLength * 1000)) * plotW;
+                    const y = margin.top + i * cellH;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+        }
+        
+        // Color bar
+        const barW = 15;
+        const barX = w - margin.right - barW - 5;
+        const gradient = ctx.createLinearGradient(0, margin.top, 0, h - margin.bottom);
+        gradient.addColorStop(0, 'rgb(255, 0, 0)');
+        gradient.addColorStop(0.5, 'rgb(255, 200, 0)');
+        gradient.addColorStop(1, 'rgb(50, 50, 150)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(barX, margin.top, barW, plotH);
+        
+        ctx.fillStyle = '#888';
+        ctx.font = '9px sans-serif';
+        ctx.fillText('400 MPa', barX - 5, margin.top + 10);
+        ctx.fillText('0 MPa', barX - 5, h - margin.bottom - 5);
+    }
+
+    function renderCharts() {
+        // Pressure vs Position
+        renderPressurePositionChart();
+        
+        // Velocity chart
+        renderVelocityChart();
+        
+        // History chart
+        renderHistoryChart();
+    }
+
+    function renderPressurePositionChart() {
+        const ctx = ctxPressureChart;
+        const w = canvasPressureChart.getBoundingClientRect().width;
+        const h = canvasPressureChart.getBoundingClientRect().height;
+        
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, w, h);
+        
+        const margin = { left: 50, right: 20, top: 20, bottom: 30 };
+        const plotW = w - margin.left - margin.right;
+        const plotH = h - margin.top - margin.bottom;
+        
+        // Axes
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, h - margin.bottom);
+        ctx.lineTo(w - margin.right, h - margin.bottom);
+        ctx.stroke();
+        
+        // Grid
+        ctx.strokeStyle = '#222';
+        ctx.setLineDash([2, 2]);
+        for (let i = 1; i < 5; i++) {
+            const y = margin.top + i * plotH / 5;
+            ctx.beginPath();
+            ctx.moveTo(margin.left, y);
+            ctx.lineTo(w - margin.right, y);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        
+        // Labels
+        ctx.fillStyle = '#888';
+        ctx.font = '10px sans-serif';
+        ctx.fillText('Position (mm)', w / 2 - 30, h - 5);
+        ctx.fillText('P (MPa)', 5, margin.top + 10);
+        ctx.fillText('400', 20, margin.top + 10);
+        ctx.fillText('0', 35, h - margin.bottom - 5);
+        
+        // Plot pressure distribution
+        if (grid.W.length > 0) {
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let i = 0; i < grid.N; i++) {
+                const x = margin.left + (i / grid.N) * plotW;
+                const p = grid.W[i][2] / 1e6;
+                const y = h - margin.bottom - (p / 400) * plotH;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Bullet position marker
+            if (bullet.inBarrel) {
+                const bulletX = margin.left + (bullet.x / params.barrelLength) * plotW;
+                ctx.strokeStyle = '#feca57';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(bulletX, margin.top);
+                ctx.lineTo(bulletX, h - margin.bottom);
+                ctx.stroke();
+            }
+        }
+    }
+
+    function renderVelocityChart() {
+        const ctx = ctxVelocity;
+        const w = canvasVelocity.getBoundingClientRect().width;
+        const h = canvasVelocity.getBoundingClientRect().height;
+        
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, w, h);
+        
+        const margin = { left: 50, right: 50, top: 20, bottom: 30 };
+        const plotW = w - margin.left - margin.right;
+        const plotH = h - margin.top - margin.bottom;
+        
+        // Axes
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, h - margin.bottom);
+        ctx.lineTo(w - margin.right, h - margin.bottom);
+        ctx.stroke();
+        
+        // Right axis for Mach
+        ctx.beginPath();
+        ctx.moveTo(w - margin.right, margin.top);
+        ctx.lineTo(w - margin.right, h - margin.bottom);
+        ctx.stroke();
+        
+        // Labels
+        ctx.fillStyle = '#888';
+        ctx.font = '10px sans-serif';
+        ctx.fillText('Time (ms)', w / 2 - 20, h - 5);
+        ctx.fillStyle = '#48dbfb';
+        ctx.fillText('V (m/s)', 5, margin.top + 10);
+        ctx.fillStyle = '#1dd1a1';
+        ctx.fillText('Mach', w - margin.right + 5, margin.top + 10);
+        
+        if (history.time.length > 1) {
+            const maxTime = Math.max(...history.time);
+            const maxVel = Math.max(...history.velocity, 100);
+            
+            // Velocity curve
+            ctx.strokeStyle = '#48dbfb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < history.time.length; i++) {
+                const x = margin.left + (history.time[i] / maxTime) * plotW;
+                const y = h - margin.bottom - (history.velocity[i] / maxVel) * plotH;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Mach number curve
+            ctx.strokeStyle = '#1dd1a1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < history.time.length; i++) {
+                const mach = history.velocity[i] / 340; // Approximate speed of sound in air
+                const x = margin.left + (history.time[i] / maxTime) * plotW;
+                const y = h - margin.bottom - (mach / 4) * plotH; // Scale to Mach 4
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+    }
+
+    function renderHistoryChart() {
+        const ctx = ctxHistory;
+        const w = canvasHistory.getBoundingClientRect().width;
+        const h = canvasHistory.getBoundingClientRect().height;
+        
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, w, h);
+        
+        const margin = { left: 50, right: 20, top: 20, bottom: 30 };
+        const plotW = w - margin.left - margin.right;
+        const plotH = h - margin.top - margin.bottom;
+        
+        // Axes
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, margin.top);
+        ctx.lineTo(margin.left, h - margin.bottom);
+        ctx.lineTo(w - margin.right, h - margin.bottom);
+        ctx.stroke();
+        
+        // Labels
+        ctx.fillStyle = '#888';
+        ctx.font = '10px sans-serif';
+        ctx.fillText('Time (ms)', w / 2 - 20, h - 5);
+        ctx.fillText('P (MPa)', 5, margin.top + 10);
+        
+        if (history.time.length > 1) {
+            const maxTime = Math.max(...history.time);
+            const maxP = Math.max(...history.chamberP, ...history.baseP, 100);
+            
+            // Chamber pressure
+            ctx.strokeStyle = '#ff6b6b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < history.time.length; i++) {
+                const x = margin.left + (history.time[i] / maxTime) * plotW;
+                const y = h - margin.bottom - (history.chamberP[i] / maxP) * plotH;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Base pressure
+            ctx.strokeStyle = '#feca57';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < history.time.length; i++) {
+                const x = margin.left + (history.time[i] / maxTime) * plotW;
+                const y = h - margin.bottom - (history.baseP[i] / maxP) * plotH;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Tube pressure (if available)
+            if (history.tubeP.length > 0) {
+                ctx.strokeStyle = '#48dbfb';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < history.tubeP.length; i++) {
+                    const x = margin.left + (history.time[i] / maxTime) * plotW;
+                    const y = h - margin.bottom - (history.tubeP[i] / maxP) * plotH;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+            
+            // Legend
+            const legendY = margin.top + 5;
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(margin.left + 10, legendY, 15, 3);
+            ctx.fillStyle = '#888';
+            ctx.fillText('Chamber', margin.left + 30, legendY + 5);
+            
+            ctx.fillStyle = '#feca57';
+            ctx.fillRect(margin.left + 90, legendY, 15, 3);
+            ctx.fillStyle = '#888';
+            ctx.fillText('Base', margin.left + 110, legendY + 5);
+            
+            if (simState.mode === 'augmented') {
+                ctx.fillStyle = '#48dbfb';
+                ctx.fillRect(margin.left + 150, legendY, 15, 3);
+                ctx.fillStyle = '#888';
+                ctx.fillText('Tube', margin.left + 170, legendY + 5);
+            }
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('statVelocity').textContent = bullet.v.toFixed(1);
+        document.getElementById('statPosition').textContent = (bullet.x * 1000).toFixed(1);
+        
+        if (history.chamberP.length > 0) {
+            document.getElementById('statChamber').textContent = 
+                history.chamberP[history.chamberP.length - 1].toFixed(1);
+            document.getElementById('statBase').textContent = 
+                history.baseP[history.baseP.length - 1].toFixed(1);
+        }
+        
+        const mach = bullet.v / 340;
+        document.getElementById('statMach').textContent = mach.toFixed(2);
+        document.getElementById('statTime').textContent = (simState.time * 1000).toFixed(3);
+    }
+
+    // ============================================================
+    // CONTROL FUNCTIONS
+    // ============================================================
+
+    function setMode(mode) {
+        simState.mode = mode;
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        resetSimulation();
+    }
+
+    function startSimulation() {
+        if (simState.finished) {
+            resetSimulation();
+        }
+        simState.running = true;
+        simState.paused = false;
+        step();
+    }
+
+    function pauseSimulation() {
+        simState.paused = true;
+    }
+
+    function resetSimulation() {
+        simState.running = false;
+        simState.paused = false;
+        simState.finished = false;
+        simState.time = 0;
+        
+        updateParams();
+        initializeGrid();
+        initializeBullet();
+        initializeGasSystem();
+        initializeHistory();
+        
+        render();
+    }
+
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+
+    window.onload = init;
+    window.onresize = () => {
+        setupCanvas(canvasBarrel);
+        setupCanvas(canvasPressure);
+        setupCanvas(canvasPressureChart);
+        setupCanvas(canvasVelocity);
+        setupCanvas(canvasHistory);
+        
+        ctxBarrel = canvasBarrel.getContext('2d');
+        ctxPressure = canvasPressure.getContext('2d');
+        ctxPressureChart = canvasPressureChart.getContext('2d');
+        ctxVelocity = canvasVelocity.getContext('2d');
+        ctxHistory = canvasHistory.getContext('2d');
+        
+        render();
+    };
+    </script>
+</body>
+</html>
