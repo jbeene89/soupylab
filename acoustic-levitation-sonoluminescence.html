@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acoustic Levitation & Sonoluminescence - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&display=swap');
+
+        :root {
+            --bg: #0a0514;
+            --panel: #1a0f2e;
+            --accent: #00ffff;
+            --accent-glow: #00ddff;
+            --purple: #9d4edd;
+            --pink: #ff006e;
+            --text: #e0e0e0;
+            --dim: #8888aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #1a0f2e 0%, var(--bg) 100%);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            background: linear-gradient(180deg, rgba(0, 255, 255, 0.1) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #00ffff 0%, #9d4edd 50%, #ff006e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(0, 255, 255, 0.5);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: var(--dim);
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(26, 15, 46, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .control-group label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(0, 255, 255, 0.2) 0%, rgba(157, 78, 221, 0.2) 100%);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #00ffff 0%, #9d4edd 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 1);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #00ffff 0%, #9d4edd 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
+        }
+
+        .slider-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #00ffff 0%, #9d4edd 50%, #ff006e 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 255, 255, 0.6);
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00ffff 0%, #9d4edd 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin-left: 0.3rem;
+        }
+
+        .canvas-container {
+            background: rgba(10, 5, 20, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        inset 0 0 60px rgba(0, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .canvas-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            background: linear-gradient(135deg, #00ffff 0%, #9d4edd 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-align: center;
+            letter-spacing: 0.1em;
+            position: relative;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            position: relative;
+            z-index: 1;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 3px;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 0.6rem 1rem;
+            background: rgba(26, 15, 46, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-link:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: var(--accent);
+            transform: translateX(-3px);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .info-badge {
+            display: inline-block;
+            background: rgba(157, 78, 221, 0.3);
+            border: 1px solid var(--purple);
+            border-radius: 4px;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
+            color: var(--purple);
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 280px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="header">
+        <h1>⚛ ACOUSTIC LEVITATION & SONOLUMINESCENCE ⚛</h1>
+        <p>Harness the power of sound to suspend matter in mid-air and witness the birth of miniature stars as collapsing bubbles emit photons. Explore standing waves, acoustic radiation pressure, and the mysterious phenomenon of single-bubble sonoluminescence.</p>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <div class="section-title">Acoustic Field</div>
+
+            <div class="control-group">
+                <label>
+                    Frequency (f)
+                    <span style="font-size: 0.7rem; color: var(--dim);">Hz</span>
+                </label>
+                <input type="range" id="frequency" min="20000" max="100000" step="1000" value="40000">
+                <div class="slider-value">
+                    <span>20 kHz</span>
+                    <span class="value-display" id="frequencyValue">40 kHz</span>
+                    <span>100 kHz</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Acoustic Pressure (P₀)
+                    <span style="font-size: 0.7rem; color: var(--dim);">Pa</span>
+                </label>
+                <input type="range" id="pressure" min="100" max="5000" step="50" value="2000">
+                <div class="slider-value">
+                    <span>100 Pa</span>
+                    <span class="value-display" id="pressureValue">2000 Pa</span>
+                    <span>5000 Pa</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Wave Mode
+                </label>
+                <select id="waveMode">
+                    <option value="standing">Standing Wave (1D)</option>
+                    <option value="standing2d">Standing Wave (2D)</option>
+                    <option value="bessel">Bessel Beam</option>
+                    <option value="vortex">Acoustic Vortex</option>
+                </select>
+            </div>
+
+            <div class="section-title">Levitated Particles</div>
+
+            <div class="control-group">
+                <label>
+                    Particle Type
+                </label>
+                <select id="particleType">
+                    <option value="water">Water Droplets</option>
+                    <option value="polystyrene">Polystyrene Beads</option>
+                    <option value="bubble">Gas Bubbles (SL)</option>
+                    <option value="metal">Metal Spheres</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Particle Size
+                    <span style="font-size: 0.7rem; color: var(--dim);">μm</span>
+                </label>
+                <input type="range" id="particleSize" min="10" max="1000" step="10" value="200">
+                <div class="slider-value">
+                    <span>10 μm</span>
+                    <span class="value-display" id="particleSizeValue">200 μm</span>
+                    <span>1000 μm</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Particle Count
+                </label>
+                <input type="range" id="particleCount" min="5" max="100" step="5" value="30">
+                <div class="slider-value">
+                    <span>5</span>
+                    <span class="value-display" id="particleCountValue">30</span>
+                    <span>100</span>
+                </div>
+            </div>
+
+            <div class="section-title">Visualization</div>
+
+            <div class="control-group">
+                <label>
+                    Show Pressure Field
+                </label>
+                <input type="checkbox" id="showField" checked style="width: auto;">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Show Wave Animation
+                </label>
+                <input type="checkbox" id="showWaves" checked style="width: auto;">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Sonoluminescence Intensity
+                </label>
+                <input type="range" id="slIntensity" min="0" max="100" step="5" value="60">
+                <div class="slider-value">
+                    <span>Off</span>
+                    <span class="value-display" id="slIntensityValue">60%</span>
+                    <span>Max</span>
+                </div>
+            </div>
+
+            <button id="spawnBtn">🌟 Spawn Particles</button>
+            <button id="resetBtn" style="background: linear-gradient(135deg, #ff006e 0%, #9d4edd 100%);">🔄 Reset</button>
+        </div>
+
+        <!-- Center Panel: Visualization -->
+        <div>
+            <div class="canvas-container">
+                <div class="canvas-title">ACOUSTIC LEVITATION CHAMBER</div>
+                <canvas id="mainCanvas" width="900" height="600"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00ffff; color: #00ffff;"></div>
+                        <span>Pressure Nodes</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #9d4edd; color: #9d4edd;"></div>
+                        <span>Levitated Particles</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffffff; color: #ffffff;"></div>
+                        <span>Sonoluminescence</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Statistics -->
+        <div class="panel">
+            <div class="section-title">Acoustic Parameters</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Wavelength (λ)</div>
+                <div class="stat-value">
+                    <span id="wavelengthValue">8.58</span>
+                    <span class="stat-unit">mm</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Sound Pressure Level</div>
+                <div class="stat-value">
+                    <span id="splValue">160</span>
+                    <span class="stat-unit">dB</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Radiation Force</div>
+                <div class="stat-value">
+                    <span id="forceValue">0</span>
+                    <span class="stat-unit">μN</span>
+                </div>
+            </div>
+
+            <div class="section-title">Particle Dynamics</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Levitated Count</div>
+                <div class="stat-value">
+                    <span id="levitatedValue">0</span>
+                    <span class="stat-unit">particles</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Avg. Height</div>
+                <div class="stat-value">
+                    <span id="heightValue">0</span>
+                    <span class="stat-unit">mm</span>
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Stability Index</div>
+                <div class="stat-value">
+                    <span id="stabilityValue">0</span>
+                    <span class="stat-unit">%</span>
+                </div>
+            </div>
+
+            <div class="section-title">Sonoluminescence</div>
+
+            <div class="stat-box">
+                <div class="stat-label">Flash Count</div>
+                <div class="stat-value">
+                    <span id="flashCountValue">0</span>
+                    <span class="stat-unit">flashes</span>
+                </div>
+                <div class="info-badge">Bubble collapses</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label">Peak Intensity</div>
+                <div class="stat-value">
+                    <span id="peakIntensityValue">0</span>
+                    <span class="stat-unit">a.u.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONSTANTS ==========
+        const c = 343; // Speed of sound in air (m/s)
+        const rho_air = 1.2; // Air density (kg/m³)
+        const P_ref = 20e-6; // Reference pressure for SPL (20 μPa)
+        const g = 9.81; // Gravity (m/s²)
+
+        // ========== PARTICLE PROPERTIES ==========
+        const PARTICLE_TYPES = {
+            water: {
+                name: 'Water Droplets',
+                density: 1000, // kg/m³
+                color: { r: 100, g: 200, b: 255 },
+                glow: 'rgba(100, 200, 255, 0.8)',
+                canSL: false
+            },
+            polystyrene: {
+                name: 'Polystyrene Beads',
+                density: 1050,
+                color: { r: 200, g: 200, b: 200 },
+                glow: 'rgba(200, 200, 200, 0.8)',
+                canSL: false
+            },
+            bubble: {
+                name: 'Gas Bubbles',
+                density: 1.2, // Gas inside
+                color: { r: 0, g: 255, b: 255 },
+                glow: 'rgba(0, 255, 255, 0.9)',
+                canSL: true // Can produce sonoluminescence
+            },
+            metal: {
+                name: 'Metal Spheres',
+                density: 7800,
+                color: { r: 192, g: 192, b: 192 },
+                glow: 'rgba(192, 192, 192, 1)',
+                canSL: false
+            }
+        };
+
+        // ========== STATE VARIABLES ==========
+        let frequency = 40000; // Hz
+        let pressure = 2000; // Pa
+        let particleSize = 200e-6; // m
+        let particleType = PARTICLE_TYPES.water;
+        let waveMode = 'standing';
+        let showField = true;
+        let showWaves = true;
+        let slIntensity = 60;
+
+        let particles = [];
+        let flashes = [];
+        let time = 0;
+        let flashCount = 0;
+
+        // Canvas
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // ========== PHYSICS CALCULATIONS ==========
+
+        // Calculate wavelength
+        function calculateWavelength() {
+            return c / frequency;
+        }
+
+        // Calculate Sound Pressure Level (dB)
+        function calculateSPL(P0) {
+            return 20 * Math.log10(P0 / P_ref);
+        }
+
+        // Calculate acoustic radiation force (Gor'kov potential)
+        function calculateRadiationForce(radius, P0, freq) {
+            const k = 2 * Math.PI * freq / c;
+            const V = (4/3) * Math.PI * Math.pow(radius, 3);
+
+            // Simplified radiation force for small particles
+            const E_ac = P0 * P0 / (rho_air * c * c);
+            const F = Math.PI * Math.pow(radius, 3) * k * E_ac;
+
+            return F * 1e6; // Convert to μN
+        }
+
+        // Calculate pressure field at position
+        function calculatePressureField(x, y, t) {
+            const lambda = calculateWavelength();
+            const k = 2 * Math.PI / lambda;
+            const omega = 2 * Math.PI * frequency;
+
+            switch(waveMode) {
+                case 'standing':
+                    // 1D standing wave (vertical)
+                    return Math.abs(2 * pressure * Math.sin(k * y) * Math.cos(omega * t));
+
+                case 'standing2d':
+                    // 2D standing wave
+                    return Math.abs(2 * pressure * Math.sin(k * x) * Math.sin(k * y) * Math.cos(omega * t));
+
+                case 'bessel':
+                    // Bessel beam (focused)
+                    const r = Math.sqrt(Math.pow(x - canvas.width/2, 2) + Math.pow(y - canvas.height/2, 2));
+                    const bessel = Math.abs(Math.cos(k * r / 100));
+                    return pressure * bessel * Math.cos(omega * t);
+
+                case 'vortex':
+                    // Acoustic vortex
+                    const dx = x - canvas.width/2;
+                    const dy = y - canvas.height/2;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const angle = Math.atan2(dy, dx);
+                    return Math.abs(pressure * Math.sin(k * dist / 50 + angle) * Math.cos(omega * t));
+            }
+        }
+
+        // ========== PARTICLE CLASS ==========
+        class LevitatedParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.radius = particleSize / 2;
+                this.mass = (4/3) * Math.PI * Math.pow(this.radius, 3) * particleType.density;
+                this.isLevitated = false;
+                this.trail = [];
+                this.slPhase = Math.random() * Math.PI * 2;
+                this.slTimer = 0;
+            }
+
+            update(dt) {
+                // Calculate pressure gradient (radiation force)
+                const lambda = calculateWavelength();
+                const pixelsPerMeter = canvas.height / (lambda * 10); // Calibration
+
+                const P_here = calculatePressureField(this.x, this.y, time);
+                const P_up = calculatePressureField(this.x, this.y - 1, time);
+                const P_down = calculatePressureField(this.x, this.y + 1, time);
+                const P_left = calculatePressureField(this.x - 1, this.y, time);
+                const P_right = calculatePressureField(this.x + 1, this.y, time);
+
+                // Gradient of pressure squared (radiation force direction)
+                const gradY = (P_down * P_down - P_up * P_up) / 2;
+                const gradX = (P_right * P_right - P_left * P_left) / 2;
+
+                // Radiation force (pushes toward pressure nodes)
+                const F_rad_scale = 0.01; // Tuning parameter
+                const F_x = -gradX * F_rad_scale;
+                const F_y = -gradY * F_rad_scale;
+
+                // Gravity
+                const F_gravity = this.mass * g * pixelsPerMeter * 0.1;
+
+                // Net force
+                const ax = F_x / this.mass;
+                const ay = (F_y + F_gravity) / this.mass;
+
+                // Update velocity
+                this.vx += ax * dt;
+                this.vy += ay * dt;
+
+                // Damping (air resistance)
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+
+                // Update position
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                // Boundaries
+                if (this.x < this.radius) {
+                    this.x = this.radius;
+                    this.vx *= -0.5;
+                }
+                if (this.x > canvas.width - this.radius) {
+                    this.x = canvas.width - this.radius;
+                    this.vx *= -0.5;
+                }
+                if (this.y < this.radius) {
+                    this.y = this.radius;
+                    this.vy *= -0.5;
+                }
+                if (this.y > canvas.height - this.radius) {
+                    this.y = canvas.height - this.radius;
+                    this.vy *= -0.5;
+                }
+
+                // Check if levitated (velocity is small and not at bottom)
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                this.isLevitated = speed < 2 && this.y < canvas.height - 50;
+
+                // Trail
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 20) this.trail.shift();
+
+                // Sonoluminescence for bubbles
+                if (particleType.canSL) {
+                    this.slTimer += dt;
+                    // Trigger flash based on pressure oscillation
+                    const pressureFactor = Math.abs(Math.sin(2 * Math.PI * frequency * time));
+                    if (pressureFactor > 0.98 && this.slTimer > 0.1 && Math.random() < slIntensity / 100) {
+                        this.triggerFlash();
+                        this.slTimer = 0;
+                    }
+                }
+            }
+
+            triggerFlash() {
+                flashes.push(new SonoluminescenceFlash(this.x, this.y));
+                flashCount++;
+            }
+
+            draw(ctx) {
+                // Trail
+                if (this.trail.length > 1) {
+                    ctx.strokeStyle = particleType.glow;
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                    for (let i = 1; i < this.trail.length; i++) {
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Particle with glow
+                const displayRadius = this.radius * 5e5; // Scale for visibility
+
+                // Outer glow
+                const glowGrad = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, displayRadius * 3
+                );
+                glowGrad.addColorStop(0, particleType.glow);
+                glowGrad.addColorStop(0.5, particleType.glow.replace('0.9', '0.3').replace('0.8', '0.2'));
+                glowGrad.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = glowGrad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, displayRadius * 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Main particle
+                const grad = ctx.createRadialGradient(
+                    this.x - displayRadius * 0.3,
+                    this.y - displayRadius * 0.3,
+                    0,
+                    this.x,
+                    this.y,
+                    displayRadius
+                );
+
+                const c = particleType.color;
+                grad.addColorStop(0, `rgba(255, 255, 255, 0.9)`);
+                grad.addColorStop(0.3, `rgba(${c.r}, ${c.g}, ${c.b}, 1)`);
+                grad.addColorStop(1, `rgba(${c.r * 0.7}, ${c.g * 0.7}, ${c.b * 0.7}, 1)`);
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, displayRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(this.x - displayRadius * 0.4, this.y - displayRadius * 0.4, displayRadius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ========== SONOLUMINESCENCE FLASH CLASS ==========
+        class SonoluminescenceFlash {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.intensity = 1.0;
+                this.radius = 2;
+                this.maxRadius = 30;
+            }
+
+            update(dt) {
+                this.intensity -= 0.05;
+                this.radius += 2;
+            }
+
+            draw(ctx) {
+                if (this.intensity <= 0) return;
+
+                ctx.save();
+                ctx.globalAlpha = this.intensity;
+
+                // Bright core
+                const coreGrad = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius
+                );
+                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                coreGrad.addColorStop(0.3, 'rgba(200, 230, 255, 0.8)');
+                coreGrad.addColorStop(0.7, 'rgba(0, 200, 255, 0.4)');
+                coreGrad.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = coreGrad;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Star burst
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i) / 8;
+                    const r = this.radius * 0.5;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(
+                        this.x + Math.cos(angle) * r,
+                        this.y + Math.sin(angle) * r
+                    );
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            isDead() {
+                return this.intensity <= 0 || this.radius > this.maxRadius;
+            }
+        }
+
+        // ========== RENDERING ==========
+
+        function drawPressureField() {
+            const resolution = 10;
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let y = 0; y < canvas.height; y += resolution) {
+                for (let x = 0; x < canvas.width; x += resolution) {
+                    const P = calculatePressureField(x, y, time);
+                    const normalized = Math.min(P / (2 * pressure), 1);
+
+                    // Color based on pressure (cyan for low, purple for high)
+                    const r = Math.floor(normalized * 157 + (1 - normalized) * 0);
+                    const g = Math.floor(normalized * 78 + (1 - normalized) * 255);
+                    const b = Math.floor(normalized * 221 + (1 - normalized) * 255);
+                    const a = 80;
+
+                    // Fill resolution x resolution block
+                    for (let dy = 0; dy < resolution && y + dy < canvas.height; dy++) {
+                        for (let dx = 0; dx < resolution && x + dx < canvas.width; dx++) {
+                            const idx = ((y + dy) * canvas.width + (x + dx)) * 4;
+                            data[idx] = r;
+                            data[idx + 1] = g;
+                            data[idx + 2] = b;
+                            data[idx + 3] = a;
+                        }
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function drawWaveLines() {
+            const lambda = calculateWavelength();
+            const pixelsPerMeter = canvas.height / (lambda * 10);
+
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+
+            if (waveMode === 'standing' || waveMode === 'standing2d') {
+                // Draw pressure nodes (where particles levitate)
+                const k = 2 * Math.PI / lambda;
+                for (let n = 0; n < 20; n++) {
+                    const y = (n * Math.PI / k) % canvas.height;
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+
+                    if (waveMode === 'standing2d') {
+                        const x = (n * Math.PI / k) % canvas.width;
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, canvas.height);
+                        ctx.stroke();
+                    }
+                }
+            } else if (waveMode === 'bessel') {
+                // Concentric circles
+                for (let r = 20; r < Math.max(canvas.width, canvas.height); r += 40) {
+                    ctx.beginPath();
+                    ctx.arc(canvas.width/2, canvas.height/2, r, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function animate() {
+            // Clear
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw pressure field
+            if (showField) {
+                drawPressureField();
+            }
+
+            // Draw wave lines
+            if (showWaves) {
+                drawWaveLines();
+            }
+
+            // Update and draw particles
+            const dt = 1/60;
+            particles.forEach(p => {
+                p.update(dt);
+                p.draw(ctx);
+            });
+
+            // Update and draw flashes
+            for (let i = flashes.length - 1; i >= 0; i--) {
+                flashes[i].update(dt);
+                flashes[i].draw(ctx);
+
+                if (flashes[i].isDead()) {
+                    flashes.splice(i, 1);
+                }
+            }
+
+            // Update time
+            time += dt;
+
+            // Update UI
+            updateUI();
+
+            requestAnimationFrame(animate);
+        }
+
+        // ========== UI UPDATES ==========
+        function updateUI() {
+            const lambda = calculateWavelength();
+            const spl = calculateSPL(pressure);
+            const force = calculateRadiationForce(particleSize / 2, pressure, frequency);
+
+            document.getElementById('wavelengthValue').textContent = (lambda * 1000).toFixed(2);
+            document.getElementById('splValue').textContent = spl.toFixed(0);
+            document.getElementById('forceValue').textContent = force.toFixed(2);
+
+            const levitatedCount = particles.filter(p => p.isLevitated).length;
+            document.getElementById('levitatedValue').textContent = levitatedCount;
+
+            if (levitatedCount > 0) {
+                const avgHeight = particles
+                    .filter(p => p.isLevitated)
+                    .reduce((sum, p) => sum + (canvas.height - p.y), 0) / levitatedCount;
+                document.getElementById('heightValue').textContent = (avgHeight / 10).toFixed(1);
+
+                const stability = (levitatedCount / particles.length * 100).toFixed(0);
+                document.getElementById('stabilityValue').textContent = stability;
+            } else {
+                document.getElementById('heightValue').textContent = '0';
+                document.getElementById('stabilityValue').textContent = '0';
+            }
+
+            document.getElementById('flashCountValue').textContent = flashCount;
+
+            const currentFlashIntensity = flashes.reduce((sum, f) => sum + f.intensity, 0);
+            document.getElementById('peakIntensityValue').textContent = currentFlashIntensity.toFixed(2);
+        }
+
+        // ========== EVENT LISTENERS ==========
+
+        document.getElementById('frequency').addEventListener('input', (e) => {
+            frequency = parseFloat(e.target.value);
+            document.getElementById('frequencyValue').textContent = (frequency / 1000).toFixed(0) + ' kHz';
+        });
+
+        document.getElementById('pressure').addEventListener('input', (e) => {
+            pressure = parseFloat(e.target.value);
+            document.getElementById('pressureValue').textContent = pressure + ' Pa';
+        });
+
+        document.getElementById('particleSize').addEventListener('input', (e) => {
+            particleSize = parseFloat(e.target.value) * 1e-6;
+            document.getElementById('particleSizeValue').textContent = e.target.value + ' μm';
+        });
+
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            document.getElementById('particleCountValue').textContent = e.target.value;
+        });
+
+        document.getElementById('particleType').addEventListener('change', (e) => {
+            particleType = PARTICLE_TYPES[e.target.value];
+        });
+
+        document.getElementById('waveMode').addEventListener('change', (e) => {
+            waveMode = e.target.value;
+        });
+
+        document.getElementById('showField').addEventListener('change', (e) => {
+            showField = e.target.checked;
+        });
+
+        document.getElementById('showWaves').addEventListener('change', (e) => {
+            showWaves = e.target.checked;
+        });
+
+        document.getElementById('slIntensity').addEventListener('input', (e) => {
+            slIntensity = parseFloat(e.target.value);
+            document.getElementById('slIntensityValue').textContent = slIntensity + '%';
+        });
+
+        document.getElementById('spawnBtn').addEventListener('click', () => {
+            const count = parseInt(document.getElementById('particleCount').value);
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                particles.push(new LevitatedParticle(
+                    Math.random() * canvas.width,
+                    canvas.height - 50 - Math.random() * 100
+                ));
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            frequency = 40000;
+            pressure = 2000;
+            particleSize = 200e-6;
+            particleType = PARTICLE_TYPES.water;
+            particles = [];
+            flashes = [];
+            flashCount = 0;
+            time = 0;
+
+            document.getElementById('frequency').value = 40000;
+            document.getElementById('pressure').value = 2000;
+            document.getElementById('particleSize').value = 200;
+            document.getElementById('particleType').value = 'water';
+            document.getElementById('waveMode').value = 'standing';
+            document.getElementById('particleCount').value = 30;
+            document.getElementById('slIntensity').value = 60;
+
+            document.getElementById('frequencyValue').textContent = '40 kHz';
+            document.getElementById('pressureValue').textContent = '2000 Pa';
+            document.getElementById('particleSizeValue').textContent = '200 μm';
+            document.getElementById('particleCountValue').textContent = '30';
+            document.getElementById('slIntensityValue').textContent = '60%';
+        });
+
+        // ========== INITIALIZATION ==========
+        window.addEventListener('load', () => {
+            // Spawn initial particles
+            const count = 30;
+            for (let i = 0; i < count; i++) {
+                particles.push(new LevitatedParticle(
+                    Math.random() * canvas.width,
+                    canvas.height - 50 - Math.random() * 100
+                ));
+            }
+
+            animate();
+        });
+    </script>
+</body>
+</html>
