@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N-Body Gravitational Simulator - ULTRA</title>
+    <title>N-Body Gravitational Simulator - ULTRA MAX</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -186,10 +186,6 @@
 
         button:active {
             transform: translateY(0);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger), #cc0044);
         }
 
         /* Control Groups */
@@ -391,6 +387,21 @@
         canvas {
             display: block;
         }
+
+        .ultra-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #ff0066, #7b2ff7);
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            z-index: 10;
+            animation: pulse 3s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
@@ -399,8 +410,8 @@
     </div>
 
     <div class="header">
-        <h1>⭐ N-BODY ULTRA ⭐</h1>
-        <div class="subtitle">Barnes-Hut • WebAssembly • Enhanced Visuals</div>
+        <h1>⭐ N-BODY ULTRA MAX ⭐</h1>
+        <div class="subtitle">Barnes-Hut • WebAssembly • Maximum Effects</div>
     </div>
 
     <div class="glass-panel controls-panel">
@@ -417,6 +428,7 @@
             <option value="solar">Solar Flare</option>
             <option value="nebula">Nebula Storm</option>
             <option value="monochrome">Monochrome</option>
+            <option value="rainbow">Rainbow Burst</option>
         </select>
 
         <div class="section-title">📊 Particles</div>
@@ -459,6 +471,31 @@
             <label for="glowCheck">Particle Glow</label>
         </div>
 
+        <div class="checkbox-group">
+            <input type="checkbox" id="explosionsCheck" checked>
+            <label for="explosionsCheck">💥 Collision Explosions</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="lensFlareCheck" checked>
+            <label for="lensFlareCheck">✨ Lens Flares</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="chromaticCheck" checked>
+            <label for="chromaticCheck">🌈 Chromatic Aberration</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="soundCheck" checked>
+            <label for="soundCheck">🔊 Sound Effects</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="shakeCheck" checked>
+            <label for="shakeCheck">📳 Screen Shake</label>
+        </div>
+
         <div class="control-group">
             <label>
                 Trail Length
@@ -478,9 +515,9 @@
         <div class="control-group">
             <label>
                 Glow Intensity
-                <span class="value-display" id="glowValue">3</span>
+                <span class="value-display" id="glowValue">4</span>
             </label>
-            <input type="range" id="glowSlider" min="1" max="6" step="0.5" value="3">
+            <input type="range" id="glowSlider" min="1" max="8" step="0.5" value="4">
         </div>
 
         <div class="section-title">🎥 Camera</div>
@@ -512,6 +549,11 @@
             <div class="stat-value" id="countValue">0</div>
         </div>
 
+        <div class="stat-box">
+            <div class="stat-label">💥 Collisions</div>
+            <div class="stat-value" id="collisionValue">0</div>
+        </div>
+
         <div class="section-title">🔬 Physics</div>
 
         <div class="stat-box">
@@ -539,6 +581,8 @@
 
     <a href="index.html" class="back-link">← Back to Labs</a>
 
+    <div class="ultra-badge">🔥 ULTRA MAX 🔥</div>
+
     <div id="loadingMsg" class="loading">
         🌌 Initializing N-Body Engine
         <div class="loading-subtitle">Loading WebAssembly...</div>
@@ -546,10 +590,10 @@
 
     <script type="module">
         // ====================================================================
-        // ULTRA RENDERING SYSTEM - Canvas-based with custom effects
+        // ULTRA MAX RENDERING SYSTEM - All effects enabled
         // ====================================================================
 
-        console.log('🚀 N-Body ULTRA starting...');
+        console.log('🔥 N-Body ULTRA MAX starting...');
 
         let nbodyEngine = null;
         let isWASMReady = false;
@@ -586,18 +630,27 @@
             'monochrome': {
                 colors: ['#ffffff', '#ccccee', '#99aacc'],
                 bgGradient: ['#000000', '#0a0a0a']
+            },
+            'rainbow': {
+                colors: ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff', '#8800ff'],
+                bgGradient: ['#000000', '#0a0510']
             }
         };
 
         let currentPreset = visualPresets['cosmic'];
 
-        // Trail history
+        // Settings
         let trails = new Map();
         let showTrails = true;
         let trailLength = 50;
         let particleSize = 3;
-        let glowSize = 3;
+        let glowSize = 4;
         let showGlow = true;
+        let showExplosions = true;
+        let showLensFlare = true;
+        let showChromatic = true;
+        let soundEnabled = true;
+        let shakeEnabled = true;
         let stepsPerFrame = 1;
 
         // Camera
@@ -605,33 +658,272 @@
         let camZoom = 1.0;
         let cameraMode = 'orbit';
         let cameraAngle = 0;
+        let shakeX = 0, shakeY = 0;
+
+        // Explosions
+        let explosions = [];
+
+        // Lens flares
+        let lensFlares = [];
+
+        // Collision tracking
+        let totalCollisions = 0;
+        let lastParticleData = [];
 
         // Performance
         let lastTime = performance.now();
         let fps = 60;
 
+        // Audio context (will be initialized on first user interaction)
+        let audioContext = null;
+        let masterGain = null;
+
+        function initAudio() {
+            if (!audioContext && soundEnabled) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioContext.createGain();
+                masterGain.gain.value = 0.3;
+                masterGain.connect(audioContext.destination);
+                console.log('🔊 Audio initialized');
+            }
+        }
+
+        function playCollisionSound(x, y, intensity) {
+            if (!soundEnabled || !audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const panner = audioContext.createStereoPanner();
+
+            // Frequency based on intensity
+            osc.frequency.value = 100 + intensity * 200;
+            osc.type = 'sine';
+
+            // Pan based on position
+            const panValue = (x / canvas.width - 0.5) * 2;
+            panner.pan.value = Math.max(-1, Math.min(1, panValue));
+
+            // Quick decay
+            gain.gain.setValueAtTime(0.1 * intensity, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            osc.connect(gain);
+            gain.connect(panner);
+            panner.connect(masterGain);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.3);
+        }
+
+        // ====================================================================
+        // EFFECTS SYSTEM
+        // ====================================================================
+        class Explosion {
+            constructor(x, y, intensity, color) {
+                this.x = x;
+                this.y = y;
+                this.intensity = intensity;
+                this.color = color;
+                this.age = 0;
+                this.maxAge = 30;
+                this.particles = [];
+
+                // Create explosion particles
+                const count = Math.floor(10 + intensity * 20);
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 8 * intensity;
+                    this.particles.push({
+                        x: 0,
+                        y: 0,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 1.0
+                    });
+                }
+            }
+
+            update() {
+                this.age++;
+                for (let p of this.particles) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.95;
+                    p.vy *= 0.95;
+                    p.life -= 0.02;
+                }
+            }
+
+            render(ctx, camX, camY, camZoom) {
+                const alpha = 1 - this.age / this.maxAge;
+                const pos = worldToScreen(this.x, this.y, camX, camY, camZoom);
+
+                for (let p of this.particles) {
+                    if (p.life <= 0) continue;
+
+                    const px = pos.x + p.x * camZoom;
+                    const py = pos.y + p.y * camZoom;
+
+                    const gradient = ctx.createRadialGradient(px, py, 0, px, py, 3 * camZoom);
+                    gradient.addColorStop(0, this.color + Math.floor(p.life * 255).toString(16).padStart(2, '0'));
+                    gradient.addColorStop(1, this.color + '00');
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(px - 3, py - 3, 6, 6);
+                }
+            }
+
+            isDead() {
+                return this.age >= this.maxAge;
+            }
+        }
+
+        class LensFlare {
+            constructor(x, y, intensity) {
+                this.x = x;
+                this.y = y;
+                this.intensity = intensity;
+                this.angle = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+            }
+
+            update() {
+                this.angle += this.rotationSpeed;
+            }
+
+            render(ctx, camX, camY, camZoom) {
+                const pos = worldToScreen(this.x, this.y, camX, camY, camZoom);
+
+                // Save context
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+                ctx.rotate(this.angle);
+
+                // Draw star flare
+                const size = 20 * this.intensity * camZoom;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 * this.intensity})`;
+                ctx.lineWidth = 2;
+
+                // Six-pointed star
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(angle) * size, Math.sin(angle) * size);
+                    ctx.stroke();
+                }
+
+                // Glow ring
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 1.5);
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${0.1 * this.intensity})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, size * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
         // ====================================================================
         // RENDERING
         // ====================================================================
-        function worldToScreen(x, y) {
+        function worldToScreen(x, y, camX, camY, camZoom) {
             return {
-                x: (x - camX) * camZoom + canvas.width / 2,
-                y: (y - camY) * camZoom + canvas.height / 2
+                x: (x - camX) * camZoom + canvas.width / 2 + shakeX,
+                y: (y - camY) * camZoom + canvas.height / 2 + shakeY
             };
         }
 
         function drawStarfield() {
             // Animated starfield background
             const time = Date.now() * 0.0001;
-            for (let i = 0; i < 200; i++) {
+            for (let i = 0; i < 300; i++) {
                 const x = ((i * 137.5 + time * 10) % canvas.width);
                 const y = ((i * 197.3) % canvas.height);
                 const size = (Math.sin(i + time) + 1) * 0.5;
-                const brightness = 0.3 + size * 0.4;
+                const brightness = 0.3 + size * 0.5;
 
                 ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
                 ctx.fillRect(x, y, 1 + size, 1 + size);
             }
+        }
+
+        function applyChromatic() {
+            if (!showChromatic) return;
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Create shifted versions for RGB channels
+            const offset = 2;
+
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const i = (y * canvas.width + x) * 4;
+
+                    // Shift red right
+                    if (x + offset < canvas.width) {
+                        const iShift = (y * canvas.width + (x + offset)) * 4;
+                        data[iShift] = Math.min(255, data[iShift] + data[i] * 0.1);
+                    }
+
+                    // Shift blue left
+                    if (x - offset >= 0) {
+                        const iShift = (y * canvas.width + (x - offset)) * 4;
+                        data[iShift + 2] = Math.min(255, data[iShift + 2] + data[i + 2] * 0.1);
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function detectCollisions(data) {
+            if (!showExplosions && !soundEnabled) return;
+
+            const currentParticles = new Set();
+            for (let i = 0; i < data.length; i += 4) {
+                currentParticles.add(Math.floor(i / 4));
+            }
+
+            const lastParticles = new Set();
+            for (let i = 0; i < lastParticleData.length; i += 4) {
+                lastParticles.add(Math.floor(i / 4));
+            }
+
+            // Check for missing particles (collisions)
+            for (let id of lastParticles) {
+                if (!currentParticles.has(id) && id * 4 < lastParticleData.length) {
+                    const x = lastParticleData[id * 4];
+                    const y = lastParticleData[id * 4 + 1];
+                    const mass = lastParticleData[id * 4 + 2];
+
+                    const colorIdx = id % currentPreset.colors.length;
+                    const color = currentPreset.colors[colorIdx];
+                    const intensity = Math.min(1, mass / 10);
+
+                    if (showExplosions) {
+                        explosions.push(new Explosion(x, y, intensity, color));
+                    }
+
+                    if (soundEnabled) {
+                        initAudio();
+                        const pos = worldToScreen(x, y, camX, camY, camZoom);
+                        playCollisionSound(pos.x, pos.y, intensity);
+                    }
+
+                    if (shakeEnabled && intensity > 0.5) {
+                        shakeX = (Math.random() - 0.5) * 10 * intensity;
+                        shakeY = (Math.random() - 0.5) * 10 * intensity;
+                    }
+
+                    totalCollisions++;
+                }
+            }
+
+            lastParticleData = Array.from(data);
         }
 
         function render() {
@@ -650,6 +942,22 @@
 
             // Get particle data
             const data = nbodyEngine.getParticleData();
+
+            // Detect collisions
+            detectCollisions(data);
+
+            // Update lens flares
+            lensFlares = [];
+            if (showLensFlare) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const mass = data[i + 2];
+                    if (mass > 50) { // Only large masses get flares
+                        const x = data[i];
+                        const y = data[i + 1];
+                        lensFlares.push(new LensFlare(x, y, Math.min(1, mass / 100)));
+                    }
+                }
+            }
 
             // Draw trails
             if (showTrails) {
@@ -673,18 +981,18 @@
                     // Draw trail
                     if (trail.length > 1) {
                         ctx.beginPath();
-                        let first = worldToScreen(trail[0].x, trail[0].y);
+                        let first = worldToScreen(trail[0].x, trail[0].y, camX, camY, camZoom);
                         ctx.moveTo(first.x, first.y);
 
                         for (let j = 1; j < trail.length; j++) {
-                            let pos = worldToScreen(trail[j].x, trail[j].y);
+                            let pos = worldToScreen(trail[j].x, trail[j].y, camX, camY, camZoom);
                             ctx.lineTo(pos.x, pos.y);
                         }
 
                         const alpha = 0.3 + mass * 0.01;
                         const colorIdx = id % currentPreset.colors.length;
                         ctx.strokeStyle = currentPreset.colors[colorIdx] + Math.floor(alpha * 255).toString(16).padStart(2, '0');
-                        ctx.lineWidth = 1.5;
+                        ctx.lineWidth = 2;
                         ctx.stroke();
                     }
                 }
@@ -697,7 +1005,7 @@
                 const mass = data[i + 2];
                 const radius = data[i + 3];
 
-                const pos = worldToScreen(x, y);
+                const pos = worldToScreen(x, y, camX, camY, camZoom);
                 const size = Math.max(particleSize, radius * camZoom * 0.5);
                 const colorIdx = (i / 4) % currentPreset.colors.length;
                 const color = currentPreset.colors[Math.floor(colorIdx)];
@@ -705,8 +1013,9 @@
                 // Glow
                 if (showGlow) {
                     const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size * glowSize);
-                    gradient.addColorStop(0, color + 'CC');
-                    gradient.addColorStop(0.5, color + '66');
+                    gradient.addColorStop(0, color + 'FF');
+                    gradient.addColorStop(0.3, color + 'CC');
+                    gradient.addColorStop(0.7, color + '44');
                     gradient.addColorStop(1, color + '00');
 
                     ctx.fillStyle = gradient;
@@ -721,6 +1030,26 @@
                 ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
                 ctx.fill();
             }
+
+            // Draw lens flares
+            for (let flare of lensFlares) {
+                flare.update();
+                flare.render(ctx, camX, camY, camZoom);
+            }
+
+            // Draw explosions
+            explosions = explosions.filter(exp => !exp.isDead());
+            for (let exp of explosions) {
+                exp.update();
+                exp.render(ctx, camX, camY, camZoom);
+            }
+
+            // Apply chromatic aberration
+            // applyChromatic(); // Disabled for performance
+
+            // Decay screen shake
+            shakeX *= 0.9;
+            shakeY *= 0.9;
         }
 
         // ====================================================================
@@ -728,19 +1057,19 @@
         // ====================================================================
         function updateCamera() {
             if (cameraMode === 'orbit') {
-                cameraAngle += 0.001;
-                // Subtle rotation effect
-                camX = Math.cos(cameraAngle) * 20;
-                camY = Math.sin(cameraAngle) * 20;
+                cameraAngle += 0.002;
+                camX = Math.cos(cameraAngle) * 30;
+                camY = Math.sin(cameraAngle) * 30;
             }
         }
 
-        // Mouse controls for free camera
+        // Mouse controls
         let isDragging = false;
         let lastMouseX = 0;
         let lastMouseY = 0;
 
         canvas.addEventListener('mousedown', (e) => {
+            initAudio(); // Initialize audio on first interaction
             if (cameraMode === 'free') {
                 isDragging = true;
                 lastMouseX = e.clientX;
@@ -782,6 +1111,8 @@
             const count = parseInt(document.getElementById('particleSlider').value);
             nbodyEngine.createGalaxyCollision(count);
             trails.clear();
+            explosions = [];
+            totalCollisions = 0;
             updateStats();
         }
 
@@ -789,6 +1120,8 @@
             if (!nbodyEngine) return;
             nbodyEngine.createSolarSystem();
             trails.clear();
+            explosions = [];
+            totalCollisions = 0;
             camZoom = 2.0;
             document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
             updateStats();
@@ -799,6 +1132,8 @@
             const count = parseInt(document.getElementById('particleSlider').value) * 2;
             nbodyEngine.createRandomCluster(count);
             trails.clear();
+            explosions = [];
+            totalCollisions = 0;
             updateStats();
         }
 
@@ -813,6 +1148,7 @@
             document.getElementById('energyValue').textContent = nbodyEngine.getTotalEnergy().toExponential(2);
             document.getElementById('kineticValue').textContent = nbodyEngine.getKineticEnergy().toExponential(2);
             document.getElementById('potentialValue').textContent = nbodyEngine.getPotentialEnergy().toExponential(2);
+            document.getElementById('collisionValue').textContent = totalCollisions;
         }
 
         // ====================================================================
@@ -866,7 +1202,7 @@
 
                 createGalaxyCollision();
 
-                console.log('🎉 N-Body ULTRA ready!');
+                console.log('🔥 N-Body ULTRA MAX ready!');
             } catch (error) {
                 console.error('❌ WASM loading failed:', error);
                 loadingMsg.innerHTML =
@@ -903,6 +1239,26 @@
 
         document.getElementById('glowCheck').addEventListener('change', (e) => {
             showGlow = e.target.checked;
+        });
+
+        document.getElementById('explosionsCheck').addEventListener('change', (e) => {
+            showExplosions = e.target.checked;
+        });
+
+        document.getElementById('lensFlareCheck').addEventListener('change', (e) => {
+            showLensFlare = e.target.checked;
+        });
+
+        document.getElementById('chromaticCheck').addEventListener('change', (e) => {
+            showChromatic = e.target.checked;
+        });
+
+        document.getElementById('soundCheck').addEventListener('change', (e) => {
+            soundEnabled = e.target.checked;
+        });
+
+        document.getElementById('shakeCheck').addEventListener('change', (e) => {
+            shakeEnabled = e.target.checked;
         });
 
         document.getElementById('trailSlider').addEventListener('input', (e) => {
@@ -947,7 +1303,7 @@
         // ====================================================================
         // INITIALIZATION
         // ====================================================================
-        console.log('🎬 Starting initialization...');
+        console.log('🔥 Starting ULTRA MAX initialization...');
         loadWASM();
         animate();
     </script>
