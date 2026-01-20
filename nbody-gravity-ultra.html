@@ -348,7 +348,7 @@
         /* Camera Mode Buttons */
         .camera-modes {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 8px;
         }
 
@@ -388,24 +388,19 @@
             color: var(--text);
         }
 
-        /* Performance Warning */
-        .warning {
-            background: rgba(255, 51, 102, 0.1);
-            border: 1px solid rgba(255, 51, 102, 0.3);
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 0.8rem;
-            color: var(--danger);
-            margin-top: 12px;
+        canvas {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div id="canvas-container"></div>
+    <div id="canvas-container">
+        <canvas id="nbodyCanvas"></canvas>
+    </div>
 
     <div class="header">
         <h1>⭐ N-BODY ULTRA ⭐</h1>
-        <div class="subtitle">Barnes-Hut • WebAssembly • Three.js</div>
+        <div class="subtitle">Barnes-Hut • WebAssembly • Enhanced Visuals</div>
     </div>
 
     <div class="glass-panel controls-panel">
@@ -455,45 +450,52 @@
         <div class="section-title">✨ Visual Effects</div>
 
         <div class="checkbox-group">
-            <input type="checkbox" id="bloomCheck" checked>
-            <label for="bloomCheck">Bloom Glow</label>
-        </div>
-
-        <div class="checkbox-group">
             <input type="checkbox" id="trailsCheck" checked>
             <label for="trailsCheck">Motion Trails</label>
         </div>
 
+        <div class="checkbox-group">
+            <input type="checkbox" id="glowCheck" checked>
+            <label for="glowCheck">Particle Glow</label>
+        </div>
+
         <div class="control-group">
             <label>
-                Bloom Intensity
-                <span class="value-display" id="bloomValue">1.5</span>
+                Trail Length
+                <span class="value-display" id="trailValue">50</span>
             </label>
-            <input type="range" id="bloomSlider" min="0" max="3" step="0.1" value="1.5">
+            <input type="range" id="trailSlider" min="10" max="200" step="10" value="50">
         </div>
 
         <div class="control-group">
             <label>
                 Particle Size
-                <span class="value-display" id="sizeValue">1.0</span>
+                <span class="value-display" id="sizeValue">3</span>
             </label>
-            <input type="range" id="sizeSlider" min="0.5" max="3" step="0.1" value="1.0">
+            <input type="range" id="sizeSlider" min="1" max="8" step="0.5" value="3">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Glow Intensity
+                <span class="value-display" id="glowValue">3</span>
+            </label>
+            <input type="range" id="glowSlider" min="1" max="6" step="0.5" value="3">
         </div>
 
         <div class="section-title">🎥 Camera</div>
 
         <div class="camera-modes">
-            <button class="camera-btn active" id="orbitBtn">Orbit</button>
-            <button class="camera-btn" id="followBtn">Follow</button>
-            <button class="camera-btn" id="freeBtn">Free</button>
+            <button class="camera-btn active" id="orbitBtn">🔄 Orbit</button>
+            <button class="camera-btn" id="freeBtn">🎮 Free</button>
         </div>
 
         <div class="control-group" style="margin-top: 16px;">
             <label>
-                Camera Distance
-                <span class="value-display" id="camDistValue">1000</span>
+                Zoom Level
+                <span class="value-display" id="zoomValue">1.0</span>
             </label>
-            <input type="range" id="camDistSlider" min="200" max="2000" step="50" value="1000">
+            <input type="range" id="zoomSlider" min="0.3" max="3.0" step="0.1" value="1.0">
         </div>
     </div>
 
@@ -539,346 +541,238 @@
 
     <div id="loadingMsg" class="loading">
         🌌 Initializing N-Body Engine
-        <div class="loading-subtitle">Compiling WebAssembly...</div>
+        <div class="loading-subtitle">Loading WebAssembly...</div>
     </div>
 
-    <!-- Three.js from CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
     <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-        import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+        // ====================================================================
+        // ULTRA RENDERING SYSTEM - Canvas-based with custom effects
+        // ====================================================================
 
-        // ====================================================================
-        // WASM ENGINE
-        // ====================================================================
+        console.log('🚀 N-Body ULTRA starting...');
+
         let nbodyEngine = null;
         let isWASMReady = false;
 
-        // ====================================================================
-        // THREE.JS SETUP
-        // ====================================================================
-        const container = document.getElementById('canvas-container');
+        const canvas = document.getElementById('nbodyCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
 
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.0001);
-
-        const camera = new THREE.PerspectiveCamera(
-            60,
-            window.innerWidth / window.innerHeight,
-            1,
-            10000
-        );
-        camera.position.set(0, 300, 1000);
-
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true,
-            powerPreference: 'high-performance'
-        });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-        container.appendChild(renderer.domElement);
-
-        // Post-processing
-        const composer = new EffectComposer(renderer);
-        const renderPass = new RenderPass(scene, camera);
-        composer.addPass(renderPass);
-
-        const bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.5,  // strength
-            0.4,  // radius
-            0.85  // threshold
-        );
-        composer.addPass(bloomPass);
-
-        // ====================================================================
-        // PARTICLE SYSTEM
-        // ====================================================================
-        let particleSystem = null;
-        let particleGeometry = null;
-        let particleMaterial = null;
-        let maxParticles = 10000;
-
-        // Trail system
-        let trailGeometry = null;
-        let trailMaterial = null;
-        let trailSystem = null;
-        let trailPositions = [];
-        let trailColors = [];
-        let showTrails = true;
-        const maxTrailLength = 100;
-
-        function initParticleSystem() {
-            // Main particles
-            particleGeometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(maxParticles * 3);
-            const colors = new Float32Array(maxParticles * 3);
-            const sizes = new Float32Array(maxParticles);
-
-            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-            particleMaterial = new THREE.PointsMaterial({
-                size: 8,
-                sizeAttenuation: true,
-                vertexColors: true,
-                transparent: true,
-                opacity: 1.0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-
-            particleSystem = new THREE.Points(particleGeometry, particleMaterial);
-            scene.add(particleSystem);
-
-            // Trail system
-            trailGeometry = new THREE.BufferGeometry();
-            trailMaterial = new THREE.LineBasicMaterial({
-                vertexColors: true,
-                transparent: true,
-                opacity: 0.6,
-                blending: THREE.AdditiveBlending
-            });
-
-            trailSystem = new THREE.LineSegments(trailGeometry, trailMaterial);
-            scene.add(trailSystem);
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-        // ====================================================================
-        // NEBULA BACKGROUND
-        // ====================================================================
-        function createNebulaBackground() {
-            const geometry = new THREE.SphereGeometry(5000, 64, 64);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = 2048;
-            canvas.height = 2048;
-            const ctx = canvas.getContext('2d');
-
-            // Create nebula texture
-            const gradient = ctx.createRadialGradient(1024, 1024, 0, 1024, 1024, 1024);
-            gradient.addColorStop(0, 'rgba(20, 10, 40, 1)');
-            gradient.addColorStop(0.3, 'rgba(40, 20, 60, 0.8)');
-            gradient.addColorStop(0.6, 'rgba(10, 5, 20, 0.5)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 2048, 2048);
-
-            // Add stars
-            for (let i = 0; i < 3000; i++) {
-                const x = Math.random() * 2048;
-                const y = Math.random() * 2048;
-                const size = Math.random() * 2;
-                const brightness = Math.random();
-
-                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            const texture = new THREE.CanvasTexture(canvas);
-            const material = new THREE.MeshBasicMaterial({
-                map: texture,
-                side: THREE.BackSide,
-                transparent: true,
-                opacity: 0.8
-            });
-
-            const nebula = new THREE.Mesh(geometry, material);
-            scene.add(nebula);
-        }
-
-        // ====================================================================
-        // VISUAL PRESETS
-        // ====================================================================
+        // Visual presets
         const visualPresets = {
             'cosmic': {
-                colors: [[0.0, 0.83, 1.0], [0.48, 0.18, 0.97], [1.0, 0.0, 0.4]],
-                bloomStrength: 1.5,
-                exposure: 1.2
+                colors: ['#00d4ff', '#7b2ff7', '#ff0066'],
+                bgGradient: ['#000208', '#0a0515']
             },
             'deep-space': {
-                colors: [[0.1, 0.3, 0.8], [0.3, 0.1, 0.5], [0.7, 0.9, 1.0]],
-                bloomStrength: 1.0,
-                exposure: 0.9
+                colors: ['#1a4d80', '#4d1a80', '#b3d9ff'],
+                bgGradient: ['#000000', '#0a0a15']
             },
             'solar': {
-                colors: [[1.0, 0.9, 0.2], [1.0, 0.5, 0.0], [1.0, 0.2, 0.1]],
-                bloomStrength: 2.0,
-                exposure: 1.5
+                colors: ['#ffcc33', '#ff8800', '#ff3333'],
+                bgGradient: ['#0a0000', '#150a00']
             },
             'nebula': {
-                colors: [[1.0, 0.0, 0.5], [0.5, 0.0, 1.0], [0.0, 0.8, 1.0]],
-                bloomStrength: 1.8,
-                exposure: 1.3
+                colors: ['#ff0080', '#8000ff', '#00ccff'],
+                bgGradient: ['#000000', '#100010']
             },
             'monochrome': {
-                colors: [[1.0, 1.0, 1.0], [0.8, 0.8, 0.9], [0.6, 0.7, 0.8]],
-                bloomStrength: 1.2,
-                exposure: 1.0
+                colors: ['#ffffff', '#ccccee', '#99aacc'],
+                bgGradient: ['#000000', '#0a0a0a']
             }
         };
 
         let currentPreset = visualPresets['cosmic'];
 
-        // ====================================================================
-        // CAMERA CONTROLS
-        // ====================================================================
-        let cameraMode = 'orbit';
-        let cameraDistance = 1000;
-        let cameraAngle = 0;
-        let cameraHeight = 300;
+        // Trail history
+        let trails = new Map();
+        let showTrails = true;
+        let trailLength = 50;
+        let particleSize = 3;
+        let glowSize = 3;
+        let showGlow = true;
+        let stepsPerFrame = 1;
 
+        // Camera
+        let camX = 0, camY = 0;
+        let camZoom = 1.0;
+        let cameraMode = 'orbit';
+        let cameraAngle = 0;
+
+        // Performance
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // ====================================================================
+        // RENDERING
+        // ====================================================================
+        function worldToScreen(x, y) {
+            return {
+                x: (x - camX) * camZoom + canvas.width / 2,
+                y: (y - camY) * camZoom + canvas.height / 2
+            };
+        }
+
+        function drawStarfield() {
+            // Animated starfield background
+            const time = Date.now() * 0.0001;
+            for (let i = 0; i < 200; i++) {
+                const x = ((i * 137.5 + time * 10) % canvas.width);
+                const y = ((i * 197.3) % canvas.height);
+                const size = (Math.sin(i + time) + 1) * 0.5;
+                const brightness = 0.3 + size * 0.4;
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.fillRect(x, y, 1 + size, 1 + size);
+            }
+        }
+
+        function render() {
+            if (!isWASMReady || !nbodyEngine) return;
+
+            // Clear with fade for trails
+            if (showTrails) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            } else {
+                ctx.fillStyle = '#000';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw starfield
+            drawStarfield();
+
+            // Get particle data
+            const data = nbodyEngine.getParticleData();
+
+            // Draw trails
+            if (showTrails) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const x = data[i];
+                    const y = data[i + 1];
+                    const mass = data[i + 2];
+
+                    const id = Math.floor(i / 4);
+                    if (!trails.has(id)) {
+                        trails.set(id, []);
+                    }
+
+                    const trail = trails.get(id);
+                    trail.push({ x, y });
+
+                    if (trail.length > trailLength) {
+                        trail.shift();
+                    }
+
+                    // Draw trail
+                    if (trail.length > 1) {
+                        ctx.beginPath();
+                        let first = worldToScreen(trail[0].x, trail[0].y);
+                        ctx.moveTo(first.x, first.y);
+
+                        for (let j = 1; j < trail.length; j++) {
+                            let pos = worldToScreen(trail[j].x, trail[j].y);
+                            ctx.lineTo(pos.x, pos.y);
+                        }
+
+                        const alpha = 0.3 + mass * 0.01;
+                        const colorIdx = id % currentPreset.colors.length;
+                        ctx.strokeStyle = currentPreset.colors[colorIdx] + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw particles
+            for (let i = 0; i < data.length; i += 4) {
+                const x = data[i];
+                const y = data[i + 1];
+                const mass = data[i + 2];
+                const radius = data[i + 3];
+
+                const pos = worldToScreen(x, y);
+                const size = Math.max(particleSize, radius * camZoom * 0.5);
+                const colorIdx = (i / 4) % currentPreset.colors.length;
+                const color = currentPreset.colors[Math.floor(colorIdx)];
+
+                // Glow
+                if (showGlow) {
+                    const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size * glowSize);
+                    gradient.addColorStop(0, color + 'CC');
+                    gradient.addColorStop(0.5, color + '66');
+                    gradient.addColorStop(1, color + '00');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, size * glowSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Core
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ====================================================================
+        // CAMERA
+        // ====================================================================
         function updateCamera() {
             if (cameraMode === 'orbit') {
                 cameraAngle += 0.001;
-                camera.position.x = Math.cos(cameraAngle) * cameraDistance;
-                camera.position.z = Math.sin(cameraAngle) * cameraDistance;
-                camera.position.y = cameraHeight;
-                camera.lookAt(0, 0, 0);
-            } else if (cameraMode === 'follow' && particleSystem) {
-                // Follow first particle
-                const positions = particleGeometry.attributes.position.array;
-                if (positions.length > 0) {
-                    camera.position.x = positions[0] + 200;
-                    camera.position.y = positions[1] + 200;
-                    camera.position.z = positions[2] + 400;
-                    camera.lookAt(positions[0], positions[1], positions[2]);
-                }
+                // Subtle rotation effect
+                camX = Math.cos(cameraAngle) * 20;
+                camY = Math.sin(cameraAngle) * 20;
             }
-            // 'free' mode lets mouse control it
         }
 
         // Mouse controls for free camera
         let isDragging = false;
-        let previousMouseX = 0;
-        let previousMouseY = 0;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
 
-        renderer.domElement.addEventListener('mousedown', (e) => {
+        canvas.addEventListener('mousedown', (e) => {
             if (cameraMode === 'free') {
                 isDragging = true;
-                previousMouseX = e.clientX;
-                previousMouseY = e.clientY;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
             }
         });
 
-        renderer.domElement.addEventListener('mousemove', (e) => {
+        canvas.addEventListener('mousemove', (e) => {
             if (isDragging && cameraMode === 'free') {
-                const deltaX = e.clientX - previousMouseX;
-                const deltaY = e.clientY - previousMouseY;
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
 
-                camera.rotation.y -= deltaX * 0.005;
-                camera.rotation.x -= deltaY * 0.005;
+                camX -= deltaX / camZoom;
+                camY -= deltaY / camZoom;
 
-                previousMouseX = e.clientX;
-                previousMouseY = e.clientY;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
             }
         });
 
-        renderer.domElement.addEventListener('mouseup', () => {
+        canvas.addEventListener('mouseup', () => {
             isDragging = false;
         });
 
-        // Zoom with mouse wheel
-        renderer.domElement.addEventListener('wheel', (e) => {
+        canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            cameraDistance += e.deltaY * 0.5;
-            cameraDistance = Math.max(200, Math.min(2000, cameraDistance));
-            document.getElementById('camDistValue').textContent = Math.round(cameraDistance);
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            camZoom *= zoomFactor;
+            camZoom = Math.max(0.3, Math.min(3, camZoom));
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
+            document.getElementById('zoomSlider').value = camZoom;
         });
-
-        // ====================================================================
-        // UPDATE PARTICLES
-        // ====================================================================
-        function updateParticles() {
-            if (!isWASMReady || !nbodyEngine) return;
-
-            const data = nbodyEngine.getParticleData();
-            const particleCount = data.length / 4;
-
-            const positions = particleGeometry.attributes.position.array;
-            const colors = particleGeometry.attributes.color.array;
-            const sizes = particleGeometry.attributes.size.array;
-
-            // Update trails
-            if (showTrails && trailPositions.length > 0) {
-                const newTrailPos = [];
-                const newTrailCol = [];
-
-                for (let i = 0; i < particleCount && i < 100; i++) {
-                    const x = data[i * 4];
-                    const y = data[i * 4 + 1];
-                    const mass = data[i * 4 + 2];
-
-                    if (!trailPositions[i]) trailPositions[i] = [];
-
-                    trailPositions[i].push({ x, y, z: 0 });
-                    if (trailPositions[i].length > maxTrailLength) {
-                        trailPositions[i].shift();
-                    }
-
-                    // Create trail line segments
-                    const trail = trailPositions[i];
-                    for (let j = 0; j < trail.length - 1; j++) {
-                        const alpha = j / trail.length;
-                        const colorIdx = i % currentPreset.colors.length;
-                        const color = currentPreset.colors[colorIdx];
-
-                        newTrailPos.push(trail[j].x, trail[j].y, trail[j].z);
-                        newTrailPos.push(trail[j + 1].x, trail[j + 1].y, trail[j + 1].z);
-
-                        newTrailCol.push(color[0], color[1], color[2], alpha);
-                        newTrailCol.push(color[0], color[1], color[2], alpha);
-                    }
-                }
-
-                trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(newTrailPos, 3));
-                trailGeometry.setAttribute('color', new THREE.Float32BufferAttribute(newTrailCol, 4));
-            }
-
-            // Update particle positions and colors
-            for (let i = 0; i < particleCount; i++) {
-                const x = data[i * 4];
-                const y = data[i * 4 + 1];
-                const mass = data[i * 4 + 2];
-                const radius = data[i * 4 + 3];
-
-                positions[i * 3] = x;
-                positions[i * 3 + 1] = y;
-                positions[i * 3 + 2] = 0;
-
-                // Color based on mass and preset
-                const colorIdx = i % currentPreset.colors.length;
-                const baseColor = currentPreset.colors[colorIdx];
-
-                colors[i * 3] = baseColor[0];
-                colors[i * 3 + 1] = baseColor[1];
-                colors[i * 3 + 2] = baseColor[2];
-
-                sizes[i] = Math.max(2, radius * parseFloat(document.getElementById('sizeValue').textContent));
-            }
-
-            // Hide unused particles
-            for (let i = particleCount; i < maxParticles; i++) {
-                positions[i * 3] = 0;
-                positions[i * 3 + 1] = 0;
-                positions[i * 3 + 2] = -10000;
-                sizes[i] = 0;
-            }
-
-            particleGeometry.attributes.position.needsUpdate = true;
-            particleGeometry.attributes.color.needsUpdate = true;
-            particleGeometry.attributes.size.needsUpdate = true;
-        }
 
         // ====================================================================
         // SCENARIOS
@@ -887,15 +781,16 @@
             if (!nbodyEngine) return;
             const count = parseInt(document.getElementById('particleSlider').value);
             nbodyEngine.createGalaxyCollision(count);
-            trailPositions = [];
+            trails.clear();
             updateStats();
         }
 
         function createSolarSystem() {
             if (!nbodyEngine) return;
             nbodyEngine.createSolarSystem();
-            trailPositions = [];
-            cameraDistance = 500;
+            trails.clear();
+            camZoom = 2.0;
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
             updateStats();
         }
 
@@ -903,7 +798,7 @@
             if (!nbodyEngine) return;
             const count = parseInt(document.getElementById('particleSlider').value) * 2;
             nbodyEngine.createRandomCluster(count);
-            trailPositions = [];
+            trails.clear();
             updateStats();
         }
 
@@ -923,10 +818,6 @@
         // ====================================================================
         // ANIMATION LOOP
         // ====================================================================
-        let lastTime = performance.now();
-        let fps = 60;
-        let stepsPerFrame = 1;
-
         function animate() {
             requestAnimationFrame(animate);
 
@@ -939,7 +830,7 @@
 
             if (isWASMReady && nbodyEngine) {
                 nbodyEngine.update(stepsPerFrame);
-                updateParticles();
+                render();
 
                 if (nbodyEngine.getIteration() % 30 === 0) {
                     updateStats();
@@ -947,29 +838,39 @@
             }
 
             updateCamera();
-            composer.render();
         }
 
         // ====================================================================
         // LOAD WASM
         // ====================================================================
         async function loadWASM() {
+            const loadingMsg = document.getElementById('loadingMsg');
+
             try {
-                const createModule = (await import('./nbody_engine.js')).default;
+                console.log('📦 Loading WASM module...');
+                loadingMsg.innerHTML = '🌌 Loading N-Body Engine<br><span class="loading-subtitle">Importing module...</span>';
+
+                const nbodyModule = await import('./nbody_engine.js');
+                console.log('✅ Module imported');
+
+                loadingMsg.innerHTML = '🌌 Loading N-Body Engine<br><span class="loading-subtitle">Initializing...</span>';
+
+                const createModule = nbodyModule.default;
                 const Module = await createModule();
+                console.log('✅ WASM initialized');
 
                 nbodyEngine = new Module.NBodyEngine(1000);
                 isWASMReady = true;
 
-                document.getElementById('loadingMsg').style.display = 'none';
+                loadingMsg.style.display = 'none';
 
                 createGalaxyCollision();
 
-                console.log('✅ N-Body WASM module loaded!');
+                console.log('🎉 N-Body ULTRA ready!');
             } catch (error) {
-                console.error('❌ Failed to load WASM:', error);
-                document.getElementById('loadingMsg').innerHTML =
-                    '⚠️ Failed to load WebAssembly<br><span class="loading-subtitle">Check console</span>';
+                console.error('❌ WASM loading failed:', error);
+                loadingMsg.innerHTML =
+                    `⚠️ Failed to load<br><span class="loading-subtitle">${error.message}</span><br><span class="loading-subtitle" style="font-size: 0.7rem;">Press F12 for details</span>`;
             }
         }
 
@@ -995,38 +896,38 @@
             document.getElementById('stepsValue').textContent = stepsPerFrame;
         });
 
-        document.getElementById('bloomCheck').addEventListener('change', (e) => {
-            bloomPass.enabled = e.target.checked;
-        });
-
         document.getElementById('trailsCheck').addEventListener('change', (e) => {
             showTrails = e.target.checked;
-            trailSystem.visible = showTrails;
-            if (!showTrails) trailPositions = [];
+            if (!showTrails) trails.clear();
         });
 
-        document.getElementById('bloomSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('bloomValue').textContent = val.toFixed(1);
-            bloomPass.strength = val;
+        document.getElementById('glowCheck').addEventListener('change', (e) => {
+            showGlow = e.target.checked;
+        });
+
+        document.getElementById('trailSlider').addEventListener('input', (e) => {
+            trailLength = parseInt(e.target.value);
+            document.getElementById('trailValue').textContent = trailLength;
         });
 
         document.getElementById('sizeSlider').addEventListener('input', (e) => {
-            document.getElementById('sizeValue').textContent = parseFloat(e.target.value).toFixed(1);
+            particleSize = parseFloat(e.target.value);
+            document.getElementById('sizeValue').textContent = particleSize;
         });
 
-        document.getElementById('camDistSlider').addEventListener('input', (e) => {
-            cameraDistance = parseInt(e.target.value);
-            document.getElementById('camDistValue').textContent = cameraDistance;
+        document.getElementById('glowSlider').addEventListener('input', (e) => {
+            glowSize = parseFloat(e.target.value);
+            document.getElementById('glowValue').textContent = glowSize;
+        });
+
+        document.getElementById('zoomSlider').addEventListener('input', (e) => {
+            camZoom = parseFloat(e.target.value);
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
         });
 
         // Visual presets
         document.getElementById('visualPreset').addEventListener('change', (e) => {
             currentPreset = visualPresets[e.target.value];
-            bloomPass.strength = currentPreset.bloomStrength;
-            renderer.toneMappingExposure = currentPreset.exposure;
-            document.getElementById('bloomValue').textContent = currentPreset.bloomStrength.toFixed(1);
-            document.getElementById('bloomSlider').value = currentPreset.bloomStrength;
         });
 
         // Camera mode buttons
@@ -1037,31 +938,16 @@
             document.getElementById('orbitBtn').classList.add('active');
         });
 
-        document.getElementById('followBtn').addEventListener('click', () => {
-            cameraMode = 'follow';
-            cameraBtns.forEach(btn => btn.classList.remove('active'));
-            document.getElementById('followBtn').classList.add('active');
-        });
-
         document.getElementById('freeBtn').addEventListener('click', () => {
             cameraMode = 'free';
             cameraBtns.forEach(btn => btn.classList.remove('active'));
             document.getElementById('freeBtn').classList.add('active');
         });
 
-        // Window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
-        });
-
         // ====================================================================
         // INITIALIZATION
         // ====================================================================
-        createNebulaBackground();
-        initParticleSystem();
+        console.log('🎬 Starting initialization...');
         loadWASM();
         animate();
     </script>
