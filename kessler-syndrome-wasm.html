@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kessler Syndrome - Orbital Debris Cascade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #000000 0%, #0a0a1a 50%, #0a1a1a 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(0, 170, 255, 0.3), rgba(0, 255, 157, 0.3));
+            padding: 20px;
+            border-bottom: 2px solid rgba(0, 170, 255, 0.5);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #00aaff 0%, #00ff9d 50%, #ffcd00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #00aaff, #00ff9d);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0, 170, 255, 0.5);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 170, 255, 0.7);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1900px;
+            margin: 0 auto;
+        }
+
+        .container.fullscreen-mode {
+            grid-template-columns: 1fr;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .container.fullscreen-mode .panel:not(.canvas-panel) {
+            display: none;
+        }
+
+        .panel {
+            background: rgba(10, 20, 30, 0.8);
+            border: 1px solid rgba(0, 170, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 170, 255, 0.3);
+        }
+
+        .panel h2 {
+            color: #00aaff;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(0, 170, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(0, 170, 255, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #00aaff, #00ff9d);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 170, 255, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 170, 255, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .scenario-btn {
+            padding: 8px;
+            font-size: 0.9em;
+            margin: 3px 0;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(0, 170, 255, 0.05);
+            border: 1px solid rgba(0, 170, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.75em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #00ff9d;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.8em;
+            margin-left: 3px;
+        }
+
+        .warning-box {
+            background: rgba(255, 100, 0, 0.2);
+            border: 2px solid rgba(255, 100, 0, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .warning-box.active {
+            display: block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .warning-text {
+            color: #ff6400;
+            font-weight: bold;
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .camera-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 170, 255, 0.8);
+            border: 1px solid rgba(0, 255, 157, 0.6);
+            border-radius: 5px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-btn:hover {
+            background: rgba(0, 255, 157, 1);
+            transform: scale(1.1);
+        }
+
+        .zoom-label {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: #00ff9d;
+            font-size: 0.9em;
+            font-family: 'Orbitron', monospace;
+            border: 1px solid rgba(0, 170, 255, 0.3);
+            z-index: 10;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #00aaff;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00aaff, #ff6400);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛰️ KESSLER SYNDROME SIMULATOR</h1>
+        <p class="subtitle">Orbital Debris Cascade • Collision Dynamics • Space Sustainability • C++ WebAssembly</p>
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Left Panel: Scenarios -->
+        <div class="panel">
+            <h2>Scenarios</h2>
+
+            <div class="info-box">
+                Kessler Syndrome: Debris density reaches critical threshold where collisions create more debris, causing exponential cascade.
+            </div>
+
+            <button class="scenario-btn" id="currentBtn">Current State (2024)</button>
+            <button class="scenario-btn" id="future2050Btn">Future 2050 (Mega-Constellations)</button>
+            <button class="scenario-btn" id="cascadeBtn">Cascade Scenario</button>
+            <button class="scenario-btn" id="triggerBtn">Trigger Collision</button>
+
+            <button id="resetBtn" style="margin-top: 20px;">🔄 Reset</button>
+
+            <div class="warning-box" id="cascadeWarning">
+                <div class="warning-text">⚠️ CASCADE INITIATED</div>
+                <div style="font-size: 0.8em; color: #888; margin-top: 10px; text-align: center;">
+                    Exponential debris multiplication
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Population</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">TOTAL OBJECTS</div>
+                    <div class="stat-value">
+                        <span id="totalStat">0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">ACTIVE SATS</div>
+                    <div class="stat-value">
+                        <span id="activeStat">0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DEBRIS</div>
+                    <div class="stat-value">
+                        <span id="debrisStat">0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">COLLISIONS</div>
+                    <div class="stat-value">
+                        <span id="collisionsStat">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px;">
+                <strong>Reality:</strong> Over 34,000 tracked objects >10cm currently in orbit. Millions of smaller pieces exist.
+            </div>
+        </div>
+
+        <!-- Center: 3D Orbital View -->
+        <div class="panel canvas-panel" style="padding: 0;">
+            <div class="canvas-container">
+                <canvas id="kesslerCanvas" width="1000" height="700"></canvas>
+
+                <div class="camera-controls">
+                    <button class="camera-btn" id="zoomInBtn" title="Zoom In">+</button>
+                    <button class="camera-btn" id="zoomOutBtn" title="Zoom Out">−</button>
+                    <button class="camera-btn" id="rotateBtn" title="Toggle Rotation">↻</button>
+                </div>
+
+                <div class="zoom-label" id="zoomLabel">Zoom: 1.0x</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Statistics -->
+        <div class="panel">
+            <h2>Orbital Density</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">LEO (200-2000km)</div>
+                    <div class="stat-value">
+                        <span id="leoStat">0.0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">MEO (2-35k km)</div>
+                    <div class="stat-value">
+                        <span id="meoStat">0.0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">GEO (~36k km)</div>
+                    <div class="stat-value">
+                        <span id="geoStat">0.0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">TIME</div>
+                    <div class="stat-value">
+                        <span id="timeStat">0</span>
+                        <span class="stat-unit">days</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Cascade Progress</h2>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="cascadeProgress" style="width: 0%"></div>
+            </div>
+            <div style="text-align: center; color: #888; font-size: 0.85em;">
+                <span id="cascadePercent">0%</span> to critical threshold
+            </div>
+
+            <h2 style="margin-top: 20px;">Recent Collisions</h2>
+
+            <div id="collisionList" style="max-height: 200px; overflow-y: auto; font-size: 0.85em;">
+                <div style="color: #666; padding: 10px; text-align: center;">No collisions yet</div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Consequences</h2>
+
+            <div class="info-box">
+                <strong>If cascade occurs:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px; color: #ff6400;">
+                    <li>LEO becomes unusable for decades</li>
+                    <li>No new satellite launches</li>
+                    <li>GPS, communications fail</li>
+                    <li>Space exploration halted</li>
+                    <li>$100B+ economic impact</li>
+                </ul>
+            </div>
+
+            <div class="info-box">
+                <strong>Prevention:</strong> Active debris removal, satellite deorbiting, collision avoidance, launch restrictions.
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createKesslerModule from './kessler_engine.js';
+
+        let Module, kessler;
+        let canvas, ctx;
+        let isRunning = false;
+        let cameraZoom = 1.0;
+        let rotationAngle = 0;
+        let autoRotate = true;
+
+        async function init() {
+            try {
+                Module = await createKesslerModule();
+                kessler = new Module.KesslerSyndrome();
+
+                canvas = document.getElementById('kesslerCanvas');
+                ctx = canvas.getContext('2d');
+
+                setupControls();
+                setupCameraControls();
+
+                // Start with current state
+                kessler.setCurrentState();
+
+                animate();
+                isRunning = true;
+
+                console.log('🛰️ Kessler Syndrome simulator initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                canvas = document.getElementById('kesslerCanvas');
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile kessler_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupControls() {
+            document.getElementById('currentBtn').addEventListener('click', () => {
+                kessler.setCurrentState();
+            });
+
+            document.getElementById('future2050Btn').addEventListener('click', () => {
+                kessler.setFuture2050();
+            });
+
+            document.getElementById('cascadeBtn').addEventListener('click', () => {
+                kessler.setCascadeScenario();
+            });
+
+            document.getElementById('triggerBtn').addEventListener('click', () => {
+                kessler.triggerCollision();
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                kessler.reset();
+            });
+        }
+
+        function setupCameraControls() {
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                cameraZoom *= 1.2;
+                cameraZoom = Math.min(cameraZoom, 5.0);
+                updateZoomLabel();
+            });
+
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                cameraZoom *= 0.8;
+                cameraZoom = Math.max(cameraZoom, 0.3);
+                updateZoomLabel();
+            });
+
+            document.getElementById('rotateBtn').addEventListener('click', () => {
+                autoRotate = !autoRotate;
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                cameraZoom *= zoomFactor;
+                cameraZoom = Math.max(0.3, Math.min(cameraZoom, 5.0));
+                updateZoomLabel();
+            });
+
+            // Manual rotation
+            let isDragging = false;
+            let lastX = 0;
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                autoRotate = false;
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const dx = e.clientX - lastX;
+                    rotationAngle += dx * 0.01;
+                    lastX = e.clientX;
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+        }
+
+        function updateZoomLabel() {
+            document.getElementById('zoomLabel').textContent = `Zoom: ${cameraZoom.toFixed(1)}x`;
+        }
+
+        window.toggleFullscreen = () => {
+            const container = document.getElementById('mainContainer');
+            if (!document.fullscreenElement) {
+                container.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen();
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.exitFullscreen();
+            }
+        };
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Update physics
+            kessler.update(100); // 100 seconds per frame
+
+            if (autoRotate) {
+                rotationAngle += 0.005;
+            }
+
+            updateStats();
+            drawScene();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateStats() {
+            const total = kessler.getObjectCount();
+            const active = kessler.getActiveSatellites();
+            const debris = kessler.getDebrisCount();
+            const collisions = kessler.getTotalCollisions();
+            const time = kessler.getTime();
+
+            document.getElementById('totalStat').textContent = total;
+            document.getElementById('activeStat').textContent = active;
+            document.getElementById('debrisStat').textContent = debris;
+            document.getElementById('collisionsStat').textContent = collisions;
+            document.getElementById('timeStat').textContent = (time / 86400).toFixed(1);
+
+            const leoD = kessler.getDensityLEO();
+            const meoD = kessler.getDensityMEO();
+            const geoD = kessler.getDensityGEO();
+
+            document.getElementById('leoStat').textContent = leoD.toFixed(3);
+            document.getElementById('meoStat').textContent = meoD.toFixed(3);
+            document.getElementById('geoStat').textContent = geoD.toFixed(3);
+
+            // Cascade progress (arbitrary threshold)
+            const cascadeProgress = Math.min(100, (leoD / 100.0) * 100);
+            document.getElementById('cascadeProgress').style.width = cascadeProgress + '%';
+            document.getElementById('cascadePercent').textContent = cascadeProgress.toFixed(0) + '%';
+
+            if (kessler.isCascading()) {
+                document.getElementById('cascadeWarning').classList.add('active');
+            } else {
+                document.getElementById('cascadeWarning').classList.remove('active');
+            }
+
+            // Update collision list
+            const recentCollisions = kessler.getRecentCollisions();
+            if (recentCollisions.length > 0) {
+                let html = '';
+                for (let i = 0; i < recentCollisions.length; i += 3) {
+                    const time = recentCollisions[i];
+                    const energy = recentCollisions[i + 1];
+                    const debris = recentCollisions[i + 2];
+                    html += `<div style="padding: 5px; border-bottom: 1px solid rgba(0,170,255,0.1);">
+                        <strong>T+${(time/86400).toFixed(1)}d:</strong> ${debris} debris generated<br>
+                        <span style="color: #666; font-size: 0.9em;">Energy: ${(energy/1e9).toFixed(2)} GJ</span>
+                    </div>`;
+                }
+                document.getElementById('collisionList').innerHTML = html;
+            }
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear with space background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw stars
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 200; i++) {
+                const x = (i * 7919) % w;
+                const y = (i * 4273) % h;
+                const size = (i % 3) * 0.5 + 0.5;
+                ctx.fillRect(x, y, size, size);
+            }
+
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.scale(cameraZoom, cameraZoom);
+
+            // Draw Earth
+            const earthRadius = 50;
+            const earthGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, earthRadius);
+            earthGrad.addColorStop(0, '#4a90e2');
+            earthGrad.addColorStop(0.7, '#2d5aa3');
+            earthGrad.addColorStop(1, '#1a3a6e');
+            ctx.fillStyle = earthGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, earthRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw orbital shells
+            drawOrbitalShell(earthRadius + 30, '#00aaff', 0.3); // LEO
+            drawOrbitalShell(earthRadius + 100, '#00ff9d', 0.2); // MEO
+            drawOrbitalShell(earthRadius + 180, '#ffcd00', 0.2); // GEO
+
+            // Draw satellites and debris
+            const positions = kessler.getObjectPositions();
+
+            for (let i = 0; i < positions.length; i += 4) {
+                const x = positions[i];
+                const y = positions[i + 1];
+                const z = positions[i + 2];
+                const type = positions[i + 3];
+
+                // Simple 3D projection (rotate around Y axis)
+                const x3d = x * Math.cos(rotationAngle) - z * Math.sin(rotationAngle);
+                const z3d = x * Math.sin(rotationAngle) + z * Math.cos(rotationAngle);
+                const y3d = y;
+
+                // Perspective (simple)
+                const scale = 300 / (300 + z3d);
+                const screenX = x3d * scale * 0.7;
+                const screenY = y3d * scale * 0.7;
+
+                // Color based on type
+                let color = '#ffffff';
+                let size = 1;
+                if (type === 0) { // Active satellite
+                    color = '#00ff9d';
+                    size = 2;
+                } else if (type === 1) { // Dead satellite
+                    color = '#888888';
+                    size = 1.5;
+                } else { // Debris
+                    color = '#ff6400';
+                    size = 1;
+                }
+
+                ctx.fillStyle = color;
+                ctx.globalAlpha = scale * 0.8;
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, size / cameraZoom, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+
+            ctx.restore();
+
+            // Draw labels
+            ctx.fillStyle = '#00ff9d';
+            ctx.font = '12px Orbitron';
+            ctx.fillText('LEO', 20, 30);
+            ctx.fillStyle = '#ffcd00';
+            ctx.fillText('GEO', 20, 50);
+        }
+
+        function drawOrbitalShell(radius, color, opacity) {
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = opacity;
+            ctx.lineWidth = 1 / cameraZoom;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+        }
+
+        init();
+    </script>
+</body>
+</html>

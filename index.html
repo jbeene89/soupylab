@@ -15,6 +15,7 @@
             --fusion: #ffcc33;
             --magnetic: #00aaff;
             --navigation: #ffcd00;
+            --apocalypse: #8B0000;
             --text: #e0e0e0;
             --dim: #606080;
         }
@@ -77,6 +78,7 @@
         .section-title.plasma { color: var(--plasma); border-color: rgba(255,107,53,0.2); }
         .section-title.magnetic { color: var(--magnetic); border-color: rgba(0,170,255,0.2); }
         .section-title.navigation { color: var(--navigation); border-color: rgba(255,205,0,0.2); }
+        .section-title.apocalypse { color: var(--apocalypse); border-color: rgba(139,0,0,0.3); }
         
         .grid {
             display: grid;
@@ -106,7 +108,8 @@
         .card.plasma:hover { border-color: var(--plasma); box-shadow: 0 10px 40px rgba(255,107,53,0.1); }
         .card.magnetic:hover { border-color: var(--magnetic); box-shadow: 0 10px 40px rgba(0,170,255,0.1); }
         .card.navigation:hover { border-color: var(--navigation); box-shadow: 0 10px 40px rgba(255,205,0,0.1); }
-        
+        .card.apocalypse:hover { border-color: var(--apocalypse); box-shadow: 0 10px 40px rgba(139,0,0,0.3); }
+
         .card-preview {
             height: 100px;
             background: linear-gradient(135deg, rgba(0,255,157,0.1) 0%, rgba(255,107,53,0.05) 100%);
@@ -178,6 +181,7 @@
         <p class="subtitle">30 interactive simulations • Fusion reactors • Plasma physics • Optics • WebAssembly • Chemistry & materials • Propulsion systems • Aerodynamics • Acoustics • Navigation • GPU visualization • Gemini AI assistant</p>
         <p class="subtitle">22 interactive simulations • Fusion reactors • Plasma physics • Optics • Chemistry & materials • Propulsion systems • Acoustics • Navigation • GPU visualization • Gemini AI assistant</p>
         <p class="subtitle">23 interactive simulations • Fusion reactors • Plasma physics • Optics • WebAssembly • Chemistry & materials • Propulsion systems • Acoustics • Navigation • GPU visualization • Gemini AI assistant</p>
+        <p class="subtitle">34 interactive simulations • Fusion reactors • Plasma physics • Space & orbital • Optics • WebAssembly • Chemistry & materials • Propulsion systems • Aerodynamics • Acoustics • Navigation • Apocalypse scenarios • GPU visualization • Gemini AI assistant</p>
 
         <a href="https://ko-fi.com/soupylab" target="_blank" class="kofi-btn">Support SOUPY LABS - Buy Me a Coffee!</a>
         <p style="color: #888; font-size: 0.75rem; margin-top: 8px;">Help keep these free simulations running and support more physics awesomeness! ⚡</p>
@@ -394,11 +398,11 @@
             </div>
         </a>
         <a href="hypersonic-flight-wasm.html" class="card plasma">
-            <div class="card-preview">🔥<span class="badge">WASM</span></div>
+            <div class="card-preview">🔥<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
             <div class="card-content">
                 <div class="card-title">Hypersonic Flight</div>
-                <div class="card-desc">Mach 5-25 flight dynamics with aerothermal heating, plasma sheath, and thermal protection system modeling</div>
-                <div class="card-tags"><span class="tag">Mach 25</span><span class="tag">Re-entry</span><span class="tag">X-43</span></div>
+                <div class="card-desc">Mach 5-25 flight dynamics with aerothermal heating, plasma sheath, and thermal protection system. Pan/zoom camera with follow mode</div>
+                <div class="card-tags"><span class="tag">Mach 25</span><span class="tag">Re-entry</span><span class="tag">Pan/Zoom</span></div>
             </div>
         </a>
         <a href="ground-effect-wasm.html" class="card plasma">
@@ -447,9 +451,49 @@
         </a>
     </div>
 
+    <div class="section-title apocalypse">☢️ APOCALYPSE SCENARIOS</div>
+    <div class="grid">
+        <a href="asteroid-apocalypse-wasm.html" class="card apocalypse">
+            <div class="card-preview">☄️<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
+            <div class="card-content">
+                <div class="card-title">Asteroid Impact</div>
+                <div class="card-desc">Planetary defense simulator with impact cratering, global effects, nuclear winter, and extinction-level events. Historical scenarios from Tunguska to Chicxulub</div>
+                <div class="card-tags"><span class="tag">10km</span><span class="tag">Extinction</span><span class="tag">Crater</span></div>
+            </div>
+        </a>
+        <a href="nuclear-apocalypse-wasm.html" class="card apocalypse">
+            <div class="card-preview">☢️<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
+            <div class="card-content">
+                <div class="card-title">Nuclear War</div>
+                <div class="card-desc">Global thermonuclear war simulator with blast effects, radiation, nuclear winter, and civilization collapse. Educational demonstration of MAD doctrine</div>
+                <div class="card-tags"><span class="tag">5000 warheads</span><span class="tag">Nuclear winter</span><span class="tag">MAD</span></div>
+            </div>
+        </a>
+        <a href="gamma-ray-burst-wasm.html" class="card apocalypse">
+            <div class="card-preview">⚡<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
+            <div class="card-content">
+                <div class="card-title">Gamma Ray Burst</div>
+                <div class="card-desc">Cosmic extinction event from nearby stellar collapse. Ozone destruction, UV sterilization, mass extinction. Speed-of-light death from 6000 light-years away</div>
+                <div class="card-tags"><span class="tag">6000 ly</span><span class="tag">Ozone loss</span><span class="tag">Ordovician</span></div>
+            </div>
+        </a>
+    </div>
+
+    <div class="section-title magnetic">🛰️ SPACE & ORBITAL</div>
+    <div class="grid">
+        <a href="kessler-syndrome-wasm.html" class="card magnetic">
+            <div class="card-preview">🛰️<span class="badge">WASM</span><span class="badge">FULLSCREEN</span></div>
+            <div class="card-content">
+                <div class="card-title">Kessler Syndrome</div>
+                <div class="card-desc">Orbital debris cascade simulator. Collision dynamics, NASA breakup models, exponential debris multiplication. Shows how one collision can make LEO unusable for decades</div>
+                <div class="card-tags"><span class="tag">Cascade</span><span class="tag">LEO/MEO/GEO</span><span class="tag">Debris</span></div>
+            </div>
+        </a>
+    </div>
+
     <div class="footer">
         SOUPY LABS © 2024 | Glen St. Mary, FL | Created by John Beene<br>
-        <span style="color: #444; font-size: 0.65rem;">Physics simulation suite for fusion reactor concepts, plasma physics, chemistry & materials, navigation systems, and field visualization</span>
+        <span style="color: #444; font-size: 0.65rem;">Physics simulation suite for fusion reactor concepts, plasma physics, space & orbital mechanics, chemistry & materials, navigation systems, apocalypse scenarios, and field visualization</span>
     </div>
 </body>
 </html>
