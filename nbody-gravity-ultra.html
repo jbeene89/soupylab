@@ -14,13 +14,13 @@
         }
 
         :root {
-            --glass-bg: rgba(10, 10, 20, 0.4);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent: #00d4ff;
-            --accent-glow: rgba(0, 212, 255, 0.3);
-            --text: #e8f0f8;
-            --text-dim: #8899aa;
-            --danger: #ff3366;
+            --glass-bg: rgba(15, 20, 30, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #6b9bd1;
+            --accent-glow: rgba(107, 155, 209, 0.25);
+            --text: #e4e8ed;
+            --text-dim: #8895a5;
+            --danger: #c75a6f;
         }
 
         body {
@@ -74,12 +74,12 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 2.5rem;
             font-weight: 900;
-            background: linear-gradient(135deg, #00d4ff 0%, #7b2ff7 50%, #ff0066 100%);
+            background: linear-gradient(135deg, #6b9bd1 0%, #8ba8c7 50%, #4a5c7a 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             letter-spacing: 0.15em;
-            text-shadow: 0 0 40px var(--accent-glow);
+            text-shadow: 0 0 30px var(--accent-glow);
             animation: pulse 4s ease-in-out infinite;
         }
 
@@ -149,7 +149,7 @@
         button {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, var(--accent), #7b2ff7);
+            background: linear-gradient(135deg, var(--accent), #4a5c7a);
             border: none;
             border-radius: 10px;
             color: #fff;
@@ -186,6 +186,10 @@
 
         button:active {
             transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #a04555);
         }
 
         /* Control Groups */
