@@ -381,6 +381,21 @@
             </label>
         </div>
 
+        <div class="section-title">Audio (For Fun!)</div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="spatialAudio"> 3D Spatial Audio
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <span>Volume</span>
+                <span class="value-display" id="volumeDisplay">50</span>%
+            </label>
+            <input type="range" id="volume" min="0" max="100" step="5" value="50">
+        </div>
+
+        <div class="section-title">Graphics</div>
         <div class="control-group">
             <label>
                 <span>Particle Size</span>
@@ -661,10 +676,215 @@
             followIndex: -1,
             showTrails: true,
             showVelocity: false,
-            showGrid: false
+            showGrid: false,
+            spatialAudio: false,
+            audioVolume: 0.5
         };
 
         physics.initialize(config.scenario, config.particleCount);
+
+        // Spatial Audio System (For Fun!)
+        class SpatialAudioEngine {
+            constructor() {
+                this.audioContext = null;
+                this.listener = null;
+                this.sources = new Map();
+                this.gainNode = null;
+                this.enabled = false;
+                this.masterVolume = 0.5;
+            }
+
+            initialize() {
+                if (this.audioContext) return;
+
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                this.listener = this.audioContext.listener;
+
+                // Master gain
+                this.gainNode = this.audioContext.createGain();
+                this.gainNode.gain.value = this.masterVolume;
+                this.gainNode.connect(this.audioContext.destination);
+
+                // Resume on user interaction
+                document.addEventListener('click', () => {
+                    if (this.audioContext.state === 'suspended') {
+                        this.audioContext.resume();
+                    }
+                }, { once: true });
+            }
+
+            setVolume(volume) {
+                this.masterVolume = volume;
+                if (this.gainNode) {
+                    this.gainNode.gain.value = volume;
+                }
+            }
+
+            updateListener(position, forward) {
+                if (!this.audioContext || !this.enabled) return;
+
+                if (this.listener.positionX) {
+                    this.listener.positionX.value = position.x;
+                    this.listener.positionY.value = position.y;
+                    this.listener.positionZ.value = position.z;
+                    this.listener.forwardX.value = forward.x;
+                    this.listener.forwardY.value = forward.y;
+                    this.listener.forwardZ.value = forward.z;
+                    this.listener.upX.value = 0;
+                    this.listener.upY.value = 1;
+                    this.listener.upZ.value = 0;
+                } else {
+                    this.listener.setPosition(position.x, position.y, position.z);
+                    this.listener.setOrientation(forward.x, forward.y, forward.z, 0, 1, 0);
+                }
+            }
+
+            createOscillator(frequency, type = 'sine') {
+                if (!this.audioContext) return null;
+
+                const oscillator = this.audioContext.createOscillator();
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                return oscillator;
+            }
+
+            playParticleSound(particleId, position, velocity) {
+                if (!this.audioContext || !this.enabled) return;
+
+                // Don't create too many sounds
+                if (this.sources.size > 50) return;
+
+                // Skip if particle too far
+                const distToCam = Math.sqrt(
+                    (position.x - camera.position.x) ** 2 +
+                    (position.y - camera.position.y) ** 2 +
+                    (position.z - camera.position.z) ** 2
+                );
+                if (distToCam > 50) return;
+
+                // Create panner for 3D positioning
+                const panner = this.audioContext.createPanner();
+                panner.panningModel = 'HRTF';
+                panner.distanceModel = 'inverse';
+                panner.refDistance = 1;
+                panner.maxDistance = 100;
+                panner.rolloffFactor = 1;
+                panner.coneInnerAngle = 360;
+                panner.coneOuterAngle = 0;
+                panner.coneOuterGain = 0;
+
+                if (panner.positionX) {
+                    panner.positionX.value = position.x;
+                    panner.positionY.value = position.y;
+                    panner.positionZ.value = position.z;
+                } else {
+                    panner.setPosition(position.x, position.y, position.z);
+                }
+
+                // Create sound based on velocity (Doppler-like effect)
+                const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2);
+                const baseFreq = 200 + speed * 50;
+                const freq = Math.min(2000, Math.max(100, baseFreq));
+
+                const oscillator = this.createOscillator(freq, 'sine');
+
+                // Envelope for smoother sound
+                const envelope = this.audioContext.createGain();
+                envelope.gain.value = 0;
+                envelope.gain.linearRampToValueAtTime(0.02, this.audioContext.currentTime + 0.05);
+                envelope.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.5);
+
+                oscillator.connect(envelope);
+                envelope.connect(panner);
+                panner.connect(this.gainNode);
+
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.5);
+
+                this.sources.set(particleId, { oscillator, panner, envelope });
+
+                // Cleanup
+                oscillator.onended = () => {
+                    this.sources.delete(particleId);
+                };
+            }
+
+            playCollisionSound(position, intensity) {
+                if (!this.audioContext || !this.enabled) return;
+
+                const panner = this.audioContext.createPanner();
+                panner.panningModel = 'HRTF';
+                panner.distanceModel = 'inverse';
+                panner.refDistance = 1;
+                panner.maxDistance = 100;
+
+                if (panner.positionX) {
+                    panner.positionX.value = position.x;
+                    panner.positionY.value = position.y;
+                    panner.positionZ.value = position.z;
+                } else {
+                    panner.setPosition(position.x, position.y, position.z);
+                }
+
+                // White noise burst for collision
+                const bufferSize = this.audioContext.sampleRate * 0.1;
+                const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * intensity;
+                }
+
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
+
+                const envelope = this.audioContext.createGain();
+                envelope.gain.value = 0.1;
+                envelope.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.1);
+
+                source.connect(envelope);
+                envelope.connect(panner);
+                panner.connect(this.gainNode);
+
+                source.start();
+            }
+
+            playAmbientDrone(frequency = 100) {
+                if (!this.audioContext || !this.enabled || this.ambientDrone) return;
+
+                this.ambientDrone = this.createOscillator(frequency, 'sine');
+                const gain = this.audioContext.createGain();
+                gain.gain.value = 0.01;
+
+                this.ambientDrone.connect(gain);
+                gain.connect(this.gainNode);
+                this.ambientDrone.start();
+            }
+
+            stopAmbientDrone() {
+                if (this.ambientDrone) {
+                    this.ambientDrone.stop();
+                    this.ambientDrone = null;
+                }
+            }
+
+            enable() {
+                this.enabled = true;
+                this.initialize();
+                this.playAmbientDrone(80);
+            }
+
+            disable() {
+                this.enabled = false;
+                this.stopAmbientDrone();
+                this.sources.forEach(({ oscillator }) => {
+                    try { oscillator.stop(); } catch (e) {}
+                });
+                this.sources.clear();
+            }
+        }
+
+        const spatialAudio = new SpatialAudioEngine();
 
         // Particle system
         let particleGeometry = new THREE.BufferGeometry();
@@ -822,6 +1042,55 @@
             updateParticles();
             updateCamera();
 
+            // Update spatial audio
+            if (config.spatialAudio && spatialAudio.enabled) {
+                // Update listener position and orientation
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                spatialAudio.updateListener(camera.position, forward);
+
+                // Play sounds for nearby fast-moving particles (sparingly)
+                if (frameCount % 10 === 0) {
+                    const particles = physics.particles;
+                    for (let i = 0; i < Math.min(5, particles.length); i++) {
+                        const idx = Math.floor(Math.random() * particles.length);
+                        const p = particles[idx];
+                        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+
+                        // Only sound if fast enough
+                        if (speed > 5) {
+                            spatialAudio.playParticleSound(
+                                idx,
+                                { x: p.x, y: p.y, z: p.z },
+                                { x: p.vx, y: p.vy, z: p.vz }
+                            );
+                        }
+                    }
+                }
+
+                // Check for close encounters (collision-like events)
+                if (frameCount % 30 === 0) {
+                    const particles = physics.particles;
+                    for (let i = 0; i < particles.length - 1; i++) {
+                        const pi = particles[i];
+                        const pj = particles[i + 1];
+
+                        const dx = pj.x - pi.x;
+                        const dy = pj.y - pi.y;
+                        const dz = pj.z - pi.z;
+                        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                        if (dist < 0.5) {
+                            const intensity = Math.min(0.1, 1 / (dist + 0.1));
+                            spatialAudio.playCollisionSound(
+                                { x: pi.x, y: pi.y, z: pi.z },
+                                intensity
+                            );
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Stats
             frameCount++;
             const now = performance.now();
@@ -899,6 +1168,21 @@
 
         document.getElementById('showGrid').addEventListener('change', (e) => {
             config.showGrid = e.target.checked;
+        });
+
+        document.getElementById('spatialAudio').addEventListener('change', (e) => {
+            config.spatialAudio = e.target.checked;
+            if (config.spatialAudio) {
+                spatialAudio.enable();
+            } else {
+                spatialAudio.disable();
+            }
+        });
+
+        document.getElementById('volume').addEventListener('input', (e) => {
+            config.audioVolume = parseInt(e.target.value) / 100;
+            spatialAudio.setVolume(config.audioVolume);
+            document.getElementById('volumeDisplay').textContent = e.target.value;
         });
 
         window.addEventListener('resize', () => {
