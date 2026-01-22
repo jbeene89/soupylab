@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Magnetic Sun 3D - Unreal Graphics</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --glass-bg: rgba(15, 20, 30, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #6b9bd1;
+            --text: #e4e8ed;
+            --text-dim: #8895a5;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #6b9bd1 0%, #ff6b35 50%, #ffdd00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 30px rgba(107, 155, 209, 0.3);
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            position: fixed;
+            top: 120px;
+            left: 20px;
+            width: 320px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            z-index: 10;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1rem 0 0.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(107, 155, 209, 0.2);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent), #4a5c7a);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 8px;
+        }
+
+        .stats {
+            position: fixed;
+            top: 120px;
+            right: 20px;
+            width: 280px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-left: 6px;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            z-index: 100;
+        }
+
+        .controls::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .controls::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .controls::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div class="loading" id="loading">Initializing 3D Engine...</div>
+
+    <div class="header">
+        <h1>ULTRA MAGNETIC SUN 3D</h1>
+        <div class="subtitle">Unreal Graphics • Volumetric Rendering</div>
+    </div>
+
+    <div class="controls">
+        <div class="section-title">Rendering Quality</div>
+        <div class="control-group">
+            <label>Graphics Preset</label>
+            <select id="quality">
+                <option value="low">Performance</option>
+                <option value="medium">Balanced</option>
+                <option value="high" selected>High</option>
+                <option value="ultra">Ultra (RTX)</option>
+            </select>
+        </div>
+
+        <div class="section-title">Environment</div>
+        <div class="control-group">
+            <label>Scene</label>
+            <select id="environment">
+                <option value="space">Deep Space</option>
+                <option value="lab" selected>Laboratory</option>
+                <option value="hangar">Hangar</option>
+                <option value="reactor">Reactor Chamber</option>
+            </select>
+        </div>
+
+        <div class="section-title">Electromagnets</div>
+        <div class="control-group">
+            <label>
+                Coil Count
+                <span class="value-display" id="coilCountDisplay">16</span>
+            </label>
+            <input type="range" id="coilCount" min="8" max="32" step="4" value="16">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Ring Radius
+                <span class="value-display" id="radiusDisplay">8</span> m
+            </label>
+            <input type="range" id="radius" min="5" max="15" step="0.5" value="8">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Pulse Frequency
+                <span class="value-display" id="frequencyDisplay">15</span> Hz
+            </label>
+            <input type="range" id="frequency" min="1" max="60" step="1" value="15">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Field Intensity
+                <span class="value-display" id="intensityDisplay">100</span>%
+            </label>
+            <input type="range" id="intensity" min="0" max="200" step="10" value="100">
+        </div>
+
+        <div class="section-title">Plasma</div>
+        <div class="control-group">
+            <label>
+                Particle Count
+                <span class="value-display" id="particleCountDisplay">2000</span>
+            </label>
+            <input type="range" id="particleCount" min="500" max="5000" step="100" value="2000">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Temperature
+                <span class="value-display" id="tempDisplay">10000</span> K
+            </label>
+            <input type="range" id="temperature" min="2000" max="50000" step="1000" value="10000">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Glow Intensity
+                <span class="value-display" id="glowDisplay">2.0</span>
+            </label>
+            <input type="range" id="glow" min="0" max="5" step="0.1" value="2.0">
+        </div>
+
+        <div class="section-title">Camera</div>
+        <div class="control-group">
+            <label>
+                Auto Rotate
+                <input type="checkbox" id="autoRotate" checked>
+            </label>
+        </div>
+
+        <button id="resetBtn">Reset Camera</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-label">Confinement Field</div>
+            <div class="stat-value">
+                <span id="fieldStrength">0.00</span>
+                <span class="stat-unit">T</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Core Temperature</div>
+            <div class="stat-value">
+                <span id="coreTemp">10000</span>
+                <span class="stat-unit">K</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Active Coils</div>
+            <div class="stat-value">
+                <span id="activeCoils">8</span>
+                <span class="stat-unit">/ 16</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">FPS</div>
+            <div class="stat-value">
+                <span id="fps">60</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('container').appendChild(renderer.domElement);
+
+        // Post-processing
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            2.0, // strength
+            0.4, // radius
+            0.85 // threshold
+        );
+        composer.addPass(bloomPass);
+
+        // Camera
+        camera.position.set(20, 15, 20);
+        camera.lookAt(0, 0, 0);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+
+        // Configuration
+        const config = {
+            coilCount: 16,
+            radius: 8,
+            frequency: 15,
+            intensity: 100,
+            particleCount: 2000,
+            temperature: 10000,
+            glow: 2.0,
+            environment: 'lab',
+            quality: 'high'
+        };
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1);
+        keyLight.position.set(10, 20, 10);
+        keyLight.castShadow = true;
+        scene.add(keyLight);
+
+        const fillLight = new THREE.DirectionalLight(0x6b9bd1, 0.3);
+        fillLight.position.set(-10, 5, -10);
+        scene.add(fillLight);
+
+        // Environment
+        function createEnvironment(type) {
+            // Remove existing environment
+            scene.children.forEach(child => {
+                if (child.userData.environment) {
+                    scene.remove(child);
+                }
+            });
+
+            if (type === 'space') {
+                scene.background = new THREE.Color(0x000510);
+                // Stars
+                const starsGeometry = new THREE.BufferGeometry();
+                const starsMaterial = new THREE.PointsMaterial({
+                    color: 0xffffff,
+                    size: 0.1,
+                    transparent: true
+                });
+                const starsVertices = [];
+                for (let i = 0; i < 1000; i++) {
+                    const x = (Math.random() - 0.5) * 200;
+                    const y = (Math.random() - 0.5) * 200;
+                    const z = (Math.random() - 0.5) * 200;
+                    starsVertices.push(x, y, z);
+                }
+                starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+                const stars = new THREE.Points(starsGeometry, starsMaterial);
+                stars.userData.environment = true;
+                scene.add(stars);
+            } else if (type === 'lab') {
+                scene.background = new THREE.Color(0x1a2332);
+                // Floor
+                const floorGeometry = new THREE.PlaneGeometry(50, 50);
+                const floorMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x2a3442,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -5;
+                floor.receiveShadow = true;
+                floor.userData.environment = true;
+                scene.add(floor);
+
+                // Grid
+                const gridHelper = new THREE.GridHelper(50, 50, 0x6b9bd1, 0x3a4a5a);
+                gridHelper.position.y = -4.9;
+                gridHelper.userData.environment = true;
+                scene.add(gridHelper);
+            } else if (type === 'hangar') {
+                scene.background = new THREE.Color(0x0f1419);
+                const floor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(60, 60),
+                    new THREE.MeshStandardMaterial({ color: 0x1a1e24, roughness: 0.9 })
+                );
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -5;
+                floor.receiveShadow = true;
+                floor.userData.environment = true;
+                scene.add(floor);
+            } else if (type === 'reactor') {
+                scene.background = new THREE.Color(0x0a0e14);
+                const floor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(40, 40),
+                    new THREE.MeshStandardMaterial({ color: 0x2a2e34, roughness: 0.7, metalness: 0.5 })
+                );
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -5;
+                floor.receiveShadow = true;
+                floor.userData.environment = true;
+                scene.add(floor);
+            }
+        }
+
+        // Electromagnets
+        const coils = [];
+        let coilGroup = new THREE.Group();
+        scene.add(coilGroup);
+
+        function createCoils() {
+            coilGroup.children = [];
+            coils.length = 0;
+
+            const angleStep = (Math.PI * 2) / config.coilCount;
+
+            for (let i = 0; i < config.coilCount; i++) {
+                const angle = i * angleStep;
+                const x = Math.cos(angle) * config.radius;
+                const z = Math.sin(angle) * config.radius;
+
+                // Coil housing
+                const coilGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 16);
+                const coilMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x2a3a4a,
+                    emissive: 0x000000,
+                    roughness: 0.3,
+                    metalness: 0.8
+                });
+
+                const coil = new THREE.Mesh(coilGeometry, coilMaterial);
+                coil.position.set(x, 0, z);
+                coil.lookAt(0, 0, 0);
+                coil.castShadow = true;
+                coil.receiveShadow = true;
+
+                // Emissive ring
+                const ringGeometry = new THREE.TorusGeometry(0.3, 0.05, 8, 32);
+                const ringMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x00ff88,
+                    emissive: 0x00ff88,
+                    emissiveIntensity: 0,
+                    roughness: 0.2,
+                    metalness: 0.9
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.y = Math.PI / 2;
+                coil.add(ring);
+
+                coilGroup.add(coil);
+                coils.push({
+                    mesh: coil,
+                    ring: ring,
+                    angle: angle,
+                    isOn: false
+                });
+            }
+        }
+
+        // Plasma particles
+        let plasmaParticles;
+        let plasmaGeometry;
+
+        function createPlasma() {
+            if (plasmaParticles) {
+                scene.remove(plasmaParticles);
+            }
+
+            plasmaGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(config.particleCount * 3);
+            const colors = new Float32Array(config.particleCount * 3);
+            const sizes = new Float32Array(config.particleCount);
+
+            for (let i = 0; i < config.particleCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = Math.random() * 2;
+
+                positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = r * Math.cos(phi);
+
+                // Temperature-based color
+                const temp = config.temperature / 50000;
+                colors[i * 3] = 1.0;
+                colors[i * 3 + 1] = 0.5 + temp * 0.5;
+                colors[i * 3 + 2] = 0.2 + temp * 0.3;
+
+                sizes[i] = 0.1 + Math.random() * 0.2;
+            }
+
+            plasmaGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            plasmaGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            plasmaGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const plasmaMaterial = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true
+            });
+
+            plasmaParticles = new THREE.Points(plasmaGeometry, plasmaMaterial);
+            scene.add(plasmaParticles);
+        }
+
+        // Plasma core glow
+        const coreGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        const coreMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff6b35,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending
+        });
+        const plasmaCore = new THREE.Mesh(coreGeometry, coreMaterial);
+        scene.add(plasmaCore);
+
+        // Animation
+        let time = 0;
+        let frameCount = 0;
+        let lastFpsUpdate = 0;
+
+        function updateCoils() {
+            coils.forEach((coil, index) => {
+                const phase = coil.angle + time * config.frequency * 0.1;
+                const cycle = Math.sin(phase);
+                coil.isOn = cycle > 0;
+
+                const intensity = coil.isOn ? (config.intensity / 100) : 0;
+
+                // Update materials
+                coil.mesh.material.emissive.setHex(coil.isOn ? 0x00ff88 : 0x000000);
+                coil.mesh.material.emissiveIntensity = intensity * 0.5;
+
+                coil.ring.material.emissiveIntensity = intensity * 3;
+            });
+
+            // Update stats
+            const activeCount = coils.filter(c => c.isOn).length;
+            document.getElementById('activeCoils').textContent = activeCount;
+        }
+
+        function updatePlasma() {
+            if (!plasmaParticles) return;
+
+            const positions = plasmaGeometry.attributes.position.array;
+            const colors = plasmaGeometry.attributes.color.array;
+
+            for (let i = 0; i < config.particleCount; i++) {
+                let x = positions[i * 3];
+                let y = positions[i * 3 + 1];
+                let z = positions[i * 3 + 2];
+
+                // Magnetic confinement forces
+                let fx = 0, fy = 0, fz = 0;
+
+                coils.forEach(coil => {
+                    if (!coil.isOn) return;
+
+                    const coilPos = coil.mesh.position;
+                    const dx = x - coilPos.x;
+                    const dy = y - coilPos.y;
+                    const dz = z - coilPos.z;
+                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (dist < 0.1) return;
+
+                    const force = (config.intensity / 100) * 0.5 / (dist * dist);
+                    fx += (dx / dist) * force;
+                    fy += (dy / dist) * force;
+                    fz += (dz / dist) * force;
+                });
+
+                // Confinement to center
+                const centerDist = Math.sqrt(x * x + y * y + z * z);
+                const confineForce = 0.01;
+                fx -= x * confineForce;
+                fy -= y * confineForce;
+                fz -= z * confineForce;
+
+                // Thermal motion
+                const thermal = config.temperature / 50000 * 0.02;
+                fx += (Math.random() - 0.5) * thermal;
+                fy += (Math.random() - 0.5) * thermal;
+                fz += (Math.random() - 0.5) * thermal;
+
+                // Update positions
+                positions[i * 3] += fx;
+                positions[i * 3 + 1] += fy;
+                positions[i * 3 + 2] += fz;
+
+                // Damping
+                positions[i * 3] *= 0.98;
+                positions[i * 3 + 1] *= 0.98;
+                positions[i * 3 + 2] *= 0.98;
+
+                // Update colors based on velocity
+                const speed = Math.sqrt(fx * fx + fy * fy + fz * fz);
+                const temp = Math.min(1, speed * 20);
+                colors[i * 3] = 1.0;
+                colors[i * 3 + 1] = 0.5 + temp * 0.5;
+                colors[i * 3 + 2] = 0.2 + temp * 0.3;
+            }
+
+            plasmaGeometry.attributes.position.needsUpdate = true;
+            plasmaGeometry.attributes.color.needsUpdate = true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.05;
+            frameCount++;
+
+            updateCoils();
+            updatePlasma();
+
+            // Rotate plasma
+            if (plasmaParticles) {
+                plasmaParticles.rotation.y += 0.002;
+            }
+
+            // Pulse core
+            plasmaCore.scale.setScalar(1 + Math.sin(time * 2) * 0.1);
+            plasmaCore.material.opacity = 0.3 + Math.sin(time * 3) * 0.1;
+
+            // Update bloom
+            bloomPass.strength = config.glow;
+
+            controls.update();
+            composer.render();
+
+            // FPS counter
+            const now = performance.now();
+            if (now - lastFpsUpdate > 1000) {
+                document.getElementById('fps').textContent = frameCount;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('quality').addEventListener('change', (e) => {
+            const q = e.target.value;
+            const pixelRatio = q === 'ultra' ? 2 : q === 'high' ? 1.5 : q === 'medium' ? 1 : 0.75;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatio));
+        });
+
+        document.getElementById('environment').addEventListener('change', (e) => {
+            config.environment = e.target.value;
+            createEnvironment(config.environment);
+        });
+
+        document.getElementById('coilCount').addEventListener('input', (e) => {
+            config.coilCount = parseInt(e.target.value);
+            document.getElementById('coilCountDisplay').textContent = config.coilCount;
+            createCoils();
+        });
+
+        document.getElementById('radius').addEventListener('input', (e) => {
+            config.radius = parseFloat(e.target.value);
+            document.getElementById('radiusDisplay').textContent = config.radius;
+            createCoils();
+        });
+
+        document.getElementById('frequency').addEventListener('input', (e) => {
+            config.frequency = parseInt(e.target.value);
+            document.getElementById('frequencyDisplay').textContent = config.frequency;
+        });
+
+        document.getElementById('intensity').addEventListener('input', (e) => {
+            config.intensity = parseInt(e.target.value);
+            document.getElementById('intensityDisplay').textContent = config.intensity;
+        });
+
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            config.particleCount = parseInt(e.target.value);
+            document.getElementById('particleCountDisplay').textContent = config.particleCount;
+            createPlasma();
+        });
+
+        document.getElementById('temperature').addEventListener('input', (e) => {
+            config.temperature = parseInt(e.target.value);
+            document.getElementById('tempDisplay').textContent = config.temperature;
+            document.getElementById('coreTemp').textContent = config.temperature;
+        });
+
+        document.getElementById('glow').addEventListener('input', (e) => {
+            config.glow = parseFloat(e.target.value);
+            document.getElementById('glowDisplay').textContent = config.glow.toFixed(1);
+        });
+
+        document.getElementById('autoRotate').addEventListener('change', (e) => {
+            controls.autoRotate = e.target.checked;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            camera.position.set(20, 15, 20);
+            camera.lookAt(0, 0, 0);
+            controls.reset();
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        createEnvironment(config.environment);
+        createCoils();
+        createPlasma();
+
+        document.getElementById('loading').style.display = 'none';
+        animate();
+    </script>
+</body>
+</html>

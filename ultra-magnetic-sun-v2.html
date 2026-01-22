@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Magnetic Sun - Altermagnetic Plasma Confinement</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --glass-bg: rgba(15, 20, 30, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #6b9bd1;
+            --accent-glow: rgba(107, 155, 209, 0.25);
+            --text: #e4e8ed;
+            --text-dim: #8895a5;
+            --danger: #c75a6f;
+            --plasma-core: #ff6b35;
+            --plasma-hot: #ffdd00;
+            --coil-on: #00ff88;
+            --coil-off: #2a3a4a;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0e14;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #6b9bd1 0%, #ff6b35 50%, #ffdd00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* Control Panel */
+        .controls {
+            position: fixed;
+            top: 140px;
+            left: 20px;
+            width: 340px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 10;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(107, 155, 209, 0.2);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(107, 155, 209, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(107, 155, 209, 0.5);
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), #4a5c7a);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--accent-glow);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #a04555);
+        }
+
+        /* Stats Panel */
+        .stats {
+            position: fixed;
+            top: 140px;
+            right: 20px;
+            width: 320px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 10;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-unit {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-left: 8px;
+        }
+
+        .coil-status {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .coil-indicator {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: all 0.1s ease;
+        }
+
+        .coil-indicator.on {
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid var(--coil-on);
+            color: var(--coil-on);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+        }
+
+        .coil-indicator.off {
+            background: rgba(42, 58, 74, 0.2);
+            border: 2px solid var(--coil-off);
+            color: var(--coil-off);
+        }
+
+        /* Scrollbar */
+        .controls::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .controls::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .controls::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+
+    <div class="header">
+        <h1>ULTRA MAGNETIC SUN</h1>
+        <div class="subtitle">Altermagnetic Plasma Confinement</div>
+    </div>
+
+    <div class="controls">
+        <div class="section-title">Environment</div>
+        <div class="control-group">
+            <label>Background Scene</label>
+            <select id="environment">
+                <option value="laboratory">Laboratory</option>
+                <option value="spaceship">Spaceship Deck</option>
+                <option value="asphalt">Outdoor Asphalt</option>
+                <option value="stars">Deep Space</option>
+            </select>
+        </div>
+
+        <div class="section-title">Electromagnet Array</div>
+        <div class="control-group">
+            <label>
+                Number of Coils
+                <span class="value-display" id="coilCountDisplay">12</span>
+            </label>
+            <input type="range" id="coilCount" min="6" max="24" step="2" value="12">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Coil Radius
+                <span class="value-display" id="coilRadiusDisplay">300</span> px
+            </label>
+            <input type="range" id="coilRadius" min="200" max="500" step="10" value="300">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Pulse Frequency
+                <span class="value-display" id="pulseFreqDisplay">10</span> Hz
+            </label>
+            <input type="range" id="pulseFreq" min="1" max="100" step="1" value="10">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Phase Offset
+                <span class="value-display" id="phaseOffsetDisplay">0</span>°
+            </label>
+            <input type="range" id="phaseOffset" min="0" max="360" step="15" value="0">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Field Strength
+                <span class="value-display" id="fieldStrengthDisplay">100</span>%
+            </label>
+            <input type="range" id="fieldStrength" min="0" max="200" step="5" value="100">
+        </div>
+
+        <div class="section-title">Plasma Parameters</div>
+        <div class="control-group">
+            <label>
+                Particle Count
+                <span class="value-display" id="particleCountDisplay">500</span>
+            </label>
+            <input type="range" id="particleCount" min="100" max="2000" step="50" value="500">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Temperature
+                <span class="value-display" id="temperatureDisplay">5000</span> K
+            </label>
+            <input type="range" id="temperature" min="1000" max="20000" step="100" value="5000">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Confinement Strength
+                <span class="value-display" id="confinementDisplay">1.0</span>
+            </label>
+            <input type="range" id="confinement" min="0" max="2" step="0.1" value="1.0">
+        </div>
+
+        <div class="section-title">Visualization</div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showFieldLines" checked> Show Field Lines
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showCoils" checked> Show Coils
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showParticles" checked> Show Plasma
+            </label>
+        </div>
+
+        <button id="resetBtn">Reset to Defaults</button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-label">Net Field at Center</div>
+            <div class="stat-value">
+                <span id="netField">0.00</span>
+                <span class="stat-unit">mT</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Plasma Temperature</div>
+            <div class="stat-value">
+                <span id="plasmaTemp">5000</span>
+                <span class="stat-unit">K</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Confinement Quality</div>
+            <div class="stat-value">
+                <span id="confinementQuality">0.95</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Active Particles</div>
+            <div class="stat-value">
+                <span id="activeParticles">500</span>
+            </div>
+        </div>
+
+        <div class="section-title">Coil Status</div>
+        <div class="coil-status" id="coilStatus"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height, centerX, centerY;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2;
+            centerY = height / 2;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Configuration
+        let config = {
+            environment: 'laboratory',
+            coilCount: 12,
+            coilRadius: 300,
+            pulseFreq: 10,
+            phaseOffset: 0,
+            fieldStrength: 100,
+            particleCount: 500,
+            temperature: 5000,
+            confinement: 1.0,
+            showFieldLines: true,
+            showCoils: true,
+            showParticles: true
+        };
+
+        // Coils
+        class Electromagnet {
+            constructor(angle, index, total) {
+                this.angle = angle;
+                this.index = index;
+                this.total = total;
+                this.isOn = false;
+                this.strength = 0;
+            }
+
+            update(time) {
+                const freq = config.pulseFreq;
+                const phaseShift = (config.phaseOffset / 360) * Math.PI * 2;
+                const phase = (this.angle + phaseShift) + time * freq * 0.1;
+
+                // Alternating on/off with phase
+                const cycle = Math.sin(phase);
+                this.isOn = cycle > 0;
+                this.strength = this.isOn ? (config.fieldStrength / 100) : 0;
+            }
+
+            getPosition() {
+                return {
+                    x: centerX + Math.cos(this.angle) * config.coilRadius,
+                    y: centerY + Math.sin(this.angle) * config.coilRadius
+                };
+            }
+
+            draw() {
+                if (!config.showCoils) return;
+
+                const pos = this.getPosition();
+                const size = 25;
+
+                // Coil body
+                ctx.fillStyle = this.isOn ? 'rgba(0, 255, 136, 0.3)' : 'rgba(42, 58, 74, 0.3)';
+                ctx.strokeStyle = this.isOn ? '#00ff88' : '#2a3a4a';
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Glow when active
+                if (this.isOn) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#00ff88';
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, size + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Coil number
+                ctx.fillStyle = this.isOn ? '#ffffff' : '#6a7a8a';
+                ctx.font = 'bold 12px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.index + 1, pos.x, pos.y);
+            }
+        }
+
+        // Plasma Particles
+        class PlasmaParticle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 50;
+                this.x = centerX + Math.cos(angle) * radius;
+                this.y = centerY + Math.sin(angle) * radius;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.life = 1.0;
+                this.hue = 30 + Math.random() * 30; // Orange to yellow
+            }
+
+            update(coils) {
+                // Calculate magnetic forces
+                let fx = 0, fy = 0;
+
+                coils.forEach(coil => {
+                    if (!coil.isOn) return;
+
+                    const pos = coil.getPosition();
+                    const dx = this.x - pos.x;
+                    const dy = this.y - pos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 1) return;
+
+                    // Repulsive force when coil is on
+                    const force = (coil.strength * 50) / (dist * dist);
+                    fx += (dx / dist) * force;
+                    fy += (dy / dist) * force;
+                });
+
+                // Confinement force toward center
+                const dx = centerX - this.x;
+                const dy = centerY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const confineForce = config.confinement * 0.01;
+
+                fx += dx * confineForce;
+                fy += dy * confineForce;
+
+                // Apply forces
+                this.vx += fx * 0.01;
+                this.vy += fy * 0.01;
+
+                // Damping
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Thermal motion
+                const thermal = config.temperature / 10000;
+                this.x += (Math.random() - 0.5) * thermal;
+                this.y += (Math.random() - 0.5) * thermal;
+
+                // Check if escaped
+                const centerDist = Math.sqrt(dx * dx + dy * dy);
+                if (centerDist > 200) {
+                    this.life -= 0.02;
+                }
+
+                if (this.life <= 0) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                if (!config.showParticles) return;
+
+                const alpha = this.life * 0.8;
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 4);
+                gradient.addColorStop(0, `hsla(${this.hue}, 100%, 70%, ${alpha})`);
+                gradient.addColorStop(0.5, `hsla(${this.hue}, 100%, 50%, ${alpha * 0.5})`);
+                gradient.addColorStop(1, `hsla(${this.hue}, 100%, 30%, 0)`);
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Simulation state
+        let coils = [];
+        let particles = [];
+        let time = 0;
+
+        function initCoils() {
+            coils = [];
+            const count = config.coilCount;
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+                coils.push(new Electromagnet(angle, i, count));
+            }
+            updateCoilStatusDisplay();
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < config.particleCount; i++) {
+                particles.push(new PlasmaParticle());
+            }
+        }
+
+        function drawBackground() {
+            const env = config.environment;
+
+            if (env === 'laboratory') {
+                // Lab floor and walls
+                const gradient = ctx.createLinearGradient(0, 0, 0, height);
+                gradient.addColorStop(0, '#1a2332');
+                gradient.addColorStop(1, '#0f1419');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+
+                // Floor tiles
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x < width; x += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < height; y += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+            } else if (env === 'spaceship') {
+                // Spaceship interior
+                const gradient = ctx.createLinearGradient(0, 0, 0, height);
+                gradient.addColorStop(0, '#0a0e14');
+                gradient.addColorStop(1, '#1a1e24');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+
+                // Panels
+                ctx.strokeStyle = 'rgba(107, 155, 209, 0.1)';
+                ctx.lineWidth = 2;
+                for (let x = 0; x < width; x += 100) {
+                    ctx.strokeRect(x + 10, 10, 80, height - 20);
+                }
+
+                // Status lights
+                for (let i = 0; i < 10; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * 100;
+                    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0, 255, 136, 0.3)' : 'rgba(255, 107, 53, 0.3)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (env === 'asphalt') {
+                // Outdoor asphalt
+                ctx.fillStyle = '#2a2e34';
+                ctx.fillRect(0, 0, width, height);
+
+                // Asphalt texture
+                for (let i = 0; i < 200; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    ctx.fillStyle = `rgba(${40 + Math.random() * 20}, ${40 + Math.random() * 20}, ${40 + Math.random() * 20}, 0.3)`;
+                    ctx.fillRect(x, y, 2, 2);
+                }
+
+                // Road markings
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(width / 2 - 5, 0, 10, height);
+            } else if (env === 'stars') {
+                // Deep space
+                ctx.fillStyle = '#000510';
+                ctx.fillRect(0, 0, width, height);
+
+                // Stars
+                ctx.fillStyle = 'white';
+                for (let i = 0; i < 150; i++) {
+                    const x = (Math.random() * width + time * 0.1) % width;
+                    const y = Math.random() * height;
+                    const size = Math.random() * 2;
+                    ctx.globalAlpha = Math.random() * 0.8 + 0.2;
+                    ctx.fillRect(x, y, size, size);
+                }
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function drawFieldLines() {
+            if (!config.showFieldLines) return;
+
+            ctx.strokeStyle = 'rgba(107, 155, 209, 0.1)';
+            ctx.lineWidth = 1;
+
+            // Draw radial field lines from each active coil
+            coils.forEach(coil => {
+                if (!coil.isOn) return;
+
+                const pos = coil.getPosition();
+                const lines = 12;
+
+                for (let i = 0; i < lines; i++) {
+                    const angle = (i / lines) * Math.PI * 2;
+                    const length = 80 * coil.strength;
+
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y);
+                    ctx.lineTo(
+                        pos.x + Math.cos(angle) * length,
+                        pos.y + Math.sin(angle) * length
+                    );
+                    ctx.stroke();
+                }
+            });
+
+            // Draw confinement circle
+            ctx.strokeStyle = 'rgba(107, 155, 209, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 100, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function updateStats() {
+            // Calculate net field at center
+            let netField = 0;
+            coils.forEach(coil => {
+                if (coil.isOn) {
+                    const pos = coil.getPosition();
+                    const dx = centerX - pos.x;
+                    const dy = centerY - pos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    netField += coil.strength / (dist / 100);
+                }
+            });
+
+            document.getElementById('netField').textContent = (netField * 10).toFixed(2);
+            document.getElementById('plasmaTemp').textContent = config.temperature;
+
+            // Calculate confinement quality
+            let confined = 0;
+            particles.forEach(p => {
+                const dx = p.x - centerX;
+                const dy = p.y - centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 100) confined++;
+            });
+            const quality = confined / particles.length;
+            document.getElementById('confinementQuality').textContent = quality.toFixed(2);
+            document.getElementById('activeParticles').textContent = particles.length;
+        }
+
+        function updateCoilStatusDisplay() {
+            const container = document.getElementById('coilStatus');
+            container.innerHTML = '';
+
+            coils.forEach((coil, i) => {
+                const indicator = document.createElement('div');
+                indicator.className = `coil-indicator ${coil.isOn ? 'on' : 'off'}`;
+                indicator.textContent = i + 1;
+                indicator.id = `coil-indicator-${i}`;
+                container.appendChild(indicator);
+            });
+        }
+
+        function animate() {
+            time += 0.1;
+
+            drawBackground();
+            drawFieldLines();
+
+            // Update coils
+            coils.forEach(coil => coil.update(time));
+
+            // Update and draw particles
+            particles.forEach(p => {
+                p.update(coils);
+                p.draw();
+            });
+
+            // Draw coils on top
+            coils.forEach(coil => coil.draw());
+
+            // Update coil status indicators
+            coils.forEach((coil, i) => {
+                const indicator = document.getElementById(`coil-indicator-${i}`);
+                if (indicator) {
+                    indicator.className = `coil-indicator ${coil.isOn ? 'on' : 'off'}`;
+                }
+            });
+
+            // Update stats every 30 frames
+            if (Math.floor(time) % 3 === 0) {
+                updateStats();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Event Listeners
+        document.getElementById('environment').addEventListener('change', (e) => {
+            config.environment = e.target.value;
+        });
+
+        document.getElementById('coilCount').addEventListener('input', (e) => {
+            config.coilCount = parseInt(e.target.value);
+            document.getElementById('coilCountDisplay').textContent = config.coilCount;
+            initCoils();
+        });
+
+        document.getElementById('coilRadius').addEventListener('input', (e) => {
+            config.coilRadius = parseInt(e.target.value);
+            document.getElementById('coilRadiusDisplay').textContent = config.coilRadius;
+        });
+
+        document.getElementById('pulseFreq').addEventListener('input', (e) => {
+            config.pulseFreq = parseInt(e.target.value);
+            document.getElementById('pulseFreqDisplay').textContent = config.pulseFreq;
+        });
+
+        document.getElementById('phaseOffset').addEventListener('input', (e) => {
+            config.phaseOffset = parseInt(e.target.value);
+            document.getElementById('phaseOffsetDisplay').textContent = config.phaseOffset;
+        });
+
+        document.getElementById('fieldStrength').addEventListener('input', (e) => {
+            config.fieldStrength = parseInt(e.target.value);
+            document.getElementById('fieldStrengthDisplay').textContent = config.fieldStrength;
+        });
+
+        document.getElementById('particleCount').addEventListener('input', (e) => {
+            config.particleCount = parseInt(e.target.value);
+            document.getElementById('particleCountDisplay').textContent = config.particleCount;
+            initParticles();
+        });
+
+        document.getElementById('temperature').addEventListener('input', (e) => {
+            config.temperature = parseInt(e.target.value);
+            document.getElementById('temperatureDisplay').textContent = config.temperature;
+        });
+
+        document.getElementById('confinement').addEventListener('input', (e) => {
+            config.confinement = parseFloat(e.target.value);
+            document.getElementById('confinementDisplay').textContent = config.confinement.toFixed(1);
+        });
+
+        document.getElementById('showFieldLines').addEventListener('change', (e) => {
+            config.showFieldLines = e.target.checked;
+        });
+
+        document.getElementById('showCoils').addEventListener('change', (e) => {
+            config.showCoils = e.target.checked;
+        });
+
+        document.getElementById('showParticles').addEventListener('change', (e) => {
+            config.showParticles = e.target.checked;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            config = {
+                environment: 'laboratory',
+                coilCount: 12,
+                coilRadius: 300,
+                pulseFreq: 10,
+                phaseOffset: 0,
+                fieldStrength: 100,
+                particleCount: 500,
+                temperature: 5000,
+                confinement: 1.0,
+                showFieldLines: true,
+                showCoils: true,
+                showParticles: true
+            };
+
+            // Reset all UI elements
+            document.getElementById('environment').value = 'laboratory';
+            document.getElementById('coilCount').value = 12;
+            document.getElementById('coilCountDisplay').textContent = 12;
+            document.getElementById('coilRadius').value = 300;
+            document.getElementById('coilRadiusDisplay').textContent = 300;
+            document.getElementById('pulseFreq').value = 10;
+            document.getElementById('pulseFreqDisplay').textContent = 10;
+            document.getElementById('phaseOffset').value = 0;
+            document.getElementById('phaseOffsetDisplay').textContent = 0;
+            document.getElementById('fieldStrength').value = 100;
+            document.getElementById('fieldStrengthDisplay').textContent = 100;
+            document.getElementById('particleCount').value = 500;
+            document.getElementById('particleCountDisplay').textContent = 500;
+            document.getElementById('temperature').value = 5000;
+            document.getElementById('temperatureDisplay').textContent = 5000;
+            document.getElementById('confinement').value = 1.0;
+            document.getElementById('confinementDisplay').textContent = '1.0';
+            document.getElementById('showFieldLines').checked = true;
+            document.getElementById('showCoils').checked = true;
+            document.getElementById('showParticles').checked = true;
+
+            initCoils();
+            initParticles();
+        });
+
+        // Initialize
+        initCoils();
+        initParticles();
+        animate();
+    </script>
+</body>
+</html>
