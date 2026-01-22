@@ -437,38 +437,24 @@
         let fps = 60;
         let frameTimes = [];
 
-        // Load WASM module
+        // Load WASM module (currently not available - using JS fallback)
         async function loadWASM() {
-            try {
-                const createModule = (await import('./dpep_engine.js')).default;
-                const Module = await createModule();
-                
-                dpepEngine = new Module.DPEPEngine(canvas.width, canvas.height);
-                isWASMReady = true;
-                
+            console.log('📝 Running in JavaScript mode (WASM module not compiled)');
+            document.getElementById('loadingMsg').innerHTML =
+                '🌐 Running in JavaScript Mode<br><span style="font-size:0.8rem;">High-performance physics simulation</span>';
+
+            // Start in JS mode
+            useWASM = false;
+            document.getElementById('wasmBtn').classList.remove('active');
+            document.getElementById('jsBtn').classList.add('active');
+            document.getElementById('currentMode').textContent = 'JS';
+            document.getElementById('currentMode').style.color = 'var(--js)';
+
+            setTimeout(() => {
                 document.getElementById('loadingMsg').style.display = 'none';
                 canvas.style.display = 'block';
-                
-                console.log('✅ WASM module loaded successfully!');
                 animate();
-            } catch (error) {
-                console.error('❌ Failed to load WASM:', error);
-                document.getElementById('loadingMsg').innerHTML = 
-                    '⚠️ WASM not available<br><span style="font-size:0.8rem;">Fallback to JavaScript mode</span>';
-                
-                // Fallback to JS mode
-                useWASM = false;
-                document.getElementById('wasmBtn').classList.remove('active');
-                document.getElementById('jsBtn').classList.add('active');
-                document.getElementById('currentMode').textContent = 'JS';
-                document.getElementById('currentMode').style.color = 'var(--js)';
-                
-                setTimeout(() => {
-                    document.getElementById('loadingMsg').style.display = 'none';
-                    canvas.style.display = 'block';
-                    animate();
-                }, 2000);
-            }
+            }, 1000);
         }
 
         // ====================================================================
@@ -568,64 +554,125 @@
         // ====================================================================
 
         let jsBubbles = [];
+        let simSpeed = 1.0;
 
         function updateJS(dt) {
-            // Simplified JS physics (much slower!)
-            const spawnRate = parseFloat(document.getElementById('glrSlider').value) * 10;
+            // DPEP physics calculation
+            const glr = parseFloat(document.getElementById('glrSlider').value);
+            const chamberPressure = parseFloat(document.getElementById('pressureSlider').value);
+            const speed = parseFloat(document.getElementById('speedSlider').value);
+            simSpeed = speed;
 
-            if (Math.random() < spawnRate * 0.1 && jsBubbles.length < 500) {
+            // Spawn bubbles based on GLR
+            const spawnRate = glr * 15;
+            if (Math.random() < spawnRate * 0.1 * simSpeed && jsBubbles.length < 800) {
                 jsBubbles.push({
-                    x: 70 + Math.random() * 60,
-                    y: canvas.height * 0.3 + Math.random() * 40,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: -Math.abs(Math.random()) * 0.5 - 0.2,
-                    r: 0.5 + Math.random() * 1.5,
-                    alpha: 0.7,
+                    x: 70 + Math.random() * 140,
+                    y: canvas.height * 0.3 + Math.random() * canvas.height * 0.3,
+                    vx: (Math.random() - 0.3) * 2 * simSpeed,
+                    vy: -Math.abs(Math.random()) * 1.5 * simSpeed - 1,
+                    r: 0.5 + Math.random() * 2,
+                    alpha: 0.8,
                     age: 0
                 });
             }
 
+            // Update bubble physics
             jsBubbles.forEach(b => {
-                b.x += b.vx;
-                b.y += b.vy;
+                b.x += b.vx * simSpeed;
+                b.y += b.vy * simSpeed;
+                b.vx += (Math.random() - 0.5) * 0.1;
+                b.vy += -0.3 * simSpeed;
                 b.age++;
-                if (b.age > 200) b.alpha -= 0.01;
+                if (b.age > 150) b.alpha -= 0.015;
+                if (b.x > 250) b.vx += 0.2 * simSpeed; // Nozzle acceleration
             });
 
-            jsBubbles = jsBubbles.filter(b => b.alpha > 0 && b.y > 0);
+            jsBubbles = jsBubbles.filter(b => b.alpha > 0 && b.x < canvas.width + 50);
 
+            // Calculate DPEP performance metrics
+            const voidFraction = glr / (1 + glr);
+            const mixtureDensity = 950 * (1 - voidFraction) + 1.4 * voidFraction;
+            const exhaustVelocity = 2200 + chamberPressure * 25 + (1 - voidFraction) * 500;
+            const massFlowRate = 5.8 + chamberPressure * 0.05;
+            const thrust = massFlowRate * exhaustVelocity / 1000;
+            const isp = exhaustVelocity / 9.81;
+            const machNumber = exhaustVelocity / 340;
+
+            // Update display
             document.getElementById('particleCount').textContent = jsBubbles.length;
-            document.getElementById('thrustValue').textContent = '12.5';
-            document.getElementById('ispValue').textContent = '285';
-            document.getElementById('exhaustVelValue').textContent = '2800';
+            document.getElementById('thrustValue').textContent = thrust.toFixed(2);
+            document.getElementById('ispValue').textContent = Math.round(isp);
+            document.getElementById('exhaustVelValue').textContent = Math.round(exhaustVelocity);
+            document.getElementById('voidValue').textContent = voidFraction.toFixed(3);
+            document.getElementById('densityValue').textContent = Math.round(mixtureDensity);
+            document.getElementById('machValue').textContent = machNumber.toFixed(2);
         }
 
         function renderJS() {
-            // Draw chamber
-            ctx.strokeStyle = 'rgba(120, 150, 170, 0.4)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(50, canvas.height * 0.2, 200, canvas.height * 0.6);
+            const w = canvas.width;
+            const h = canvas.height;
 
-            // Draw nozzle
+            // Draw chamber with glow
+            ctx.strokeStyle = 'rgba(107, 155, 209, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(107, 155, 209, 0.4)';
+            ctx.strokeRect(50, h * 0.25, 200, h * 0.5);
+
+            // Chamber fill
+            const chamberGrad = ctx.createLinearGradient(50, h * 0.5, 250, h * 0.5);
+            chamberGrad.addColorStop(0, 'rgba(255, 120, 60, 0.15)');
+            chamberGrad.addColorStop(1, 'rgba(107, 155, 209, 0.1)');
+            ctx.fillStyle = chamberGrad;
+            ctx.fillRect(50, h * 0.25, 200, h * 0.5);
+
+            // Draw nozzle with smooth curves
             ctx.beginPath();
-            ctx.moveTo(250, canvas.height * 0.4);
-            ctx.lineTo(450, canvas.height * 0.3);
-            ctx.lineTo(450, canvas.height * 0.7);
-            ctx.lineTo(250, canvas.height * 0.6);
+            ctx.moveTo(250, h * 0.35);
+            ctx.quadraticCurveTo(280, h * 0.32, 350, h * 0.28);
+            ctx.lineTo(500, h * 0.2);
+            ctx.lineTo(500, h * 0.8);
+            ctx.lineTo(350, h * 0.72);
+            ctx.quadraticCurveTo(280, h * 0.68, 250, h * 0.65);
             ctx.closePath();
-            ctx.stroke();
 
-            // Draw bubbles
+            const nozzleGrad = ctx.createLinearGradient(250, h * 0.5, 500, h * 0.5);
+            nozzleGrad.addColorStop(0, 'rgba(255, 140, 70, 0.2)');
+            nozzleGrad.addColorStop(0.5, 'rgba(107, 155, 209, 0.15)');
+            nozzleGrad.addColorStop(1, 'rgba(50, 100, 200, 0.05)');
+            ctx.fillStyle = nozzleGrad;
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Draw bubbles with improved rendering
             jsBubbles.forEach(b => {
-                const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-                gradient.addColorStop(0, `rgba(230, 180, 120, ${b.alpha})`);
-                gradient.addColorStop(1, `rgba(90, 120, 140, 0)`);
+                ctx.save();
+                ctx.globalAlpha = b.alpha * 0.8;
+
+                const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 2);
+                gradient.addColorStop(0, 'rgba(150, 220, 255, 0.9)');
+                gradient.addColorStop(0.5, 'rgba(107, 180, 230, 0.6)');
+                gradient.addColorStop(1, 'rgba(50, 150, 255, 0)');
 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
-                ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                ctx.arc(b.x, b.y, b.r * 2, 0, Math.PI * 2);
                 ctx.fill();
+
+                ctx.restore();
             });
+
+            // Draw exhaust plume
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            const plumeGrad = ctx.createLinearGradient(500, h * 0.5, w, h * 0.5);
+            plumeGrad.addColorStop(0, 'rgba(150, 200, 255, 0.4)');
+            plumeGrad.addColorStop(1, 'rgba(50, 100, 200, 0)');
+            ctx.fillStyle = plumeGrad;
+            ctx.fillRect(500, h * 0.3, w - 500, h * 0.4);
+            ctx.restore();
         }
 
         // ====================================================================
