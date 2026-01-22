@@ -252,6 +252,11 @@ private:
 
     std::mt19937 rng;
 
+    // Environmental controls
+    float currentDampening;  // 0.0-1.0, reduces velocity
+    std::vector<Vec2> barrierZones;  // Barrier positions
+    std::vector<float> barrierRadii;  // Barrier radii
+
     void buildTree() {
         root = std::make_unique<QuadNode>(Vec2(0, 0), worldSize);
 
@@ -369,6 +374,7 @@ public:
         , kineticEnergy(0)
         , potentialEnergy(0)
         , rng(12345)
+        , currentDampening(0.0f)
     {}
 
     // ========================================================================
@@ -538,6 +544,146 @@ public:
     }
 
     // ========================================================================
+    // TIME TRAVEL / ENVIRONMENTAL CONTROLS
+    // ========================================================================
+
+    // Add more trash pollution (simulates increased pollution over time)
+    void addTrashPollution(int amount) {
+        std::uniform_real_distribution<float> dist(0, 1);
+        std::uniform_real_distribution<float> posDist(-worldSize * 0.6f, worldSize * 0.6f);
+        std::uniform_real_distribution<float> velDist(-8.0f, 8.0f);
+
+        for (int i = 0; i < amount; ++i) {
+            Vec2 pos(posDist(rng), posDist(rng));
+            Vec2 vel(velDist(rng), velDist(rng));
+
+            // Random trash type
+            float trashType = dist(rng);
+            float mass, radius;
+
+            if (trashType < 0.4f) {
+                mass = 0.1f + dist(rng) * 0.2f;
+                radius = 1.5f + dist(rng) * 0.5f;
+            } else if (trashType < 0.7f) {
+                mass = 0.05f + dist(rng) * 0.1f;
+                radius = 0.8f + dist(rng) * 0.3f;
+            } else if (trashType < 0.9f) {
+                mass = 0.02f + dist(rng) * 0.05f;
+                radius = 0.3f + dist(rng) * 0.2f;
+            } else {
+                mass = 0.3f + dist(rng) * 0.4f;
+                radius = 2.0f + dist(rng) * 1.0f;
+            }
+
+            particles.emplace_back(pos, vel, mass);
+            particles.back().radius = radius;
+        }
+    }
+
+    // Remove trash (simulates cleanup efforts)
+    void removeTrashPollution(int amount) {
+        int removed = 0;
+        for (size_t i = particles.size(); i > 0 && removed < amount; --i) {
+            if (particles[i - 1].active && particles[i - 1].mass < 0.5f) {
+                particles[i - 1].active = false;
+                removed++;
+            }
+        }
+    }
+
+    // Simulate glacial melt: adds cold freshwater that disrupts currents
+    void addGlacialMelt(int intensity) {
+        std::uniform_real_distribution<float> dist(0, 1);
+
+        // Glacial melt comes from polar regions (top and bottom of world)
+        int icebergsPerPole = intensity / 2;
+
+        for (int pole = 0; pole < 2; ++pole) {
+            float polarY = (pole == 0) ? -worldSize * 0.7f : worldSize * 0.7f;
+
+            for (int i = 0; i < icebergsPerPole; ++i) {
+                // Ice spreads along polar region
+                float x = (dist(rng) - 0.5f) * worldSize * 1.2f;
+                float y = polarY + (dist(rng) - 0.5f) * worldSize * 0.2f;
+                Vec2 pos(x, y);
+
+                // Ice moves slowly, disrupts normal currents
+                float driftSpeed = 5.0f + dist(rng) * 5.0f;
+                float driftAngle = dist(rng) * 2 * 3.14159f;
+                Vec2 vel(
+                    cosf(driftAngle) * driftSpeed,
+                    sinf(driftAngle) * driftSpeed
+                );
+
+                // Ice/freshwater has different density
+                float iceType = dist(rng);
+                float mass, radius;
+
+                if (iceType < 0.5f) {
+                    // Large icebergs
+                    mass = 2.0f + dist(rng) * 3.0f;
+                    radius = 3.0f + dist(rng) * 2.0f;
+                } else {
+                    // Melted freshwater masses
+                    mass = 0.5f + dist(rng) * 1.0f;
+                    radius = 2.0f + dist(rng) * 1.0f;
+                }
+
+                particles.emplace_back(pos, vel, mass);
+                particles.back().radius = radius;
+            }
+        }
+    }
+
+    // Set global current dampening (0.0 = normal, 1.0 = completely stopped)
+    void setCurrentDampening(float dampening) {
+        currentDampening = fmaxf(0.0f, fminf(1.0f, dampening));
+    }
+
+    // Add a barrier zone that blocks ocean currents
+    void addBarrierZone(float x, float y, float radius) {
+        barrierZones.push_back(Vec2(x, y));
+        barrierRadii.push_back(radius);
+    }
+
+    // Clear all barrier zones
+    void clearBarriers() {
+        barrierZones.clear();
+        barrierRadii.clear();
+    }
+
+    // Apply environmental effects (dampening and barriers)
+    void applyEnvironmentalEffects() {
+        if (currentDampening <= 0.0f && barrierZones.empty()) return;
+
+        for (auto& p : particles) {
+            if (!p.active) continue;
+
+            // Global current dampening
+            if (currentDampening > 0.0f) {
+                p.vel *= (1.0f - currentDampening * 0.01f);
+            }
+
+            // Check barriers
+            for (size_t i = 0; i < barrierZones.size(); ++i) {
+                Vec2 diff = p.pos - barrierZones[i];
+                float dist = diff.length();
+
+                if (dist < barrierRadii[i]) {
+                    // Inside barrier zone - heavily dampen velocity
+                    p.vel *= 0.95f;
+
+                    // Push particle away from barrier center
+                    if (dist > 0.1f) {
+                        Vec2 repulsion = diff.normalized() * 0.5f;
+                        p.vel += repulsion;
+                    }
+                }
+            }
+        }
+    }
+
+    // ========================================================================
     // UPDATE
     // ========================================================================
 
@@ -547,6 +693,7 @@ public:
             calculateForces();
             integrateLeapfrog();
             handleCollisions();
+            applyEnvironmentalEffects();
 
             time += dt;
             iteration++;
@@ -600,6 +747,12 @@ EMSCRIPTEN_BINDINGS(nbody_module) {
         .function("createSolarSystem", &NBodyEngine::createSolarSystem)
         .function("createRandomCluster", &NBodyEngine::createRandomCluster)
         .function("createOceanTrash", &NBodyEngine::createOceanTrash)
+        .function("addTrashPollution", &NBodyEngine::addTrashPollution)
+        .function("removeTrashPollution", &NBodyEngine::removeTrashPollution)
+        .function("addGlacialMelt", &NBodyEngine::addGlacialMelt)
+        .function("setCurrentDampening", &NBodyEngine::setCurrentDampening)
+        .function("addBarrierZone", &NBodyEngine::addBarrierZone)
+        .function("clearBarriers", &NBodyEngine::clearBarriers)
         .function("update", &NBodyEngine::update)
         .function("getParticleData", &NBodyEngine::getParticleData)
         .function("getParticleCount", &NBodyEngine::getParticleCount)
