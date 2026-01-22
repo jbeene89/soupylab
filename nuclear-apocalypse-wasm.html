@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear War - Apocalypse Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0000 0%, #2a0000 50%, #1a0a00 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(139, 0, 0, 0.3), rgba(255, 0, 0, 0.3));
+            padding: 20px;
+            border-bottom: 2px solid rgba(255, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #8B0000 0%, #FF0000 50%, #FF8C00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #8B0000, #FF0000);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(139, 0, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.7);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1900px;
+            margin: 0 auto;
+        }
+
+        .container.fullscreen-mode {
+            grid-template-columns: 1fr;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .container.fullscreen-mode .panel:not(.canvas-panel) {
+            display: none;
+        }
+
+        .panel {
+            background: rgba(20, 5, 5, 0.8);
+            border: 1px solid rgba(139, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(139, 0, 0, 0.3);
+        }
+
+        .panel h2 {
+            color: #FF0000;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(139, 0, 0, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(139, 0, 0, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #8B0000, #FF0000);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .scenario-btn {
+            padding: 10px;
+            font-size: 0.95em;
+            margin: 8px 0;
+        }
+
+        .scenario-btn.armageddon {
+            background: linear-gradient(135deg, #FF0000, #FF8C00);
+            font-size: 1.1em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5); }
+            50% { box-shadow: 0 8px 30px rgba(255, 0, 0, 1); }
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(139, 0, 0, 0.05);
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.75em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #FF0000;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .stat-value.critical {
+            color: #FF0000;
+            animation: blink 1s infinite;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.8em;
+            margin-left: 3px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .warning-banner {
+            background: rgba(255, 0, 0, 0.2);
+            border: 2px solid rgba(255, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .warning-banner.active {
+            display: block;
+            animation: blink 2s infinite;
+        }
+
+        .warning-text {
+            color: #FF0000;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .camera-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(139, 0, 0, 0.8);
+            border: 1px solid rgba(255, 0, 0, 0.6);
+            border-radius: 5px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-btn:hover {
+            background: rgba(255, 0, 0, 1);
+            transform: scale(1.1);
+        }
+
+        .zoom-label {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: #FF0000;
+            font-size: 0.9em;
+            font-family: 'Orbitron', monospace;
+            border: 1px solid rgba(139, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #FF0000;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 0.85em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>☢️ NUCLEAR WAR APOCALYPSE</h1>
+        <p class="subtitle">Global Thermonuclear War • Nuclear Winter • Extinction Scenarios • C++ WebAssembly</p>
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Left Panel: Scenarios -->
+        <div class="panel">
+            <h2>War Scenarios</h2>
+
+            <div class="info-box">
+                Educational simulation of nuclear warfare consequences. No scenario is winnable.
+            </div>
+
+            <button class="scenario-btn" id="limitedBtn">Limited Strike (10 warheads)</button>
+            <button class="scenario-btn" id="regionalBtn">Regional War (100 warheads)</button>
+            <button class="scenario-btn" id="fullScaleBtn">Full-Scale War (1000 warheads)</button>
+            <button class="scenario-btn armageddon" id="armageddonBtn">⚠️ ARMAGEDDON (5000+ warheads)</button>
+
+            <button id="resetBtn" style="margin-top: 20px;">🔄 Reset Simulation</button>
+
+            <div class="warning-banner" id="winterWarning">
+                <div class="warning-text">❄️ NUCLEAR WINTER INITIATED</div>
+                <div style="font-size: 0.8em; color: #888; margin-top: 10px;">
+                    Global climate catastrophe underway
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Status</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">WARHEADS ARMED</div>
+                    <div class="stat-value">
+                        <span id="warheadCount">0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DETONATED</div>
+                    <div class="stat-value critical">
+                        <span id="detonatedCount">0</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">TOTAL YIELD</div>
+                    <div class="stat-value">
+                        <span id="yieldStat">0</span>
+                        <span class="stat-unit">MT</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px; border-left-color: #888;">
+                <strong>Reality Check:</strong> A single modern thermonuclear warhead has more destructive power than all explosives used in World War II combined.
+            </div>
+        </div>
+
+        <!-- Center: World Map Canvas -->
+        <div class="panel canvas-panel" style="padding: 0;">
+            <div class="canvas-container">
+                <canvas id="warCanvas" width="1200" height="700"></canvas>
+
+                <div class="camera-controls">
+                    <button class="camera-btn" id="zoomInBtn" title="Zoom In">+</button>
+                    <button class="camera-btn" id="zoomOutBtn" title="Zoom Out">−</button>
+                </div>
+
+                <div class="zoom-label" id="zoomLabel">Zoom: 1.0x</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Casualties & Effects -->
+        <div class="panel">
+            <h2>Immediate Casualties</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">BLAST/THERMAL/RADIATION</div>
+                    <div class="stat-value critical">
+                        <span id="immediateCasualties">0</span>
+                        <span class="stat-unit">million</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">RADIATION SICKNESS</div>
+                    <div class="stat-value">
+                        <span id="radiationCasualties">0</span>
+                        <span class="stat-unit">million</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">STARVATION (NUCLEAR WINTER)</div>
+                    <div class="stat-value critical">
+                        <span id="starvationCasualties">0.0</span>
+                        <span class="stat-unit">billion</span>
+                    </div>
+                </div>
+
+                <div class="stat-box" style="background: rgba(255, 0, 0, 0.1); border-color: rgba(255, 0, 0, 0.5);">
+                    <div class="stat-label">TOTAL DEATH TOLL</div>
+                    <div class="stat-value critical" style="font-size: 2em;">
+                        <span id="totalCasualties">0.0</span>
+                        <span class="stat-unit">billion</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Nuclear Winter Effects</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">TEMPERATURE DROP</div>
+                    <div class="stat-value">
+                        <span id="tempDropStat">0.0</span>
+                        <span class="stat-unit">°C</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">YEARS OF DARKNESS</div>
+                    <div class="stat-value">
+                        <span id="darknessStat">0</span>
+                        <span class="stat-unit">years</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">OZONE DEPLETION</div>
+                    <div class="stat-value">
+                        <span id="ozoneStat">0</span>
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">AGRICULTURE COLLAPSE</div>
+                    <div class="stat-value critical">
+                        <span id="agricultureStat">0</span>
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">SMOKE IN STRATOSPHERE</div>
+                    <div class="stat-value">
+                        <span id="smokeStat">0</span>
+                        <span class="stat-unit">MT</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px; border-left-color: #FF0000;">
+                <strong>Nuclear Winter:</strong> Massive fires inject soot into the stratosphere, blocking sunlight for years. Temperatures plummet, crops fail globally. Even "winners" starve.
+            </div>
+
+            <div class="info-box" style="border-left-color: #888;">
+                <strong>Note:</strong> These are simplified models. Real consequences would be worse due to infrastructure collapse, disease, and societal breakdown.
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createNuclearModule from './nuclear_war_engine.js';
+
+        let Module, war;
+        let canvas, ctx;
+        let isRunning = false;
+        let cameraZoom = 1.0;
+
+        // Camera for pan
+        let cameraX = 0;
+        let cameraY = 0;
+        let isPanning = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let panStartX = 0;
+        let panStartY = 0;
+
+        async function init() {
+            try {
+                Module = await createNuclearModule();
+                war = new Module.NuclearWar();
+
+                canvas = document.getElementById('warCanvas');
+                ctx = canvas.getContext('2d');
+
+                setupControls();
+                setupCameraControls();
+                animate();
+                isRunning = true;
+
+                console.log('☢️ Nuclear war simulator initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                canvas = document.getElementById('warCanvas');
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile nuclear_war_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupControls() {
+            document.getElementById('limitedBtn').addEventListener('click', () => {
+                war.setLimitedStrike();
+            });
+
+            document.getElementById('regionalBtn').addEventListener('click', () => {
+                war.setRegionalWar();
+            });
+
+            document.getElementById('fullScaleBtn').addEventListener('click', () => {
+                war.setFullScaleWar();
+            });
+
+            document.getElementById('armageddonBtn').addEventListener('click', () => {
+                war.setArmageddon();
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                war.reset();
+            });
+        }
+
+        function setupCameraControls() {
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                cameraZoom *= 1.2;
+                cameraZoom = Math.min(cameraZoom, 5.0);
+                updateZoomLabel();
+            });
+
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                cameraZoom *= 0.8;
+                cameraZoom = Math.max(cameraZoom, 0.5);
+                updateZoomLabel();
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                cameraZoom *= zoomFactor;
+                cameraZoom = Math.max(0.5, Math.min(cameraZoom, 5.0));
+                updateZoomLabel();
+            });
+
+            // Mouse pan
+            canvas.addEventListener('mousedown', (e) => {
+                isPanning = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                panStartX = cameraX;
+                panStartY = cameraY;
+                canvas.style.cursor = 'grabbing';
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isPanning) {
+                    const dx = (e.clientX - lastMouseX) / cameraZoom;
+                    const dy = (e.clientY - lastMouseY) / cameraZoom;
+                    cameraX = panStartX - dx;
+                    cameraY = panStartY - dy;
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isPanning = false;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isPanning = false;
+                canvas.style.cursor = 'default';
+            });
+
+            canvas.style.cursor = 'grab';
+        }
+
+        function updateZoomLabel() {
+            document.getElementById('zoomLabel').textContent = `Zoom: ${cameraZoom.toFixed(1)}x`;
+        }
+
+        window.toggleFullscreen = () => {
+            const container = document.getElementById('mainContainer');
+            if (!document.fullscreenElement) {
+                container.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen();
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.exitFullscreen();
+            }
+        };
+
+        function animate() {
+            if (!isRunning) return;
+
+            war.update(0.1);
+            updateStats();
+            drawScene();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateStats() {
+            const warheadCount = war.getWarheadCount();
+            const detonated = war.getDetonatedCount();
+            const totalYield = war.getTotalYield();
+
+            document.getElementById('warheadCount').textContent = warheadCount;
+            document.getElementById('detonatedCount').textContent = detonated;
+            document.getElementById('yieldStat').textContent = (totalYield / 1000).toFixed(0);
+
+            if (detonated > 0) {
+                const immediate = war.getImmediateCasualties();
+                const radiation = war.getRadiationCasualties();
+                const starvation = war.getStarvationCasualties();
+                const total = war.getTotalCasualties();
+
+                document.getElementById('immediateCasualties').textContent = immediate.toFixed(0);
+                document.getElementById('radiationCasualties').textContent = radiation.toFixed(0);
+                document.getElementById('starvationCasualties').textContent = starvation.toFixed(1);
+                document.getElementById('totalCasualties').textContent = total.toFixed(1);
+
+                const tempDrop = war.getTemperatureDrop();
+                const darkness = war.getYearsOfDarkness();
+                const ozone = war.getOzoneLoss();
+                const agriculture = war.getAgricultureCollapse();
+                const smoke = war.getSmokeMass();
+
+                document.getElementById('tempDropStat').textContent = tempDrop.toFixed(1);
+                document.getElementById('darknessStat').textContent = darkness;
+                document.getElementById('ozoneStat').textContent = ozone.toFixed(0);
+                document.getElementById('agricultureStat').textContent = agriculture.toFixed(0);
+                document.getElementById('smokeStat').textContent = smoke.toFixed(1);
+
+                if (tempDrop > 5.0) {
+                    document.getElementById('winterWarning').classList.add('active');
+                } else {
+                    document.getElementById('winterWarning').classList.remove('active');
+                }
+            }
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear with dark background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            ctx.translate(w / 2 - cameraX, h / 2 - cameraY);
+            ctx.scale(cameraZoom, cameraZoom);
+
+            // Draw world map (simplified)
+            drawWorldMap();
+
+            // Draw warhead positions and detonations
+            const positions = war.getWarheadPositions();
+            const radii = war.getBlastRadii();
+
+            // Draw blast radii
+            for (let i = 0; i < radii.length; i += 6) {
+                const lat = radii[i];
+                const lon = radii[i + 1];
+                const blast20 = radii[i + 2];
+                const blast5 = radii[i + 3];
+                const thermal = radii[i + 4];
+                const fireball = radii[i + 5];
+
+                const pos = latLonToCanvas(lat, lon, w, h);
+
+                // Thermal radius (yellow)
+                ctx.fillStyle = 'rgba(255, 200, 0, 0.1)';
+                ctx.beginPath();
+                const thermalSize = (thermal / 100000) * w * 0.3;
+                ctx.arc(pos.x, pos.y, thermalSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 5 psi blast (orange)
+                ctx.fillStyle = 'rgba(255, 100, 0, 0.2)';
+                ctx.beginPath();
+                const blast5Size = (blast5 / 100000) * w * 0.3;
+                ctx.arc(pos.x, pos.y, blast5Size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 20 psi blast (red)
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                ctx.beginPath();
+                const blast20Size = (blast20 / 100000) * w * 0.3;
+                ctx.arc(pos.x, pos.y, blast20Size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Fireball (white)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.shadowColor = '#FF0000';
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                const fireballSize = Math.max(3, (fireball / 100000) * w * 0.3);
+                ctx.arc(pos.x, pos.y, fireballSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Draw warheads (launch trails)
+            for (let i = 0; i < positions.length; i += 4) {
+                const lat = positions[i];
+                const lon = positions[i + 1];
+                const detonated = positions[i + 2] > 0.5;
+                const progress = positions[i + 3];
+
+                if (!detonated && progress > 0) {
+                    const pos = latLonToCanvas(lat, lon, w, h);
+
+                    // Draw launch marker
+                    ctx.fillStyle = `rgba(255, 0, 0, ${progress})`;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 2 / cameraZoom, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawWorldMap() {
+            // Simplified continents (outlines)
+            ctx.strokeStyle = 'rgba(50, 50, 50, 0.5)';
+            ctx.fillStyle = 'rgba(20, 40, 20, 0.3)';
+            ctx.lineWidth = 1 / cameraZoom;
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(50, 50, 50, 0.2)';
+            for (let lat = -90; lat <= 90; lat += 30) {
+                ctx.beginPath();
+                const y = -lat * 3;
+                ctx.moveTo(-600, y);
+                ctx.lineTo(600, y);
+                ctx.stroke();
+            }
+
+            for (let lon = -180; lon <= 180; lon += 30) {
+                ctx.beginPath();
+                const x = lon * 3;
+                ctx.moveTo(x, -270);
+                ctx.lineTo(x, 270);
+                ctx.stroke();
+            }
+        }
+
+        function latLonToCanvas(lat, lon, w, h) {
+            // Simple equirectangular projection
+            const x = lon * 3;
+            const y = -lat * 3;
+            return { x, y };
+        }
+
+        init();
+    </script>
+</body>
+</html>

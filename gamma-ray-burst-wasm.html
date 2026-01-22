@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamma Ray Burst - Extinction Event Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #000000 0%, #0a0a1a 50%, #1a0a2a 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, rgba(138, 43, 226, 0.3), rgba(75, 0, 130, 0.3));
+            padding: 20px;
+            border-bottom: 2px solid rgba(138, 43, 226, 0.5);
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(90deg, #8A2BE2 0%, #FF00FF 50%, #00FFFF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #8A2BE2, #FF00FF);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.5);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.7);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 380px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1900px;
+            margin: 0 auto;
+        }
+
+        .container.fullscreen-mode {
+            grid-template-columns: 1fr;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .container.fullscreen-mode .panel:not(.canvas-panel) {
+            display: none;
+        }
+
+        .panel {
+            background: rgba(20, 10, 30, 0.8);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(138, 43, 226, 0.3);
+        }
+
+        .panel h2 {
+            color: #8A2BE2;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(138, 43, 226, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(138, 43, 226, 0.4);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #8A2BE2;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(138, 43, 226, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8A2BE2, #FF00FF);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8A2BE2, #FF00FF);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+        }
+
+        .value-display {
+            display: inline-block;
+            float: right;
+            color: #00FFFF;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: linear-gradient(135deg, #8A2BE2, #FF00FF);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .scenario-btn {
+            padding: 8px;
+            font-size: 0.9em;
+            margin: 3px 0;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: rgba(138, 43, 226, 0.05);
+            border: 1px solid rgba(138, 43, 226, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.75em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #00FFFF;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .stat-unit {
+            color: #666;
+            font-size: 0.8em;
+            margin-left: 3px;
+        }
+
+        .warning-box {
+            background: rgba(138, 43, 226, 0.2);
+            border: 2px solid rgba(255, 0, 255, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .warning-box.active {
+            display: block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .warning-text {
+            color: #FF00FF;
+            font-weight: bold;
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .camera-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(138, 43, 226, 0.8);
+            border: 1px solid rgba(255, 0, 255, 0.6);
+            border-radius: 5px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-btn:hover {
+            background: rgba(255, 0, 255, 1);
+            transform: scale(1.1);
+        }
+
+        .zoom-label {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: #00FFFF;
+            font-size: 0.9em;
+            font-family: 'Orbitron', monospace;
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            z-index: 10;
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid #8A2BE2;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 0.85em;
+            color: #888;
+        }
+
+        .spectrum-canvas {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ GAMMA RAY BURST EXTINCTION</h1>
+        <p class="subtitle">Cosmic Radiation • Ozone Destruction • Mass Extinction • Light-Speed Death • C++ WebAssembly</p>
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Left Panel: Controls -->
+        <div class="panel">
+            <h2>GRB Parameters</h2>
+
+            <div class="control-group">
+                <label>
+                    Distance from Earth
+                    <span class="value-display" id="distanceValue">6000 ly</span>
+                </label>
+                <input type="range" id="distanceSlider" min="100" max="20000" step="100" value="6000">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Energy (10^x ergs)
+                    <span class="value-display" id="energyValue">52</span>
+                </label>
+                <input type="range" id="energySlider" min="50" max="54" step="0.1" value="52">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Duration
+                    <span class="value-display" id="durationValue">10 s</span>
+                </label>
+                <input type="range" id="durationSlider" min="0.1" max="100" step="0.1" value="10">
+            </div>
+
+            <button id="resetBtn">🔄 Reset Simulation</button>
+
+            <h2 style="margin-top: 20px;">Historical Scenarios</h2>
+            <button class="scenario-btn" id="ordovicianBtn">Ordovician Extinction (443 Mya)</button>
+            <button class="scenario-btn" id="wr104Btn">WR 104 Threat (8000 ly)</button>
+            <button class="scenario-btn" id="galacticBtn">Galactic Core GRB</button>
+
+            <h2 style="margin-top: 20px;">Extinction Levels</h2>
+            <button class="scenario-btn" id="nearbyBtn">Nearby (1000 ly) - Major</button>
+            <button class="scenario-btn" id="closeBtn">Close (100 ly) - Total</button>
+
+            <div class="warning-box" id="extinctionWarning">
+                <div class="warning-text">☠️ TOTAL EXTINCTION EVENT</div>
+                <div style="font-size: 0.8em; color: #888; margin-top: 10px; text-align: center;">
+                    All complex life sterilized
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Physics:</strong> GRB gamma rays ionize atmosphere, creating nitrogen oxides that catalytically destroy ozone layer. UV radiation kills surface life.
+            </div>
+        </div>
+
+        <!-- Center: Canvas -->
+        <div class="panel canvas-panel" style="padding: 0;">
+            <div class="canvas-container">
+                <canvas id="grbCanvas" width="1000" height="700"></canvas>
+
+                <div class="camera-controls">
+                    <button class="camera-btn" id="zoomInBtn" title="Zoom In">+</button>
+                    <button class="camera-btn" id="zoomOutBtn" title="Zoom Out">−</button>
+                </div>
+
+                <div class="zoom-label" id="zoomLabel">Zoom: 1.0x</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Effects -->
+        <div class="panel">
+            <h2>Wavefront Status</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">TIME ELAPSED</div>
+                    <div class="stat-value">
+                        <span id="timeStat">0</span>
+                        <span class="stat-unit">years</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">DISTANCE TRAVELED</div>
+                    <div class="stat-value">
+                        <span id="wavefrontStat">0</span>
+                        <span class="stat-unit">ly</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">TIME TO IMPACT</div>
+                    <div class="stat-value">
+                        <span id="ttIStat">6000</span>
+                        <span class="stat-unit">years</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">STATUS</div>
+                    <div class="stat-value">
+                        <span id="statusStat">PROPAGATING</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Atmospheric Effects</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">OZONE LAYER</div>
+                    <div class="stat-value">
+                        <span id="ozoneStat">100</span>
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">IONIZATION</div>
+                    <div class="stat-value">
+                        <span id="ionizationStat">0</span>
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Extinction Effects</h2>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label">OZONE DEPLETION</div>
+                    <div class="stat-value">
+                        <span id="depletionStat">0</span>
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">UV INCREASE</div>
+                    <div class="stat-value">
+                        <span id="uvStat">0</span>
+                        <span class="stat-unit">x</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">SURFACE RADIATION</div>
+                    <div class="stat-value">
+                        <span id="radiationStat">0.0</span>
+                        <span class="stat-unit">Sv</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">TEMP DROP</div>
+                    <div class="stat-value">
+                        <span id="tempDropStat">0.0</span>
+                        <span class="stat-unit">°C</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">SPECIES EXTINCT</div>
+                    <div class="stat-value">
+                        <span id="extinctionStat">0</span>
+                        <span class="stat-unit">%</span>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <div class="stat-label">RECOVERY TIME</div>
+                    <div class="stat-value">
+                        <span id="recoveryStat">0</span>
+                        <span class="stat-unit">years</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin-top: 20px;">Radiation Spectrum</h2>
+            <canvas id="spectrumCanvas" class="spectrum-canvas"></canvas>
+
+            <div class="info-box" style="margin-top: 20px;">
+                <strong>Kill Zone:</strong> GRBs within 6000 light-years can cause mass extinctions. The Ordovician extinction may have been caused by a GRB.
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createGRBModule from './grb_engine.js';
+
+        let Module, grb;
+        let canvas, ctx;
+        let spectrumCanvas, spectrumCtx;
+        let isRunning = false;
+        let cameraZoom = 1.0;
+
+        async function init() {
+            try {
+                Module = await createGRBModule();
+                grb = new Module.GammaRayBurst();
+
+                canvas = document.getElementById('grbCanvas');
+                ctx = canvas.getContext('2d');
+
+                spectrumCanvas = document.getElementById('spectrumCanvas');
+                spectrumCtx = spectrumCanvas.getContext('2d');
+
+                setupControls();
+                setupCameraControls();
+                animate();
+                isRunning = true;
+
+                console.log('⚡ Gamma Ray Burst simulator initialized');
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                canvas = document.getElementById('grbCanvas');
+                ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ff4444';
+                ctx.font = '20px Orbitron';
+                ctx.fillText('WebAssembly module not found', 50, 50);
+                ctx.font = '14px Orbitron';
+                ctx.fillText('Compile grb_engine.cpp with Emscripten first', 50, 80);
+            }
+        }
+
+        function setupControls() {
+            const distanceSlider = document.getElementById('distanceSlider');
+            const energySlider = document.getElementById('energySlider');
+            const durationSlider = document.getElementById('durationSlider');
+            const resetBtn = document.getElementById('resetBtn');
+
+            distanceSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                grb.setDistance(value);
+                document.getElementById('distanceValue').textContent = value.toFixed(0) + ' ly';
+            });
+
+            energySlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                const energy = Math.pow(10, value);
+                grb.setEnergy(energy);
+                document.getElementById('energyValue').textContent = value.toFixed(1);
+            });
+
+            durationSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                grb.setDuration(value);
+                document.getElementById('durationValue').textContent = value.toFixed(1) + ' s';
+            });
+
+            resetBtn.addEventListener('click', () => {
+                grb.reset();
+            });
+
+            // Scenarios
+            document.getElementById('ordovicianBtn').addEventListener('click', () => {
+                grb.setOrdovician();
+                syncSliders();
+            });
+
+            document.getElementById('nearbyBtn').addEventListener('click', () => {
+                grb.setNearby();
+                syncSliders();
+            });
+
+            document.getElementById('closeBtn').addEventListener('click', () => {
+                grb.setClose();
+                syncSliders();
+            });
+
+            document.getElementById('wr104Btn').addEventListener('click', () => {
+                grb.setWR104();
+                syncSliders();
+            });
+
+            document.getElementById('galacticBtn').addEventListener('click', () => {
+                grb.setGalacticCore();
+                syncSliders();
+            });
+        }
+
+        function syncSliders() {
+            const distance = grb.getDistance();
+            const energy = grb.getEnergy();
+            const duration = grb.getDuration();
+
+            document.getElementById('distanceSlider').value = distance;
+            document.getElementById('distanceValue').textContent = distance.toFixed(0) + ' ly';
+
+            const energyExp = Math.log10(energy);
+            document.getElementById('energySlider').value = energyExp.toFixed(1);
+            document.getElementById('energyValue').textContent = energyExp.toFixed(1);
+
+            document.getElementById('durationSlider').value = duration;
+            document.getElementById('durationValue').textContent = duration.toFixed(1) + ' s';
+        }
+
+        function setupCameraControls() {
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                cameraZoom *= 1.2;
+                cameraZoom = Math.min(cameraZoom, 5.0);
+                updateZoomLabel();
+            });
+
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                cameraZoom *= 0.8;
+                cameraZoom = Math.max(cameraZoom, 0.3);
+                updateZoomLabel();
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                cameraZoom *= zoomFactor;
+                cameraZoom = Math.max(0.3, Math.min(cameraZoom, 5.0));
+                updateZoomLabel();
+            });
+        }
+
+        function updateZoomLabel() {
+            document.getElementById('zoomLabel').textContent = `Zoom: ${cameraZoom.toFixed(1)}x`;
+        }
+
+        window.toggleFullscreen = () => {
+            const container = document.getElementById('mainContainer');
+            if (!document.fullscreenElement) {
+                container.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen();
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.exitFullscreen();
+            }
+        };
+
+        function animate() {
+            if (!isRunning) return;
+
+            // Update physics (time-accelerated)
+            grb.update(1000); // 1000 years per frame
+
+            updateStats();
+            drawScene();
+            drawSpectrum();
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateStats() {
+            const time = grb.getCurrentTime();
+            const wavefront = grb.getWavefrontDistance();
+            const reached = grb.reachedEarth();
+            const tti = grb.getTimeToImpact();
+
+            document.getElementById('timeStat').textContent = time.toFixed(0);
+            document.getElementById('wavefrontStat').textContent = wavefront.toFixed(0);
+            document.getElementById('ttIStat').textContent = tti.toFixed(0);
+            document.getElementById('statusStat').textContent = reached ? 'IMPACT!' : 'PROPAGATING';
+
+            const ozone = grb.getCurrentOzoneLevel();
+            const ionization = grb.getAtmosphericIonization();
+
+            document.getElementById('ozoneStat').textContent = ozone.toFixed(1);
+            document.getElementById('ionizationStat').textContent = ionization.toFixed(1);
+
+            const depletion = grb.getOzoneDepletion();
+            const uvIncrease = grb.getUVIncrease();
+            const radiation = grb.getSurfaceRadiation();
+            const tempDrop = grb.getTemperatureDrop();
+            const extinction = grb.getSpeciesExtinction();
+            const recovery = grb.getRecoveryTime();
+            const totalExtinction = grb.isTotalExtinction();
+
+            document.getElementById('depletionStat').textContent = depletion.toFixed(1);
+            document.getElementById('uvStat').textContent = uvIncrease.toFixed(1);
+            document.getElementById('radiationStat').textContent = radiation.toFixed(1);
+            document.getElementById('tempDropStat').textContent = tempDrop.toFixed(1);
+            document.getElementById('extinctionStat').textContent = extinction.toFixed(1);
+            document.getElementById('recoveryStat').textContent = recovery.toFixed(0);
+
+            if (totalExtinction) {
+                document.getElementById('extinctionWarning').classList.add('active');
+            } else {
+                document.getElementById('extinctionWarning').classList.remove('active');
+            }
+        }
+
+        function drawScene() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Clear with space background
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw stars
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 200; i++) {
+                const x = (i * 7919) % w;
+                const y = (i * 4273) % h;
+                const size = (i % 3) * 0.5 + 0.5;
+                ctx.fillRect(x, y, size, size);
+            }
+
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.scale(cameraZoom, cameraZoom);
+
+            // Draw Earth
+            const earthSize = 30;
+            const earthGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, earthSize);
+            earthGrad.addColorStop(0, '#4a90e2');
+            earthGrad.addColorStop(0.7, '#2d5aa3');
+            earthGrad.addColorStop(1, '#1a3a6e');
+            ctx.fillStyle = earthGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, earthSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ozone layer
+            const ozoneLevel = grb.getCurrentOzoneLevel();
+            const ozoneOpacity = ozoneLevel / 100;
+            ctx.strokeStyle = `rgba(100, 200, 255, ${ozoneOpacity * 0.5})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, earthSize + 10, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // GRB source (distant star)
+            const distance = grb.getDistance();
+            const grbX = -300;
+            const grbY = 0;
+
+            ctx.fillStyle = '#8A2BE2';
+            ctx.shadowColor = '#FF00FF';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(grbX, grbY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Wavefront expanding
+            const wavefront = grb.getWavefrontDistance();
+            const wavefrontRadius = (wavefront / distance) * 300;
+
+            if (wavefrontRadius < 300) {
+                ctx.strokeStyle = 'rgba(255, 0, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(grbX, grbY, wavefrontRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Radiation rays
+                for (let i = 0; i < 16; i++) {
+                    const angle = (i / 16) * Math.PI * 2;
+                    const x1 = grbX + Math.cos(angle) * wavefrontRadius;
+                    const y1 = grbY + Math.sin(angle) * wavefrontRadius;
+                    const x2 = grbX + Math.cos(angle) * (wavefrontRadius - 20);
+                    const y2 = grbY + Math.sin(angle) * (wavefrontRadius - 20);
+
+                    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+                    gradient.addColorStop(0, 'rgba(255, 0, 255, 0.6)');
+                    gradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
+
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+            }
+
+            // Impact effect
+            if (grb.reachedEarth()) {
+                const ionization = grb.getAtmosphericIonization();
+                if (ionization > 0) {
+                    const impactGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, earthSize + 40);
+                    impactGrad.addColorStop(0, `rgba(255, 0, 255, ${ionization / 100})`);
+                    impactGrad.addColorStop(0.5, `rgba(138, 43, 226, ${ionization / 200})`);
+                    impactGrad.addColorStop(1, 'rgba(138, 43, 226, 0)');
+                    ctx.fillStyle = impactGrad;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, earthSize + 40, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+
+            // Draw distance label
+            ctx.fillStyle = '#00FFFF';
+            ctx.font = '14px Orbitron';
+            ctx.fillText(`Distance: ${distance.toFixed(0)} light-years`, 20, 30);
+        }
+
+        function drawSpectrum() {
+            const w = spectrumCanvas.width;
+            const h = spectrumCanvas.height;
+
+            spectrumCtx.fillStyle = '#000000';
+            spectrumCtx.fillRect(0, 0, w, h);
+
+            const spectrum = grb.getRadiationSpectrum();
+
+            // Draw spectrum bars
+            const barWidth = w / spectrum.length;
+            for (let i = 0; i < spectrum.length; i++) {
+                const intensity = spectrum[i];
+                const barHeight = intensity * h;
+
+                const hue = 270 - (i / spectrum.length) * 60; // Purple to cyan
+                spectrumCtx.fillStyle = `hsl(${hue}, 100%, ${50 + intensity * 50}%)`;
+                spectrumCtx.fillRect(i * barWidth, h - barHeight, barWidth - 1, barHeight);
+            }
+
+            // Labels
+            spectrumCtx.fillStyle = '#888';
+            spectrumCtx.font = '10px Orbitron';
+            spectrumCtx.fillText('1 keV', 5, h - 5);
+            spectrumCtx.fillText('1 MeV', w - 40, h - 5);
+        }
+
+        init();
+    </script>
+</body>
+</html>

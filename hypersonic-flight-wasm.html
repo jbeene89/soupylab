@@ -283,15 +283,104 @@
             color: #ff0000 !important;
             animation: blink 0.5s infinite;
         }
+
+        /* Fullscreen Mode */
+        .container.fullscreen-mode {
+            grid-template-columns: 1fr;
+            height: 100vh;
+            padding: 0;
+        }
+
+        .container.fullscreen-mode .panel:not(.canvas-panel) {
+            display: none;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #ff4500, #ff8c00);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.7);
+        }
+
+        /* Camera Controls Overlay */
+        .camera-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .camera-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 69, 0, 0.8);
+            border: 1px solid rgba(255, 140, 0, 0.6);
+            border-radius: 5px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .camera-btn:hover {
+            background: rgba(255, 140, 0, 1);
+            transform: scale(1.1);
+        }
+
+        .camera-btn:active {
+            transform: scale(0.95);
+        }
+
+        .follow-btn.active {
+            background: rgba(0, 255, 100, 0.8);
+            border-color: rgba(0, 255, 100, 0.6);
+        }
+
+        .zoom-label {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: #ff8c00;
+            font-size: 0.9em;
+            font-family: 'Orbitron', monospace;
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🔥 HYPERSONIC FLIGHT SIMULATOR</h1>
         <p class="subtitle">Mach 5-25 Flight • Aerothermal Heating • Plasma Sheath • Thermal Protection • C++ WebAssembly</p>
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     </div>
 
-    <div class="container">
+    <div class="container" id="mainContainer">
         <!-- Left Panel: Controls -->
         <div class="panel">
             <h2>Flight Parameters</h2>
@@ -341,9 +430,18 @@
         </div>
 
         <!-- Center: Canvas -->
-        <div class="panel" style="padding: 0;">
+        <div class="panel canvas-panel" style="padding: 0;">
             <div class="canvas-container">
                 <canvas id="hypersonicCanvas" width="1000" height="650"></canvas>
+
+                <!-- Camera Controls -->
+                <div class="camera-controls">
+                    <button class="camera-btn" id="zoomInBtn" title="Zoom In">+</button>
+                    <button class="camera-btn" id="zoomOutBtn" title="Zoom Out">−</button>
+                    <button class="camera-btn follow-btn active" id="followBtn" title="Follow Vehicle">📍</button>
+                </div>
+
+                <div class="zoom-label" id="zoomLabel">Zoom: 1.0x</div>
             </div>
         </div>
 
@@ -481,6 +579,19 @@
         let canvas, ctx;
         let isRunning = false;
 
+        // Camera state
+        let cameraX = 50000; // Center of horizontal range
+        let cameraY = 50000; // Center of vertical range
+        let cameraZoom = 1.0;
+        let followMode = true;
+
+        // Pan state
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
         async function init() {
             try {
                 Module = await createHypersonicModule();
@@ -490,6 +601,7 @@
                 ctx = canvas.getContext('2d');
 
                 setupControls();
+                setupCameraControls();
                 animate();
                 isRunning = true;
 
@@ -591,6 +703,93 @@
             document.getElementById('aoaValue').textContent = aoaSlider.value + '°';
         }
 
+        function setupCameraControls() {
+            // Mouse pan
+            canvas.addEventListener('mousedown', (e) => {
+                isPanning = true;
+                followMode = false;
+                updateFollowButton();
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                panStartX = cameraX;
+                panStartY = cameraY;
+                canvas.style.cursor = 'grabbing';
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isPanning) {
+                    const dx = (e.clientX - lastMouseX) / cameraZoom;
+                    const dy = (e.clientY - lastMouseY) / cameraZoom;
+                    cameraX = panStartX - dx;
+                    cameraY = panStartY + dy; // Inverted Y
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isPanning = false;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isPanning = false;
+                canvas.style.cursor = 'default';
+            });
+
+            // Mouse wheel zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                cameraZoom *= zoomFactor;
+                cameraZoom = Math.max(0.3, Math.min(cameraZoom, 5.0));
+                updateZoomLabel();
+            });
+
+            canvas.style.cursor = 'grab';
+
+            // Zoom buttons
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                cameraZoom *= 1.2;
+                cameraZoom = Math.min(cameraZoom, 5.0);
+                updateZoomLabel();
+            });
+
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                cameraZoom *= 0.8;
+                cameraZoom = Math.max(cameraZoom, 0.3);
+                updateZoomLabel();
+            });
+
+            // Follow button
+            document.getElementById('followBtn').addEventListener('click', () => {
+                followMode = !followMode;
+                updateFollowButton();
+            });
+        }
+
+        function updateZoomLabel() {
+            document.getElementById('zoomLabel').textContent = `Zoom: ${cameraZoom.toFixed(1)}x`;
+        }
+
+        function updateFollowButton() {
+            const btn = document.getElementById('followBtn');
+            if (followMode) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        }
+
+        window.toggleFullscreen = () => {
+            const container = document.getElementById('mainContainer');
+            if (!document.fullscreenElement) {
+                container.classList.add('fullscreen-mode');
+                document.documentElement.requestFullscreen();
+            } else {
+                container.classList.remove('fullscreen-mode');
+                document.exitFullscreen();
+            }
+        };
+
         function animate() {
             if (!isRunning) return;
 
@@ -672,6 +871,12 @@
             const w = canvas.width;
             const h = canvas.height;
 
+            // Update camera to follow vehicle
+            if (followMode) {
+                cameraX = vehicle.getX();
+                cameraY = vehicle.getAltitude();
+            }
+
             // Clear with gradient (space to atmosphere)
             const gradient = ctx.createLinearGradient(0, 0, 0, h);
             gradient.addColorStop(0, '#000000');
@@ -681,19 +886,25 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, w, h);
 
+            // Apply camera transformation
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.scale(cameraZoom, cameraZoom);
+            ctx.translate(-cameraX / 100, cameraY / 100);
+
             // Draw altitude grid
             ctx.strokeStyle = 'rgba(255, 69, 0, 0.1)';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1 / cameraZoom;
             for (let alt = 0; alt <= 100000; alt += 10000) {
-                const y = h - (alt / 100000) * (h - 50);
+                const y = alt / 100;
                 ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(w, y);
+                ctx.moveTo(-5000, y);
+                ctx.lineTo(5000, y);
                 ctx.stroke();
 
                 ctx.fillStyle = 'rgba(255, 69, 0, 0.5)';
-                ctx.font = '10px Orbitron';
-                ctx.fillText(alt / 1000 + 'km', 5, y - 2);
+                ctx.font = `${10 / cameraZoom}px Orbitron`;
+                ctx.fillText(alt / 1000 + 'km', -4900, y - 20 / cameraZoom);
             }
 
             // Draw trail with temperature gradient
@@ -708,10 +919,11 @@
                 const alt2 = trail[i * 2 + 1];
                 const temp = temps[i];
 
-                const canvasX1 = (x1 % 100000) / 100000 * w;
-                const canvasY1 = h - 50 - (alt1 / 100000) * (h - 50);
-                const canvasX2 = (x2 % 100000) / 100000 * w;
-                const canvasY2 = h - 50 - (alt2 / 100000) * (h - 50);
+                // Convert to world coordinates
+                const worldX1 = x1 / 100;
+                const worldY1 = alt1 / 100;
+                const worldX2 = x2 / 100;
+                const worldY2 = alt2 / 100;
 
                 // Temperature color
                 const tempNorm = Math.min(1, temp / 2000);
@@ -720,35 +932,39 @@
                 const b = Math.floor(50 * (1 - tempNorm));
 
                 ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 3 / cameraZoom;
                 ctx.beginPath();
-                ctx.moveTo(canvasX1, canvasY1);
-                ctx.lineTo(canvasX2, canvasY2);
+                ctx.moveTo(worldX1, worldY1);
+                ctx.lineTo(worldX2, worldY2);
                 ctx.stroke();
             }
 
             // Draw vehicle
-            const vehicleX = (vehicle.getX() % 100000) / 100000 * w;
-            const vehicleY = h - 50 - (vehicle.getAltitude() / 100000) * (h - 50);
+            const vehicleWorldX = vehicle.getX() / 100;
+            const vehicleWorldY = vehicle.getAltitude() / 100;
 
             ctx.save();
-            ctx.translate(vehicleX, vehicleY);
+            ctx.translate(vehicleWorldX, vehicleWorldY);
 
             // Shock wave / plasma sheath
             const mach = vehicle.getMachNumber();
             if (mach > 5) {
                 const intensity = Math.min(1, (mach - 5) / 20);
-                const shockGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 40 * intensity);
+                const shockSize = 40 / cameraZoom;
+                const shockGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, shockSize * intensity);
                 shockGrad.addColorStop(0, `rgba(255, 100, 255, ${0.5 * intensity})`);
                 shockGrad.addColorStop(0.5, `rgba(255, 50, 0, ${0.3 * intensity})`);
                 shockGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
                 ctx.fillStyle = shockGrad;
                 ctx.beginPath();
-                ctx.arc(0, 0, 40 * intensity, 0, Math.PI * 2);
+                ctx.arc(0, 0, shockSize * intensity, 0, Math.PI * 2);
                 ctx.fill();
             }
 
-            // Vehicle body
+            // Vehicle body (scale with zoom)
+            const scale = 1 / cameraZoom;
+            ctx.scale(scale, scale);
+
             ctx.fillStyle = '#ff4500';
             ctx.shadowColor = '#ff4500';
             ctx.shadowBlur = 15;
@@ -781,7 +997,10 @@
 
             // Draw ground
             ctx.fillStyle = 'rgba(80, 40, 20, 0.9)';
-            ctx.fillRect(0, h - 50, w, 50);
+            ctx.fillRect(-5000, 0, 10000, 100);
+
+            // Restore camera transformation
+            ctx.restore();
         }
 
         init();
