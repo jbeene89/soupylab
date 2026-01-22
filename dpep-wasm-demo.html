@@ -628,6 +628,12 @@
             ctx.fillRect(50, h * 0.25, 200, h * 0.5);
 
             // Draw nozzle with smooth curves
+            // Draw chamber
+            ctx.strokeStyle = 'rgba(120, 150, 170, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(50, canvas.height * 0.2, 200, canvas.height * 0.6);
+
+            // Draw nozzle
             ctx.beginPath();
             ctx.moveTo(250, h * 0.35);
             ctx.quadraticCurveTo(280, h * 0.32, 350, h * 0.28);
@@ -655,6 +661,9 @@
                 gradient.addColorStop(0, 'rgba(150, 220, 255, 0.9)');
                 gradient.addColorStop(0.5, 'rgba(107, 180, 230, 0.6)');
                 gradient.addColorStop(1, 'rgba(50, 150, 255, 0)');
+                const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+                gradient.addColorStop(0, `rgba(230, 180, 120, ${b.alpha})`);
+                gradient.addColorStop(1, `rgba(90, 120, 140, 0)`);
 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
