@@ -262,6 +262,36 @@
         <button id="clusterBtn" style="background: linear-gradient(135deg, #00ff88, #00ccff);">
             💫 Random Cluster
         </button>
+        <button id="oceanTrashBtn" style="background: linear-gradient(135deg, #006994, #00c9a7);">
+            🌊 Ocean Trash
+        </button>
+
+        <div class="section-title">⏰ Time Travel</div>
+
+        <button id="addPollutionBtn" style="background: linear-gradient(135deg, #ff4444, #cc0000); font-size: 0.75rem; padding: 0.4rem;">
+            ➕ Add Pollution
+        </button>
+        <button id="cleanupBtn" style="background: linear-gradient(135deg, #00cc66, #00ff88); font-size: 0.75rem; padding: 0.4rem;">
+            ♻️ Cleanup
+        </button>
+        <button id="glacialMeltBtn" style="background: linear-gradient(135deg, #88ccff, #ffffff); font-size: 0.75rem; padding: 0.4rem;">
+            🧊 Glacial Melt
+        </button>
+
+        <div class="control-group">
+            <label>
+                Current Dampening
+                <span class="value-display" id="dampeningValue">0%</span>
+            </label>
+            <input type="range" id="dampeningSlider" min="0" max="100" step="5" value="0">
+        </div>
+
+        <button id="addBarrierBtn" style="background: linear-gradient(135deg, #666666, #999999); font-size: 0.75rem; padding: 0.4rem;">
+            🚧 Add Barrier
+        </button>
+        <button id="clearBarriersBtn" style="background: linear-gradient(135deg, #333333, #666666); font-size: 0.75rem; padding: 0.4rem;">
+            ❌ Clear Barriers
+        </button>
 
         <div class="section-title">Particle Count</div>
         
@@ -462,6 +492,57 @@
             updateStats();
         }
 
+        function createOceanTrash() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value) * 3;
+            nbodyEngine.createOceanTrash(count);
+            trails.clear();
+            camZoom = 0.8;
+            updateStats();
+        }
+
+        // ====================================================================
+        // TIME TRAVEL / ENVIRONMENTAL CONTROLS
+        // ====================================================================
+
+        let barrierPlacementMode = false;
+
+        function addPollution() {
+            if (!nbodyEngine) return;
+            const amount = 500;
+            nbodyEngine.addTrashPollution(amount);
+            updateStats();
+        }
+
+        function cleanupTrash() {
+            if (!nbodyEngine) return;
+            const amount = 500;
+            nbodyEngine.removeTrashPollution(amount);
+            updateStats();
+        }
+
+        function addGlacialMelt() {
+            if (!nbodyEngine) return;
+            const intensity = 200;
+            nbodyEngine.addGlacialMelt(intensity);
+            updateStats();
+        }
+
+        function toggleBarrierPlacement() {
+            barrierPlacementMode = !barrierPlacementMode;
+            const btn = document.getElementById('addBarrierBtn');
+            if (barrierPlacementMode) {
+                btn.textContent = '🎯 Click Map';
+            } else {
+                btn.textContent = '🚧 Add Barrier';
+            }
+        }
+
+        function clearAllBarriers() {
+            if (!nbodyEngine) return;
+            nbodyEngine.clearBarriers();
+        }
+
         // ====================================================================
         // RENDERING
         // ====================================================================
@@ -610,6 +691,33 @@
         document.getElementById('galaxyBtn').addEventListener('click', createGalaxyCollision);
         document.getElementById('solarBtn').addEventListener('click', createSolarSystem);
         document.getElementById('clusterBtn').addEventListener('click', createRandomCluster);
+        document.getElementById('oceanTrashBtn').addEventListener('click', createOceanTrash);
+
+        // Time-travel controls
+        document.getElementById('addPollutionBtn').addEventListener('click', addPollution);
+        document.getElementById('cleanupBtn').addEventListener('click', cleanupTrash);
+        document.getElementById('glacialMeltBtn').addEventListener('click', addGlacialMelt);
+        document.getElementById('addBarrierBtn').addEventListener('click', toggleBarrierPlacement);
+        document.getElementById('clearBarriersBtn').addEventListener('click', clearAllBarriers);
+
+        document.getElementById('dampeningSlider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('dampeningValue').textContent = val + '%';
+            if (nbodyEngine) nbodyEngine.setCurrentDampening(val);
+        });
+
+        // Canvas click for barrier placement
+        canvas.addEventListener('click', (e) => {
+            if (!barrierPlacementMode || !nbodyEngine) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left - canvas.width / 2) / camZoom + camX;
+            const y = (e.clientY - rect.top - canvas.height / 2) / camZoom + camY;
+
+            nbodyEngine.addBarrierZone(x, y, 100);
+            barrierPlacementMode = false;
+            toggleBarrierPlacement();
+        });
 
         document.getElementById('particleSlider').addEventListener('input', (e) => {
             document.getElementById('particleValue').textContent = e.target.value;
