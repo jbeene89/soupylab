@@ -8,20 +8,20 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&display=swap');
 
         :root {
-            --bg: #000208;
-            --panel: #0a0515;
-            --accent: #00ff88;
-            --wasm: #ff00ff;
-            --js: #00aaff;
-            --text: #e0e0e0;
-            --dim: #6688aa;
+            --bg: #0b0f14;
+            --panel: #141a22;
+            --accent: #d38a3a;
+            --wasm: #b77732;
+            --js: #5b86a8;
+            --text: #e6e1d8;
+            --dim: #8a9aaa;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', sans-serif;
-            background: radial-gradient(ellipse at center, #0a0520 0%, var(--bg) 100%);
+            background: radial-gradient(ellipse at center, #1a212b 0%, var(--bg) 100%);
             color: var(--text);
             min-height: 100vh;
         }
@@ -29,8 +29,8 @@
         .header {
             text-align: center;
             padding: 2rem 1rem;
-            background: linear-gradient(180deg, rgba(0,255,136,0.1) 0%, transparent 100%);
-            border-bottom: 2px solid rgba(0,255,136,0.3);
+            background: linear-gradient(180deg, rgba(211, 138, 58, 0.12) 0%, transparent 100%);
+            border-bottom: 2px solid rgba(211, 138, 58, 0.3);
         }
 
         .header h1 {
@@ -40,15 +40,15 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 40px rgba(0,255,136,0.5);
+            text-shadow: 0 0 40px rgba(211, 138, 58, 0.35);
             margin-bottom: 1rem;
             letter-spacing: 0.1em;
             animation: glow 3s ease-in-out infinite;
         }
 
         @keyframes glow {
-            0%, 100% { text-shadow: 0 0 20px rgba(0,255,136,0.3); }
-            50% { text-shadow: 0 0 40px rgba(0,255,136,0.8); }
+            0%, 100% { text-shadow: 0 0 20px rgba(211, 138, 58, 0.25); }
+            50% { text-shadow: 0 0 40px rgba(211, 138, 58, 0.55); }
         }
 
         .mode-selector {
@@ -72,27 +72,64 @@
         }
 
         .mode-btn.wasm {
-            background: linear-gradient(135deg, rgba(255,0,255,0.2), rgba(255,0,255,0.05));
+            background: linear-gradient(135deg, rgba(183, 119, 50, 0.2), rgba(183, 119, 50, 0.05));
             border-color: var(--wasm);
             color: var(--wasm);
         }
 
         .mode-btn.wasm.active {
-            background: linear-gradient(135deg, var(--wasm), #aa00aa);
+            background: linear-gradient(135deg, var(--wasm), #8f5a24);
             color: #000;
-            box-shadow: 0 0 30px var(--wasm);
+            box-shadow: 0 0 30px rgba(183, 119, 50, 0.5);
         }
 
         .mode-btn.js {
-            background: linear-gradient(135deg, rgba(0,170,255,0.2), rgba(0,170,255,0.05));
+            background: linear-gradient(135deg, rgba(91, 134, 168, 0.2), rgba(91, 134, 168, 0.05));
             border-color: var(--js);
             color: var(--js);
         }
 
         .mode-btn.js.active {
-            background: linear-gradient(135deg, var(--js), #0066cc);
+            background: linear-gradient(135deg, var(--js), #456b86);
             color: #fff;
-            box-shadow: 0 0 30px var(--js);
+            box-shadow: 0 0 30px rgba(91, 134, 168, 0.45);
+        }
+
+        .action-btn {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, var(--accent), #8f5a24);
+            border: none;
+            border-radius: 8px;
+            color: #1a1208;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 20px rgba(211, 138, 58, 0.25);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(211, 138, 58, 0.35);
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 0.75rem;
+        }
+
+        .action-btn.secondary {
+            background: rgba(211, 138, 58, 0.18);
+            color: var(--accent-glow, #f2b266);
+            border: 1px solid rgba(211, 138, 58, 0.45);
+            box-shadow: none;
         }
 
         .container {
@@ -105,16 +142,16 @@
         }
 
         .panel {
-            background: rgba(10,5,21,0.9);
-            border: 1px solid rgba(0,255,136,0.2);
+            background: rgba(20, 26, 34, 0.95);
+            border: 1px solid rgba(211, 138, 58, 0.2);
             border-radius: 12px;
             padding: 20px;
             backdrop-filter: blur(10px);
         }
 
         .performance-box {
-            background: linear-gradient(135deg, rgba(0,255,136,0.1), rgba(255,0,255,0.1));
-            border: 2px solid rgba(0,255,136,0.3);
+            background: linear-gradient(135deg, rgba(211, 138, 58, 0.12), rgba(183, 119, 50, 0.12));
+            border: 2px solid rgba(211, 138, 58, 0.3);
             border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
@@ -150,18 +187,18 @@
         }
 
         .canvas-container {
-            background: rgba(0,2,8,0.95);
-            border: 2px solid rgba(0,255,136,0.3);
+            background: rgba(12, 16, 22, 0.95);
+            border: 2px solid rgba(211, 138, 58, 0.3);
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 60px rgba(0,255,136,0.05);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 0 60px rgba(211, 138, 58, 0.05);
         }
 
         canvas {
             display: block;
             width: 100%;
             border-radius: 8px;
-            background: #000;
+            background: #0b0f14;
         }
 
         .section-title {
@@ -172,7 +209,7 @@
             text-transform: uppercase;
             margin: 1.5rem 0 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(0,255,136,0.3);
+            border-bottom: 1px solid rgba(211, 138, 58, 0.3);
         }
 
         .control-group {
@@ -190,7 +227,7 @@
         input[type="range"] {
             width: 100%;
             height: 6px;
-            background: linear-gradient(90deg, rgba(0,255,136,0.2), rgba(255,0,255,0.2));
+            background: linear-gradient(90deg, rgba(211, 138, 58, 0.2), rgba(183, 119, 50, 0.2));
             border-radius: 3px;
             outline: none;
             -webkit-appearance: none;
@@ -210,22 +247,22 @@
             color: var(--accent);
             font-weight: 600;
             font-family: 'Courier New', monospace;
-            text-shadow: 0 0 8px rgba(0,255,136,0.6);
+            text-shadow: 0 0 8px rgba(211, 138, 58, 0.45);
         }
 
         select {
             width: 100%;
             padding: 0.6rem;
-            background: rgba(0,255,136,0.05);
-            border: 1px solid rgba(0,255,136,0.3);
+            background: rgba(211, 138, 58, 0.05);
+            border: 1px solid rgba(211, 138, 58, 0.3);
             border-radius: 6px;
             color: var(--text);
             font-size: 0.85rem;
         }
 
         .stat-box {
-            background: rgba(0,255,136,0.05);
-            border: 1px solid rgba(0,255,136,0.2);
+            background: rgba(211, 138, 58, 0.06);
+            border: 1px solid rgba(211, 138, 58, 0.2);
             border-radius: 8px;
             padding: 1rem;
             margin-bottom: 1rem;
@@ -250,8 +287,8 @@
             top: 20px;
             left: 20px;
             padding: 0.6rem 1rem;
-            background: rgba(10,5,21,0.9);
-            border: 1px solid rgba(0,255,136,0.3);
+            background: rgba(20, 26, 34, 0.95);
+            border: 1px solid rgba(211, 138, 58, 0.3);
             border-radius: 6px;
             color: var(--text);
             text-decoration: none;
@@ -261,9 +298,9 @@
         }
 
         .back-link:hover {
-            background: rgba(0,255,136,0.2);
+            background: rgba(211, 138, 58, 0.2);
             transform: translateX(-3px);
-            box-shadow: 0 0 20px rgba(0,255,136,0.4);
+            box-shadow: 0 0 20px rgba(211, 138, 58, 0.4);
         }
 
         .loading {
@@ -315,7 +352,7 @@
                     <span class="perf-label">Particles</span>
                     <span class="perf-value" id="particleCount" style="font-size: 1.2rem;">0</span>
                 </div>
-                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,255,136,0.2);">
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(211, 138, 58, 0.2);">
                     <div style="font-size: 0.7rem; color: var(--dim); text-align: center;">
                         MODE: <span id="currentMode" style="color: var(--wasm); font-weight: 700;">WASM</span>
                     </div>
@@ -355,6 +392,14 @@
                     <span class="value-display" id="speedValue">1.0</span>x
                 </label>
                 <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1">
+            </div>
+
+            <button class="action-btn" id="applySettingsBtn">Apply Settings</button>
+            <div class="action-grid">
+                <button class="action-btn" id="pressurizeBtn">Pressurize</button>
+                <button class="action-btn secondary" id="depressurizeBtn">Depressurize</button>
+                <button class="action-btn" id="firePulseBtn">Fire Pulse</button>
+                <button class="action-btn secondary" id="ventFlowBtn">Vent Flow</button>
             </div>
         </div>
 
@@ -437,6 +482,16 @@
         let fps = 60;
         let frameTimes = [];
 
+        const defaultSettings = {
+            propellant: 0,
+            glr: 0.1,
+            pressure: 20,
+            speed: 1
+        };
+
+        let pendingSettings = { ...defaultSettings };
+        let activeSettings = { ...defaultSettings };
+
         // Load WASM module
         async function loadWASM() {
             try {
@@ -445,11 +500,12 @@
                 
                 dpepEngine = new Module.DPEPEngine(canvas.width, canvas.height);
                 isWASMReady = true;
-                
+
                 document.getElementById('loadingMsg').style.display = 'none';
                 canvas.style.display = 'block';
-                
+
                 console.log('✅ WASM module loaded successfully!');
+                applySettings();
                 animate();
             } catch (error) {
                 console.error('❌ Failed to load WASM:', error);
@@ -466,6 +522,7 @@
                 setTimeout(() => {
                     document.getElementById('loadingMsg').style.display = 'none';
                     canvas.style.display = 'block';
+                    applySettings();
                     animate();
                 }, 2000);
             }
@@ -490,7 +547,7 @@
             document.getElementById('frameTimeDisplay').textContent = avgFrameTime.toFixed(1) + 'ms';
 
             // Clear canvas
-            ctx.fillStyle = '#000';
+            ctx.fillStyle = '#0b0f14';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             if (useWASM && isWASMReady && dpepEngine) {
@@ -531,7 +588,7 @@
             const positions = dpepEngine.getBubblePositions();
 
             // Draw chamber outline
-            ctx.strokeStyle = 'rgba(0, 170, 255, 0.3)';
+            ctx.strokeStyle = 'rgba(120, 150, 170, 0.4)';
             ctx.lineWidth = 2;
             ctx.strokeRect(50, canvas.height * 0.2, 200, canvas.height * 0.6);
 
@@ -552,9 +609,9 @@
                 const alpha = positions[i + 3];
 
                 const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-                gradient.addColorStop(0, `rgba(150, 220, 255, ${alpha})`);
-                gradient.addColorStop(0.7, `rgba(100, 200, 255, ${alpha * 0.6})`);
-                gradient.addColorStop(1, `rgba(50, 150, 255, 0)`);
+                gradient.addColorStop(0, `rgba(240, 185, 120, ${alpha})`);
+                gradient.addColorStop(0.65, `rgba(135, 165, 185, ${alpha * 0.6})`);
+                gradient.addColorStop(1, `rgba(90, 120, 140, 0)`);
 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
@@ -571,7 +628,8 @@
 
         function updateJS(dt) {
             // Simplified JS physics (much slower!)
-            const spawnRate = parseFloat(document.getElementById('glrSlider').value) * 10;
+            const spawnRate = activeSettings.glr * 10;
+            const speedFactor = activeSettings.speed;
 
             if (Math.random() < spawnRate * 0.1 && jsBubbles.length < 500) {
                 jsBubbles.push({
@@ -586,9 +644,9 @@
             }
 
             jsBubbles.forEach(b => {
-                b.x += b.vx;
-                b.y += b.vy;
-                b.age++;
+                b.x += b.vx * speedFactor;
+                b.y += b.vy * speedFactor;
+                b.age += speedFactor;
                 if (b.age > 200) b.alpha -= 0.01;
             });
 
@@ -602,7 +660,7 @@
 
         function renderJS() {
             // Draw chamber
-            ctx.strokeStyle = 'rgba(0, 170, 255, 0.3)';
+            ctx.strokeStyle = 'rgba(120, 150, 170, 0.4)';
             ctx.lineWidth = 2;
             ctx.strokeRect(50, canvas.height * 0.2, 200, canvas.height * 0.6);
 
@@ -618,8 +676,8 @@
             // Draw bubbles
             jsBubbles.forEach(b => {
                 const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-                gradient.addColorStop(0, `rgba(150, 220, 255, ${b.alpha})`);
-                gradient.addColorStop(1, `rgba(50, 150, 255, 0)`);
+                gradient.addColorStop(0, `rgba(230, 180, 120, ${b.alpha})`);
+                gradient.addColorStop(1, `rgba(90, 120, 140, 0)`);
 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
@@ -649,26 +707,69 @@
         });
 
         document.getElementById('glrSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('glrValue').textContent = val.toFixed(2);
-            if (dpepEngine) dpepEngine.setGasToLiquidRatio(val);
+            pendingSettings.glr = parseFloat(e.target.value);
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
         });
 
         document.getElementById('pressureSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('pressureValue').textContent = val;
-            if (dpepEngine) dpepEngine.setChamberPressure(val);
+            pendingSettings.pressure = parseFloat(e.target.value);
+            document.getElementById('pressureValue').textContent = pendingSettings.pressure;
         });
 
         document.getElementById('speedSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('speedValue').textContent = val.toFixed(1);
-            if (dpepEngine) dpepEngine.setSimulationSpeed(val);
+            pendingSettings.speed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = pendingSettings.speed.toFixed(1);
         });
 
         document.getElementById('propellantSelect').addEventListener('change', (e) => {
-            if (dpepEngine) dpepEngine.setPropellant(parseInt(e.target.value));
+            pendingSettings.propellant = parseInt(e.target.value);
         });
+
+        document.getElementById('applySettingsBtn').addEventListener('click', applySettings);
+
+        document.getElementById('pressurizeBtn').addEventListener('click', () => {
+            adjustPressure(10);
+        });
+
+        document.getElementById('depressurizeBtn').addEventListener('click', () => {
+            adjustPressure(-10);
+        });
+
+        document.getElementById('firePulseBtn').addEventListener('click', firePulse);
+
+        document.getElementById('ventFlowBtn').addEventListener('click', ventFlow);
+
+        function adjustPressure(delta) {
+            pendingSettings.pressure = Math.min(100, Math.max(5, pendingSettings.pressure + delta));
+            document.getElementById('pressureSlider').value = pendingSettings.pressure;
+            document.getElementById('pressureValue').textContent = pendingSettings.pressure;
+            applySettings();
+        }
+
+        function firePulse() {
+            pendingSettings.glr = Math.min(0.5, Math.max(0.01, pendingSettings.glr + 0.05));
+            document.getElementById('glrSlider').value = pendingSettings.glr;
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
+            applySettings();
+        }
+
+        function ventFlow() {
+            pendingSettings.glr = Math.max(0.01, pendingSettings.glr - 0.05);
+            document.getElementById('glrSlider').value = pendingSettings.glr;
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
+            applySettings();
+        }
+
+        function applySettings() {
+            activeSettings = { ...pendingSettings };
+
+            if (dpepEngine) {
+                dpepEngine.setGasToLiquidRatio(activeSettings.glr);
+                dpepEngine.setChamberPressure(activeSettings.pressure);
+                dpepEngine.setSimulationSpeed(activeSettings.speed);
+                dpepEngine.setPropellant(activeSettings.propellant);
+            }
+        }
 
         // ====================================================================
         // INITIALIZATION
