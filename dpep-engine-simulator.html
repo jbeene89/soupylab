@@ -8,16 +8,16 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&display=swap');
 
         :root {
-            --bg: #0a0a0f;
-            --panel: #12121a;
-            --accent: #00aaff;
-            --accent-glow: #00ddff;
+            --bg: #0f1116;
+            --panel: #1b1e24;
+            --accent: #d38a3a;
+            --accent-glow: #f2b266;
             --text: #e0e0e0;
             --dim: #606080;
             --warning: #ff6b35;
             --success: #4caf50;
-            --gas-color: rgba(100, 200, 255, 0.6);
-            --liquid-color: rgba(0, 170, 255, 0.8);
+            --gas-color: rgba(130, 160, 185, 0.6);
+            --liquid-color: rgba(45, 85, 110, 0.85);
         }
 
         * {
@@ -28,7 +28,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: radial-gradient(ellipse at center, #1a1a2e 0%, var(--bg) 100%);
+            background: radial-gradient(ellipse at center, #1c212a 0%, var(--bg) 100%);
             color: var(--text);
             overflow-x: hidden;
             min-height: 100vh;
@@ -37,15 +37,15 @@
         .header {
             text-align: center;
             padding: 2rem 1rem 1rem;
-            background: linear-gradient(180deg, rgba(0, 170, 255, 0.1) 0%, transparent 100%);
-            border-bottom: 1px solid rgba(0, 170, 255, 0.2);
+            background: linear-gradient(180deg, rgba(211, 138, 58, 0.12) 0%, transparent 100%);
+            border-bottom: 1px solid rgba(211, 138, 58, 0.25);
         }
 
         .header h1 {
             font-family: 'Orbitron', sans-serif;
             font-size: 2rem;
             color: var(--accent-glow);
-            text-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+            text-shadow: 0 0 20px rgba(242, 178, 102, 0.4);
             margin-bottom: 0.5rem;
             letter-spacing: 0.05em;
         }
@@ -83,7 +83,7 @@
             text-transform: uppercase;
             margin: 1.5rem 0 1rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid rgba(0, 170, 255, 0.2);
+            border-bottom: 1px solid rgba(211, 138, 58, 0.25);
         }
 
         .section-title:first-child {
@@ -135,13 +135,13 @@
             background: var(--accent);
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 8px rgba(0, 170, 255, 0.6);
+            box-shadow: 0 0 8px rgba(242, 178, 102, 0.45);
             transition: all 0.2s;
         }
 
         input[type="range"]::-webkit-slider-thumb:hover {
             transform: scale(1.2);
-            box-shadow: 0 0 12px rgba(0, 170, 255, 0.9);
+            box-shadow: 0 0 12px rgba(242, 178, 102, 0.65);
         }
 
         input[type="range"]::-moz-range-thumb {
@@ -151,7 +151,7 @@
             border-radius: 50%;
             cursor: pointer;
             border: none;
-            box-shadow: 0 0 8px rgba(0, 170, 255, 0.6);
+            box-shadow: 0 0 8px rgba(242, 178, 102, 0.45);
         }
 
         .slider-value {
@@ -190,7 +190,7 @@
         button {
             width: 100%;
             padding: 0.75rem;
-            background: linear-gradient(135deg, var(--accent) 0%, #0088cc 100%);
+            background: linear-gradient(135deg, var(--accent) 0%, #8a4a22 100%);
             border: none;
             border-radius: 6px;
             color: white;
@@ -205,7 +205,40 @@
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 170, 255, 0.4);
+            box-shadow: 0 4px 12px rgba(242, 178, 102, 0.35);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 0.7rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            background: linear-gradient(135deg, #8a4a22 0%, #d38a3a 100%);
+            border: 1px solid rgba(211, 138, 58, 0.6);
+            color: #1b0f05;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(211, 138, 58, 0.35);
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 0.75rem;
+        }
+
+        .action-btn.secondary {
+            background: rgba(211, 138, 58, 0.15);
+            color: var(--accent-glow);
+            border-color: rgba(211, 138, 58, 0.4);
         }
 
         .stat-box {
@@ -264,14 +297,14 @@
         canvas {
             display: block;
             width: 100%;
-            background: #0a0a0f;
+            background: #10141b;
             border-radius: 6px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .info-badge {
             display: inline-block;
-            background: rgba(0, 170, 255, 0.2);
+            background: rgba(211, 138, 58, 0.2);
             border: 1px solid var(--accent);
             border-radius: 4px;
             padding: 0.3rem 0.6rem;
@@ -316,7 +349,7 @@
         }
 
         .back-link:hover {
-            background: rgba(0, 170, 255, 0.2);
+            background: rgba(211, 138, 58, 0.2);
             border-color: var(--accent);
             transform: translateX(-3px);
         }
@@ -461,6 +494,15 @@
                 </div>
             </div>
 
+            <div class="section-title">Action Controls</div>
+            <div class="action-grid">
+                <button class="action-btn" id="pressurizeBtn">Pressurize</button>
+                <button class="action-btn secondary" id="depressurizeBtn">Depressurize</button>
+                <button class="action-btn" id="fireEngineBtn">Fire Engine</button>
+                <button class="action-btn secondary" id="purgeFlowBtn">Purge Flow</button>
+            </div>
+
+            <button id="applyBtn">Apply Settings</button>
             <button id="resetBtn">Reset to Defaults</button>
         </div>
 
@@ -471,15 +513,15 @@
                 <canvas id="flowCanvas" width="800" height="350"></canvas>
                 <div class="legend">
                     <div class="legend-item">
-                        <div class="legend-color" style="background: rgba(100, 200, 255, 0.6);"></div>
+                        <div class="legend-color" style="background: rgba(130, 160, 185, 0.6);"></div>
                         <span>Gas Bubbles</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: rgba(0, 170, 255, 0.8);"></div>
+                        <div class="legend-color" style="background: rgba(45, 85, 110, 0.85);"></div>
                         <span>Liquid Propellant</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: rgba(255, 100, 50, 0.8);"></div>
+                        <div class="legend-color" style="background: rgba(220, 130, 60, 0.8);"></div>
                         <span>Combustion Zone</span>
                     </div>
                 </div>
@@ -649,6 +691,19 @@
         let v_injection = 25;  // Injection velocity (m/s)
         let bubbleDensityParam = 400;
 
+        const defaultSettings = {
+            propellantKey: 'LOX-RP1',
+            glr: 0.15,
+            chamberPressure: 100,
+            chamberTemp: 3400,
+            throatDiameter: 20,
+            expansionRatio: 40,
+            injectionVelocity: 25,
+            bubbleDensity: 400
+        };
+
+        let pendingSettings = { ...defaultSettings };
+
         // Particle system for visualization
         let bubbles = [];
         let liquidParticles = [];
@@ -675,6 +730,10 @@
 
             // Setup event listeners
             setupEventListeners();
+
+            // Sync defaults
+            updateDisplaysFromPending();
+            applySettings();
 
             // Start animation
             updateSimulation();
@@ -738,9 +797,9 @@
                     this.x, this.y, 0,
                     this.x, this.y, this.size
                 );
-                gradient.addColorStop(0, 'rgba(150, 220, 255, 0.8)');
-                gradient.addColorStop(0.7, 'rgba(100, 200, 255, 0.4)');
-                gradient.addColorStop(1, 'rgba(100, 200, 255, 0)');
+                gradient.addColorStop(0, 'rgba(255, 196, 125, 0.75)');
+                gradient.addColorStop(0.6, 'rgba(135, 165, 185, 0.5)');
+                gradient.addColorStop(1, 'rgba(95, 125, 145, 0)');
 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
@@ -748,7 +807,7 @@
                 ctx.fill();
 
                 // Highlight
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.fillStyle = 'rgba(255, 215, 160, 0.55)';
                 ctx.beginPath();
                 ctx.arc(this.x - this.size * 0.3, this.y - this.size * 0.3, this.size * 0.3, 0, Math.PI * 2);
                 ctx.fill();
@@ -789,7 +848,7 @@
             draw(ctx) {
                 ctx.save();
                 ctx.globalAlpha = this.life * 0.7;
-                ctx.fillStyle = 'rgba(0, 170, 255, 0.8)';
+                ctx.fillStyle = 'rgba(45, 85, 110, 0.85)';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
@@ -1004,40 +1063,40 @@
             const h = canvas.height;
 
             // Clear
-            flowCtx.fillStyle = '#0a0a0f';
+            flowCtx.fillStyle = '#10141b';
             flowCtx.fillRect(0, 0, w, h);
 
             // Draw injector
-            flowCtx.strokeStyle = 'rgba(100, 150, 200, 0.6)';
+            flowCtx.strokeStyle = 'rgba(120, 150, 170, 0.6)';
             flowCtx.lineWidth = 3;
             flowCtx.strokeRect(20, 120, 120, 110);
 
-            flowCtx.fillStyle = 'rgba(0, 170, 255, 0.3)';
+            flowCtx.fillStyle = 'rgba(120, 150, 170, 0.25)';
             flowCtx.fillRect(20, 120, 120, 110);
 
-            flowCtx.fillStyle = '#00aaff';
+            flowCtx.fillStyle = '#b6c5d4';
             flowCtx.font = '12px Orbitron';
             flowCtx.fillText('INJECTOR', 45, 110);
 
             // Draw chamber
-            flowCtx.strokeStyle = 'rgba(255, 100, 50, 0.6)';
+            flowCtx.strokeStyle = 'rgba(220, 130, 60, 0.65)';
             flowCtx.lineWidth = 3;
             flowCtx.strokeRect(140, 80, 260, 190);
 
             // Combustion zone gradient
             const combustGrad = flowCtx.createLinearGradient(140, 175, 400, 175);
-            combustGrad.addColorStop(0, 'rgba(255, 100, 50, 0.3)');
-            combustGrad.addColorStop(0.5, 'rgba(255, 150, 50, 0.4)');
-            combustGrad.addColorStop(1, 'rgba(255, 50, 20, 0.2)');
+            combustGrad.addColorStop(0, 'rgba(220, 130, 60, 0.28)');
+            combustGrad.addColorStop(0.5, 'rgba(240, 170, 90, 0.35)');
+            combustGrad.addColorStop(1, 'rgba(200, 90, 40, 0.22)');
             flowCtx.fillStyle = combustGrad;
             flowCtx.fillRect(140, 80, 260, 190);
 
-            flowCtx.fillStyle = '#ff6b35';
+            flowCtx.fillStyle = '#e09045';
             flowCtx.font = '12px Orbitron';
             flowCtx.fillText('COMBUSTION CHAMBER', 200, 70);
 
             // Draw nozzle
-            flowCtx.strokeStyle = 'rgba(0, 170, 255, 0.6)';
+            flowCtx.strokeStyle = 'rgba(120, 150, 170, 0.55)';
             flowCtx.lineWidth = 3;
 
             const nozzleStart = 400;
@@ -1065,14 +1124,14 @@
 
             // Nozzle gradient
             const nozzleGrad = flowCtx.createLinearGradient(nozzleStart, centerY, nozzleStart + nozzleLength, centerY);
-            nozzleGrad.addColorStop(0, 'rgba(255, 100, 50, 0.2)');
-            nozzleGrad.addColorStop(0.5, 'rgba(100, 150, 255, 0.2)');
-            nozzleGrad.addColorStop(1, 'rgba(50, 100, 255, 0.1)');
+            nozzleGrad.addColorStop(0, 'rgba(220, 130, 60, 0.2)');
+            nozzleGrad.addColorStop(0.5, 'rgba(120, 150, 180, 0.18)');
+            nozzleGrad.addColorStop(1, 'rgba(80, 110, 140, 0.12)');
             flowCtx.fillStyle = nozzleGrad;
             flowCtx.fill();
             flowCtx.stroke();
 
-            flowCtx.fillStyle = '#00aaff';
+            flowCtx.fillStyle = '#d38a3a';
             flowCtx.font = '12px Orbitron';
             flowCtx.fillText('NOZZLE', 550, 70);
 
@@ -1153,7 +1212,7 @@
             const padding = 50;
 
             // Clear
-            pressureCtx.fillStyle = '#0a0a0f';
+            pressureCtx.fillStyle = '#10141b';
             pressureCtx.fillRect(0, 0, w, h);
 
             if (pressureData.length < 2) return;
@@ -1192,7 +1251,7 @@
             const maxP = Math.max(...pressureData) * 1.05;
             const rangeP = maxP - minP || 1;
 
-            pressureCtx.strokeStyle = '#00ddff';
+            pressureCtx.strokeStyle = '#f2b266';
             pressureCtx.lineWidth = 2;
             pressureCtx.beginPath();
 
@@ -1210,13 +1269,13 @@
             pressureCtx.stroke();
 
             // Draw glow
-            pressureCtx.shadowColor = '#00ddff';
+            pressureCtx.shadowColor = '#f2b266';
             pressureCtx.shadowBlur = 10;
             pressureCtx.stroke();
             pressureCtx.shadowBlur = 0;
 
             // Y-axis labels
-            pressureCtx.fillStyle = '#00aaff';
+            pressureCtx.fillStyle = '#d38a3a';
             pressureCtx.textAlign = 'right';
             for (let i = 0; i <= 5; i++) {
                 const value = minP + (maxP - minP) * (1 - i / 5);
@@ -1233,7 +1292,7 @@
             const padding = 50;
 
             // Clear
-            densityCtx.fillStyle = '#0a0a0f';
+            densityCtx.fillStyle = '#10141b';
             densityCtx.fillRect(0, 0, w, h);
 
             // Draw grid
@@ -1358,7 +1417,7 @@
             const padding = 50;
 
             // Clear
-            velocityCtx.fillStyle = '#0a0a0f';
+            velocityCtx.fillStyle = '#10141b';
             velocityCtx.fillRect(0, 0, w, h);
 
             // Draw grid
@@ -1467,82 +1526,131 @@
         function setupEventListeners() {
             // Propellant type
             document.getElementById('propellantType').addEventListener('change', (e) => {
-                currentPropellant = PROPELLANTS[e.target.value];
+                pendingSettings.propellantKey = e.target.value;
             });
 
             // GLR
             document.getElementById('glr').addEventListener('input', (e) => {
-                glr = parseFloat(e.target.value);
-                document.getElementById('glrValue').textContent = glr.toFixed(2);
+                pendingSettings.glr = parseFloat(e.target.value);
+                document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
             });
 
             // Chamber pressure
             document.getElementById('chamberPressure').addEventListener('input', (e) => {
-                P_chamber = parseFloat(e.target.value) * 1e5;  // Convert bar to Pa
-                document.getElementById('chamberPressureValue').textContent = e.target.value + ' bar';
+                pendingSettings.chamberPressure = parseFloat(e.target.value);
+                document.getElementById('chamberPressureValue').textContent = `${pendingSettings.chamberPressure} bar`;
             });
 
             // Chamber temperature
             document.getElementById('chamberTemp').addEventListener('input', (e) => {
-                T_chamber = parseFloat(e.target.value);
-                document.getElementById('chamberTempValue').textContent = e.target.value + ' K';
+                pendingSettings.chamberTemp = parseFloat(e.target.value);
+                document.getElementById('chamberTempValue').textContent = `${pendingSettings.chamberTemp} K`;
             });
 
             // Throat diameter
             document.getElementById('throatDiameter').addEventListener('input', (e) => {
-                D_throat = parseFloat(e.target.value) / 100;  // Convert cm to m
-                document.getElementById('throatDiameterValue').textContent = e.target.value + ' cm';
+                pendingSettings.throatDiameter = parseFloat(e.target.value);
+                document.getElementById('throatDiameterValue').textContent = `${pendingSettings.throatDiameter} cm`;
             });
 
             // Expansion ratio
             document.getElementById('expansionRatio').addEventListener('input', (e) => {
-                expansionRatio = parseFloat(e.target.value);
-                document.getElementById('expansionRatioValue').textContent = e.target.value;
+                pendingSettings.expansionRatio = parseFloat(e.target.value);
+                document.getElementById('expansionRatioValue').textContent = pendingSettings.expansionRatio;
             });
 
             // Injection velocity
             document.getElementById('injectionVelocity').addEventListener('input', (e) => {
-                v_injection = parseFloat(e.target.value);
-                document.getElementById('injectionVelocityValue').textContent = e.target.value + ' m/s';
+                pendingSettings.injectionVelocity = parseFloat(e.target.value);
+                document.getElementById('injectionVelocityValue').textContent = `${pendingSettings.injectionVelocity} m/s`;
             });
 
             // Bubble density
             document.getElementById('bubbleDensity').addEventListener('input', (e) => {
-                bubbleDensityParam = parseFloat(e.target.value);
-                document.getElementById('bubbleDensityValue').textContent = e.target.value;
+                pendingSettings.bubbleDensity = parseFloat(e.target.value);
+                document.getElementById('bubbleDensityValue').textContent = pendingSettings.bubbleDensity;
             });
+
+            document.getElementById('pressurizeBtn').addEventListener('click', () => {
+                adjustChamberPressure(10);
+            });
+
+            document.getElementById('depressurizeBtn').addEventListener('click', () => {
+                adjustChamberPressure(-10);
+            });
+
+            document.getElementById('fireEngineBtn').addEventListener('click', fireEnginePulse);
+
+            document.getElementById('purgeFlowBtn').addEventListener('click', purgeFlow);
+
+            // Apply settings button
+            document.getElementById('applyBtn').addEventListener('click', applySettings);
 
             // Reset button
             document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
         }
 
+        function adjustChamberPressure(deltaBar) {
+            pendingSettings.chamberPressure = Math.min(
+                200,
+                Math.max(5, pendingSettings.chamberPressure + deltaBar)
+            );
+            syncControlsToPending();
+            updateDisplaysFromPending();
+            applySettings();
+        }
+
+        function fireEnginePulse() {
+            pendingSettings.chamberTemp = Math.min(4000, pendingSettings.chamberTemp + 150);
+            updateDisplaysFromPending();
+            applySettings();
+            initializeParticles();
+        }
+
+        function purgeFlow() {
+            bubbles = [];
+            liquidParticles = [];
+        }
+
+        function applySettings() {
+            currentPropellant = PROPELLANTS[pendingSettings.propellantKey];
+            glr = pendingSettings.glr;
+            P_chamber = pendingSettings.chamberPressure * 1e5;
+            T_chamber = pendingSettings.chamberTemp;
+            D_throat = pendingSettings.throatDiameter / 100;
+            expansionRatio = pendingSettings.expansionRatio;
+            v_injection = pendingSettings.injectionVelocity;
+            bubbleDensityParam = pendingSettings.bubbleDensity;
+        }
+
+        function updateDisplaysFromPending() {
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
+            document.getElementById('chamberPressureValue').textContent = `${pendingSettings.chamberPressure} bar`;
+            document.getElementById('chamberTempValue').textContent = `${pendingSettings.chamberTemp} K`;
+            document.getElementById('throatDiameterValue').textContent = `${pendingSettings.throatDiameter} cm`;
+            document.getElementById('expansionRatioValue').textContent = pendingSettings.expansionRatio;
+            document.getElementById('injectionVelocityValue').textContent = `${pendingSettings.injectionVelocity} m/s`;
+            document.getElementById('bubbleDensityValue').textContent = pendingSettings.bubbleDensity;
+            document.getElementById('chamberTemp').value = pendingSettings.chamberTemp;
+        }
+
+        function syncControlsToPending() {
+            document.getElementById('propellantType').value = pendingSettings.propellantKey;
+            document.getElementById('glr').value = pendingSettings.glr;
+            document.getElementById('chamberPressure').value = pendingSettings.chamberPressure;
+            document.getElementById('chamberTemp').value = pendingSettings.chamberTemp;
+            document.getElementById('throatDiameter').value = pendingSettings.throatDiameter;
+            document.getElementById('expansionRatio').value = pendingSettings.expansionRatio;
+            document.getElementById('injectionVelocity').value = pendingSettings.injectionVelocity;
+            document.getElementById('bubbleDensity').value = pendingSettings.bubbleDensity;
+        }
+
         function resetToDefaults() {
-            document.getElementById('propellantType').value = 'LOX-RP1';
-            document.getElementById('glr').value = '0.15';
-            document.getElementById('chamberPressure').value = '100';
-            document.getElementById('chamberTemp').value = '3400';
-            document.getElementById('throatDiameter').value = '20';
-            document.getElementById('expansionRatio').value = '40';
-            document.getElementById('injectionVelocity').value = '25';
-            document.getElementById('bubbleDensity').value = '400';
-
-            currentPropellant = PROPELLANTS['LOX-RP1'];
-            glr = 0.15;
-            P_chamber = 100e5;
-            T_chamber = 3400;
-            D_throat = 0.2;
-            expansionRatio = 40;
-            v_injection = 25;
-            bubbleDensityParam = 400;
-
-            // Update displays
-            document.getElementById('glrValue').textContent = '0.15';
-            document.getElementById('chamberPressureValue').textContent = '100 bar';
-            document.getElementById('chamberTempValue').textContent = '3400 K';
-            document.getElementById('throatDiameterValue').textContent = '20 cm';
-            document.getElementById('expansionRatioValue').textContent = '40';
-            document.getElementById('injectionVelocityValue').textContent = '25 m/s';
-            document.getElementById('bubbleDensityValue').textContent = '400';
+            pendingSettings = { ...defaultSettings };
+            syncControlsToPending();
+            updateDisplaysFromPending();
+            applySettings();
+            T_chamber = pendingSettings.chamberTemp;
 
             // Reset particles
             initializeParticles();
