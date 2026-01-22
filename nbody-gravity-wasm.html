@@ -262,6 +262,9 @@
         <button id="clusterBtn" style="background: linear-gradient(135deg, #00ff88, #00ccff);">
             💫 Random Cluster
         </button>
+        <button id="oceanTrashBtn" style="background: linear-gradient(135deg, #006994, #00c9a7);">
+            🌊 Ocean Trash
+        </button>
 
         <div class="section-title">Particle Count</div>
         
@@ -462,6 +465,15 @@
             updateStats();
         }
 
+        function createOceanTrash() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value) * 3;
+            nbodyEngine.createOceanTrash(count);
+            trails.clear();
+            camZoom = 0.8;
+            updateStats();
+        }
+
         // ====================================================================
         // RENDERING
         // ====================================================================
@@ -610,6 +622,7 @@
         document.getElementById('galaxyBtn').addEventListener('click', createGalaxyCollision);
         document.getElementById('solarBtn').addEventListener('click', createSolarSystem);
         document.getElementById('clusterBtn').addEventListener('click', createRandomCluster);
+        document.getElementById('oceanTrashBtn').addEventListener('click', createOceanTrash);
 
         document.getElementById('particleSlider').addEventListener('input', (e) => {
             document.getElementById('particleValue').textContent = e.target.value;

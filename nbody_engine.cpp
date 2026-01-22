@@ -454,6 +454,89 @@ public:
         }
     }
 
+    void createOceanTrash(int count) {
+        particles.clear();
+
+        std::uniform_real_distribution<float> dist(0, 1);
+        std::uniform_real_distribution<float> angleDist(0, 2 * 3.14159f);
+
+        // Create multiple ocean current vortices with trash
+        int numVortices = 5; // Pacific, Atlantic, Indian, etc.
+        int trashPerVortex = count / numVortices;
+
+        for (int v = 0; v < numVortices; ++v) {
+            // Position each vortex in different ocean region
+            float vortexAngle = (v / (float)numVortices) * 2 * 3.14159f;
+            float vortexRadius = worldSize * 0.4f;
+            Vec2 vortexCenter(
+                cosf(vortexAngle) * vortexRadius,
+                sinf(vortexAngle) * vortexRadius
+            );
+
+            // Vortex rotation speed (gentle ocean current)
+            float vortexSpeed = 15.0f + dist(rng) * 10.0f;
+
+            for (int i = 0; i < trashPerVortex; ++i) {
+                // Distribute trash in spiral pattern around vortex
+                float r = sqrtf(dist(rng)) * worldSize * 0.15f;
+                float theta = dist(rng) * 2 * 3.14159f;
+
+                Vec2 offsetPos(cosf(theta) * r, sinf(theta) * r);
+                Vec2 pos = vortexCenter + offsetPos;
+
+                // Circular current velocity + some turbulence
+                Vec2 circularVel(-sinf(theta) * vortexSpeed, cosf(theta) * vortexSpeed);
+                Vec2 turbulence(
+                    (dist(rng) - 0.5f) * 5.0f,
+                    (dist(rng) - 0.5f) * 5.0f
+                );
+                Vec2 vel = circularVel + turbulence;
+
+                // Different trash types with varied mass (plastic, bottles, bags, debris)
+                float trashType = dist(rng);
+                float mass, radius;
+
+                if (trashType < 0.4f) {
+                    // Plastic bottles - medium size, light
+                    mass = 0.1f + dist(rng) * 0.2f;
+                    radius = 1.5f + dist(rng) * 0.5f;
+                } else if (trashType < 0.7f) {
+                    // Plastic bags - very light, small
+                    mass = 0.05f + dist(rng) * 0.1f;
+                    radius = 0.8f + dist(rng) * 0.3f;
+                } else if (trashType < 0.9f) {
+                    // Microplastics and small debris
+                    mass = 0.02f + dist(rng) * 0.05f;
+                    radius = 0.3f + dist(rng) * 0.2f;
+                } else {
+                    // Larger debris (fishing nets, etc.)
+                    mass = 0.3f + dist(rng) * 0.4f;
+                    radius = 2.0f + dist(rng) * 1.0f;
+                }
+
+                particles.emplace_back(pos, vel, mass);
+                particles.back().radius = radius;
+            }
+        }
+
+        // Add some scattered floating trash between vortices
+        int scatteredCount = count - (trashPerVortex * numVortices);
+        std::uniform_real_distribution<float> scatterPos(-worldSize * 0.6f, worldSize * 0.6f);
+        std::uniform_real_distribution<float> scatterVel(-8.0f, 8.0f);
+
+        for (int i = 0; i < scatteredCount; ++i) {
+            Vec2 pos(scatterPos(rng), scatterPos(rng));
+            Vec2 vel(scatterVel(rng), scatterVel(rng));
+
+            // Random trash type
+            float mass = 0.05f + dist(rng) * 0.25f;
+            float radius = 0.5f + dist(rng) * 1.5f;
+
+            particles.emplace_back(pos, vel, mass);
+            particles.back().radius = radius;
+        }
+    }
+
     // ========================================================================
     // UPDATE
     // ========================================================================
@@ -516,6 +599,7 @@ EMSCRIPTEN_BINDINGS(nbody_module) {
         .function("createGalaxyCollision", &NBodyEngine::createGalaxyCollision)
         .function("createSolarSystem", &NBodyEngine::createSolarSystem)
         .function("createRandomCluster", &NBodyEngine::createRandomCluster)
+        .function("createOceanTrash", &NBodyEngine::createOceanTrash)
         .function("update", &NBodyEngine::update)
         .function("getParticleData", &NBodyEngine::getParticleData)
         .function("getParticleCount", &NBodyEngine::getParticleCount)

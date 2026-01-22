@@ -420,6 +420,7 @@
         <button id="galaxyBtn">🌌 Galaxy Collision</button>
         <button id="solarBtn">☀️ Solar System</button>
         <button id="clusterBtn">💫 Random Cluster</button>
+        <button id="oceanTrashBtn">🌊 Ocean Trash</button>
 
         <div class="section-title">🎨 Visual Preset</div>
         <select id="visualPreset">
@@ -1137,6 +1138,18 @@
             updateStats();
         }
 
+        function createOceanTrash() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value) * 3;
+            nbodyEngine.createOceanTrash(count);
+            trails.clear();
+            explosions = [];
+            totalCollisions = 0;
+            camZoom = 0.8;
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
+            updateStats();
+        }
+
         // ====================================================================
         // STATS
         // ====================================================================
@@ -1216,6 +1229,7 @@
         document.getElementById('galaxyBtn').addEventListener('click', createGalaxyCollision);
         document.getElementById('solarBtn').addEventListener('click', createSolarSystem);
         document.getElementById('clusterBtn').addEventListener('click', createRandomCluster);
+        document.getElementById('oceanTrashBtn').addEventListener('click', createOceanTrash);
 
         document.getElementById('particleSlider').addEventListener('input', (e) => {
             document.getElementById('particleValue').textContent = e.target.value;
