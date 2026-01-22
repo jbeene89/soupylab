@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plastic-Eating Bacteria Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a4d3c 0%, #042826 100%);
+            color: #e0f2f1;
+            overflow: hidden;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #000;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 77, 60, 0.9);
+            border: 2px solid #26a69a;
+            border-radius: 10px;
+            padding: 20px;
+            width: 300px;
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #80cbc4;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: #26a69a;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(135deg, #26a69a, #00796b);
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .control-group {
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            color: #b2dfdb;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .value-display {
+            float: right;
+            color: #80cbc4;
+            font-weight: bold;
+        }
+
+        .stats {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .stat-label {
+            color: #b2dfdb;
+        }
+
+        .stat-value {
+            color: #80cbc4;
+            font-weight: bold;
+        }
+
+        .species-btn {
+            font-size: 0.8rem;
+            padding: 8px;
+        }
+
+        .species-0 { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+        .species-1 { background: linear-gradient(135deg, #2196F3, #0D47A1); }
+        .species-2 { background: linear-gradient(135deg, #FF9800, #E65100); }
+
+        .weather-btn {
+            font-size: 0.8rem;
+            padding: 8px;
+        }
+
+        #loadingMsg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div id="loadingMsg">Loading Bacteria Engine...</div>
+
+    <div class="controls">
+        <h1>🦠 Bacteria Simulator</h1>
+
+        <div class="section">
+            <div class="section-title">Add Bacteria Species</div>
+            <button class="species-btn species-0" onclick="addBacteria(0)">
+                🦠 Ideonella sakaiensis
+            </button>
+            <button class="species-btn species-1" onclick="addBacteria(1)">
+                💨 Pseudomonas putida
+            </button>
+            <button class="species-btn species-2" onclick="addBacteria(2)">
+                ⚡ Engineered Superbug
+            </button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Plastic Management</div>
+            <button onclick="addPlastic()">➕ Add Plastic Particles</button>
+            <button onclick="clearPlastic()" style="background: linear-gradient(135deg, #f44336, #c62828);">
+                🗑️ Clear All Plastic
+            </button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Environmental Controls</div>
+
+            <div class="control-group">
+                <label>
+                    Global Temperature
+                    <span class="value-display" id="tempValue">20°C</span>
+                </label>
+                <input type="range" id="tempSlider" min="0" max="45" step="1" value="20">
+            </div>
+
+            <div class="section-title" style="margin-top: 15px;">Weather</div>
+            <button class="weather-btn" onclick="setWeather(0)">☀️ Sunny</button>
+            <button class="weather-btn" onclick="setWeather(1)">☁️ Cloudy</button>
+            <button class="weather-btn" onclick="setWeather(2)">⛈️ Stormy</button>
+            <button class="weather-btn" onclick="setWeather(3)">☢️ Polluted</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Simulation Speed</div>
+            <div class="control-group">
+                <label>
+                    Updates/Frame
+                    <span class="value-display" id="speedValue">1</span>
+                </label>
+                <input type="range" id="speedSlider" min="1" max="10" step="1" value="1">
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Statistics</div>
+            <div class="stats">
+                <div class="stat-row">
+                    <span class="stat-label">Bacteria Colonies:</span>
+                    <span class="stat-value" id="bacteriaCount">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Total Population:</span>
+                    <span class="stat-value" id="totalPop">0M</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Plastic Particles:</span>
+                    <span class="stat-value" id="plasticCount">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Plastic Mass:</span>
+                    <span class="stat-value" id="plasticMass">0 kg</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Degraded:</span>
+                    <span class="stat-value" id="degraded">0 kg</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Time:</span>
+                    <span class="stat-value" id="timeValue">0 s</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <button onclick="resetSimulation()" style="background: linear-gradient(135deg, #607D8B, #37474F);">
+                🔄 Reset Simulation
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingMsg = document.getElementById('loadingMsg');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let bacteriaEngine = null;
+        let isWASMReady = false;
+        let updateSpeed = 1;
+
+        // Color schemes for bacteria species
+        const SPECIES_COLORS = {
+            0: '#4CAF50',  // Ideonella - green
+            1: '#2196F3',  // Pseudomonas - blue
+            2: '#FF9800'   // Superbug - orange
+        };
+
+        // Load WASM module
+        async function loadWASM() {
+            try {
+                const bacteriaModule = await import('./bacteria_engine.js');
+                const createModule = bacteriaModule.default;
+                const Module = await createModule();
+
+                bacteriaEngine = new Module.BacteriaEngine(1000);
+                isWASMReady = true;
+
+                loadingMsg.style.display = 'none';
+
+                // Add initial plastic
+                addPlastic();
+
+                console.log('🦠 Bacteria Engine ready!');
+            } catch (error) {
+                console.error('❌ WASM loading failed:', error);
+                loadingMsg.innerHTML = '❌ Failed to load bacteria engine<br><small>' + error.message + '</small>';
+            }
+        }
+
+        // Add bacteria colony (called from buttons)
+        window.addBacteria = function(species) {
+            if (!bacteriaEngine) return;
+
+            // Random position
+            const x = (Math.random() - 0.5) * 1600;
+            const y = (Math.random() - 0.5) * 1600;
+            const initialPop = 10.0;
+
+            bacteriaEngine.addBacteriaColony(x, y, species, initialPop);
+        };
+
+        // Add plastic particles
+        window.addPlastic = function() {
+            if (!bacteriaEngine) return;
+
+            for (let i = 0; i < 100; i++) {
+                const x = (Math.random() - 0.5) * 1600;
+                const y = (Math.random() - 0.5) * 1600;
+                const mass = 0.1 + Math.random() * 0.9;  // 0.1-1.0 kg
+
+                bacteriaEngine.addPlasticParticle(x, y, mass);
+            }
+
+            updateStats();
+        };
+
+        // Clear all plastic
+        window.clearPlastic = function() {
+            if (!bacteriaEngine) return;
+            resetSimulation();
+        };
+
+        // Set weather
+        window.setWeather = function(weather) {
+            if (!bacteriaEngine) return;
+            bacteriaEngine.setGlobalWeather(weather);
+        };
+
+        // Reset simulation
+        window.resetSimulation = function() {
+            if (!bacteriaEngine) return;
+
+            // Recreate engine
+            const Module = bacteriaEngine.constructor;
+            bacteriaEngine.delete();
+            bacteriaEngine = new Module(1000);
+
+            addPlastic();
+            updateStats();
+        };
+
+        // Update statistics display
+        function updateStats() {
+            if (!isWASMReady || !bacteriaEngine) return;
+
+            document.getElementById('bacteriaCount').textContent = bacteriaEngine.getBacteriaCount();
+            document.getElementById('totalPop').textContent = bacteriaEngine.getTotalBacteriaPopulation().toFixed(1) + 'M';
+            document.getElementById('plasticCount').textContent = bacteriaEngine.getPlasticCount();
+            document.getElementById('plasticMass').textContent = bacteriaEngine.getTotalPlasticMass().toFixed(2) + ' kg';
+            document.getElementById('degraded').textContent = bacteriaEngine.getTotalPlasticDegraded().toFixed(2) + ' kg';
+            document.getElementById('timeValue').textContent = bacteriaEngine.getTime().toFixed(0) + ' s';
+        }
+
+        // World to screen transformation
+        function worldToScreen(x, y) {
+            return {
+                x: x + canvas.width / 2,
+                y: y + canvas.height / 2
+            };
+        }
+
+        // Render scene
+        function render() {
+            if (!isWASMReady || !bacteriaEngine) return;
+
+            // Clear
+            ctx.fillStyle = '#001410';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw plastic particles
+            const plasticData = bacteriaEngine.getPlasticData();
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.6)';
+
+            for (let i = 0; i < plasticData.length; i += 3) {
+                const x = plasticData[i];
+                const y = plasticData[i + 1];
+                const mass = plasticData[i + 2];
+
+                const screen = worldToScreen(x, y);
+                const radius = 2 + mass * 3;
+
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw bacteria colonies
+            const bacteriaData = bacteriaEngine.getBacteriaData();
+
+            for (let i = 0; i < bacteriaData.length; i += 6) {
+                const x = bacteriaData[i];
+                const y = bacteriaData[i + 1];
+                const population = bacteriaData[i + 2];
+                const species = bacteriaData[i + 3];
+                const growthRate = bacteriaData[i + 4];
+
+                const screen = worldToScreen(x, y);
+                const radius = 5 + Math.log(population + 1) * 2;
+
+                // Glow effect
+                const gradient = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, radius * 2);
+                gradient.addColorStop(0, SPECIES_COLORS[species]);
+                gradient.addColorStop(0.5, SPECIES_COLORS[species] + '80');
+                gradient.addColorStop(1, SPECIES_COLORS[species] + '00');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, radius * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = SPECIES_COLORS[species];
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Growth indicator ring
+                if (growthRate > 0.5) {
+                    ctx.strokeStyle = SPECIES_COLORS[species] + 'AA';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(screen.x, screen.y, radius + 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            if (isWASMReady && bacteriaEngine) {
+                // Update simulation
+                for (let i = 0; i < updateSpeed; i++) {
+                    bacteriaEngine.update();
+                }
+
+                render();
+                updateStats();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('tempValue').textContent = val + '°C';
+            if (bacteriaEngine) bacteriaEngine.setGlobalTemp(val);
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            updateSpeed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = updateSpeed;
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Start
+        loadWASM();
+        animate();
+    </script>
+</body>
+</html>
