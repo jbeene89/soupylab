@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-Body Blockchain - Soupy Labs</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0e1a;
+            --bg-darker: #050810;
+            --accent-cyan: #00d4ff;
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --accent-orange: #f97316;
+            --accent-green: #10b981;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #e8f0f8;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 50%, #1a0f2e 100%);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+            animation: drift 30s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-5%, 5%) rotate(120deg); }
+            66% { transform: translate(5%, -5%) rotate(240deg); }
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple), var(--accent-pink), var(--accent-orange));
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 8s ease infinite, glow 2s ease-in-out infinite;
+            text-shadow: 0 0 40px rgba(0, 212, 255, 0.5);
+            letter-spacing: 3px;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: brightness(1) drop-shadow(0 0 20px rgba(0, 212, 255, 0.3)); }
+            50% { filter: brightness(1.2) drop-shadow(0 0 40px rgba(168, 85, 247, 0.5)); }
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: fixed;
+            top: 120px;
+            left: 20px;
+            width: 320px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            z-index: 50;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .control-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .control-panel::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 3px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-cyan);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+            padding-bottom: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+        }
+
+        .value-display {
+            display: inline-block;
+            margin-left: 8px;
+            color: var(--accent-cyan);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 212, 255, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+            accent-color: var(--accent-cyan);
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            position: fixed;
+            top: 120px;
+            right: 20px;
+            width: 300px;
+            z-index: 50;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .stats-panel h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-purple);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .stat-value.highlight {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 12px;
+            box-shadow: 0 0 15px currentColor;
+        }
+
+        .legend-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Badge */
+        .badge {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        .badge span {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>N-BODY BLOCKCHAIN</h1>
+        <p>Distributed Gravity Network</p>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="control-panel">
+        <div class="section">
+            <h3>Network Topology</h3>
+            <button onclick="initBlockchainNetwork()">Generate Blockchain</button>
+        </div>
+
+        <div class="section">
+            <h3>Visual Effects</h3>
+            <div class="checkbox-group">
+                <input type="checkbox" id="showTrails" checked>
+                <label for="showTrails">Dust Trails</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="showConnections" checked>
+                <label for="showConnections">Block Connections</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="showGlow" checked>
+                <label for="showGlow">Particle Glow</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="showDustField" checked>
+                <label for="showDustField">Dust Field</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="showTransactions" checked>
+                <label for="showTransactions">Transaction Flow</label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Physics Parameters</h3>
+            <div class="control-group">
+                <label>
+                    Time Speed
+                    <span class="value-display" id="timeSpeedValue">1.0x</span>
+                </label>
+                <input type="range" id="timeSpeed" min="0.1" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Dust Density
+                    <span class="value-display" id="dustDensityValue">2000</span>
+                </label>
+                <input type="range" id="dustDensity" min="500" max="5000" step="100" value="2000">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Block Nodes
+                    <span class="value-display" id="blockNodesValue">12</span>
+                </label>
+                <input type="range" id="blockNodes" min="5" max="25" step="1" value="12">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Gravity Strength
+                    <span class="value-display" id="gravityValue">1.0</span>
+                </label>
+                <input type="range" id="gravity" min="0.1" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Trail Length
+                    <span class="value-display" id="trailLengthValue">50</span>
+                </label>
+                <input type="range" id="trailLength" min="10" max="200" step="10" value="50">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Camera</h3>
+            <button onclick="resetCamera()">Reset View</button>
+        </div>
+    </div>
+
+    <div class="stats-panel">
+        <h3>Network Statistics</h3>
+        <div class="stat-item">
+            <span class="stat-label">Total Particles</span>
+            <span class="stat-value highlight" id="totalParticles">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Block Nodes</span>
+            <span class="stat-value" id="blockNodeCount">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Dust Particles</span>
+            <span class="stat-value" id="dustParticleCount">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Active Connections</span>
+            <span class="stat-value" id="connectionCount">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Transaction Rate</span>
+            <span class="stat-value highlight" id="transactionRate">0 tx/s</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Network Hash</span>
+            <span class="stat-value" id="networkHash">...</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Frame Rate</span>
+            <span class="stat-value" id="fps">60 FPS</span>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #00d4ff, transparent); color: #00d4ff;"></div>
+                <span class="legend-text">Block Nodes</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #a855f7, transparent); color: #a855f7;"></div>
+                <span class="legend-text">Transaction Dust</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: radial-gradient(circle, #ec4899, transparent); color: #ec4899;"></div>
+                <span class="legend-text">Network Flow</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="badge">
+        <span>BLOCKCHAIN</span> × N-BODY SIMULATION × <span>DUST DYNAMICS</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+        let blockNodes = [];
+        let connections = [];
+        let camera = { x: 0, y: 0, zoom: 1 };
+        let mouse = { x: 0, y: 0, down: false, lastX: 0, lastY: 0 };
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // Configuration
+        let config = {
+            showTrails: true,
+            showConnections: true,
+            showGlow: true,
+            showDustField: true,
+            showTransactions: true,
+            timeSpeed: 1.0,
+            dustDensity: 2000,
+            blockNodeCount: 12,
+            gravity: 1.0,
+            trailLength: 50
+        };
+
+        // Particle class
+        class Particle {
+            constructor(x, y, vx, vy, mass, isBlockNode = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.ax = 0;
+                this.ay = 0;
+                this.mass = mass;
+                this.radius = isBlockNode ? Math.sqrt(mass) * 3 : Math.sqrt(mass) * 0.5;
+                this.isBlockNode = isBlockNode;
+                this.trail = [];
+                this.hue = Math.random() * 360;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+                this.connectionStrength = 0;
+            }
+
+            update(dt) {
+                // Leapfrog integration
+                this.vx += this.ax * dt * 0.5;
+                this.vy += this.ay * dt * 0.5;
+
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                this.vx += this.ax * dt * 0.5;
+                this.vy += this.ay * dt * 0.5;
+
+                // Update trail
+                if (config.showTrails && frameCount % 2 === 0) {
+                    this.trail.push({ x: this.x, y: this.y });
+                    if (this.trail.length > config.trailLength) {
+                        this.trail.shift();
+                    }
+                }
+
+                // Update pulse phase
+                this.pulsePhase += dt * 2;
+                if (this.pulsePhase > Math.PI * 2) this.pulsePhase -= Math.PI * 2;
+
+                // Damping for dust particles
+                if (!this.isBlockNode) {
+                    this.vx *= 0.999;
+                    this.vy *= 0.999;
+                }
+            }
+
+            applyForce(fx, fy) {
+                this.ax = fx / this.mass;
+                this.ay = fy / this.mass;
+            }
+
+            draw() {
+                const screenX = (this.x - camera.x) * camera.zoom + width / 2;
+                const screenY = (this.y - camera.y) * camera.zoom + height / 2;
+
+                // Draw trail
+                if (config.showTrails && this.trail.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        (this.trail[0].x - camera.x) * camera.zoom + width / 2,
+                        (this.trail[0].y - camera.y) * camera.zoom + height / 2
+                    );
+
+                    for (let i = 1; i < this.trail.length; i++) {
+                        const tx = (this.trail[i].x - camera.x) * camera.zoom + width / 2;
+                        const ty = (this.trail[i].y - camera.y) * camera.zoom + height / 2;
+                        ctx.lineTo(tx, ty);
+                    }
+
+                    const alpha = this.isBlockNode ? 0.4 : 0.2;
+                    const hue = this.isBlockNode ? 180 : (this.hue + frameCount * 0.5) % 360;
+                    ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+                    ctx.lineWidth = this.isBlockNode ? 2 : 0.5;
+                    ctx.stroke();
+                }
+
+                // Draw glow
+                if (config.showGlow) {
+                    const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+                    const glowRadius = this.radius * camera.zoom * (this.isBlockNode ? 3 : 1.5) * pulse;
+
+                    const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, glowRadius);
+
+                    if (this.isBlockNode) {
+                        gradient.addColorStop(0, `rgba(0, 212, 255, ${0.8 * pulse})`);
+                        gradient.addColorStop(0.3, `rgba(0, 212, 255, ${0.4 * pulse})`);
+                        gradient.addColorStop(0.7, `rgba(168, 85, 247, ${0.2 * pulse})`);
+                        gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
+                    } else {
+                        const hue = (this.hue + frameCount * 0.5) % 360;
+                        gradient.addColorStop(0, `hsla(${hue}, 80%, 60%, ${0.6 * pulse})`);
+                        gradient.addColorStop(0.5, `hsla(${hue}, 80%, 60%, ${0.3 * pulse})`);
+                        gradient.addColorStop(1, `hsla(${hue}, 80%, 60%, 0)`);
+                    }
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(
+                        screenX - glowRadius,
+                        screenY - glowRadius,
+                        glowRadius * 2,
+                        glowRadius * 2
+                    );
+                }
+
+                // Draw particle core
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.radius * camera.zoom, 0, Math.PI * 2);
+
+                if (this.isBlockNode) {
+                    const coreGradient = ctx.createRadialGradient(
+                        screenX, screenY, 0,
+                        screenX, screenY, this.radius * camera.zoom
+                    );
+                    coreGradient.addColorStop(0, '#ffffff');
+                    coreGradient.addColorStop(0.3, '#00d4ff');
+                    coreGradient.addColorStop(1, '#a855f7');
+                    ctx.fillStyle = coreGradient;
+                } else {
+                    const hue = (this.hue + frameCount * 0.5) % 360;
+                    ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+                }
+
+                ctx.fill();
+
+                // Draw block node ring
+                if (this.isBlockNode) {
+                    ctx.strokeStyle = `rgba(0, 212, 255, ${0.5 + Math.sin(this.pulsePhase) * 0.3})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY, (this.radius + 5) * camera.zoom, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Initialize canvas
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        // Create blockchain network
+        function initBlockchainNetwork() {
+            particles = [];
+            blockNodes = [];
+            connections = [];
+
+            const numBlocks = config.blockNodeCount;
+            const centerX = 0;
+            const centerY = 0;
+            const radius = 400;
+
+            // Create block nodes in a circular network
+            for (let i = 0; i < numBlocks; i++) {
+                const angle = (i / numBlocks) * Math.PI * 2;
+                const r = radius + (Math.random() - 0.5) * 100;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+
+                // Orbital velocity
+                const speed = Math.sqrt(config.gravity * 1000 / r) * 0.5;
+                const vx = -Math.sin(angle) * speed;
+                const vy = Math.cos(angle) * speed;
+
+                const mass = 50 + Math.random() * 50;
+                const node = new Particle(x, y, vx, vy, mass, true);
+                particles.push(node);
+                blockNodes.push(node);
+            }
+
+            // Create dust particles
+            const numDust = config.dustDensity;
+            for (let i = 0; i < numDust; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.random() * radius * 1.5;
+                const x = centerX + Math.cos(angle) * r;
+                const y = centerY + Math.sin(angle) * r;
+
+                // Swirling velocity
+                const speed = Math.sqrt(config.gravity * 1000 / (r + 100)) * (0.8 + Math.random() * 0.4);
+                const vx = -Math.sin(angle) * speed + (Math.random() - 0.5) * 50;
+                const vy = Math.cos(angle) * speed + (Math.random() - 0.5) * 50;
+
+                const mass = 0.1 + Math.random() * 0.5;
+                const dust = new Particle(x, y, vx, vy, mass, false);
+                dust.hue = (angle / (Math.PI * 2)) * 360;
+                particles.push(dust);
+            }
+
+            // Create connections between nearby block nodes
+            updateConnections();
+
+            updateStats();
+        }
+
+        // Update network connections
+        function updateConnections() {
+            connections = [];
+            const maxConnectionDist = 500;
+
+            for (let i = 0; i < blockNodes.length; i++) {
+                for (let j = i + 1; j < blockNodes.length; j++) {
+                    const dx = blockNodes[j].x - blockNodes[i].x;
+                    const dy = blockNodes[j].y - blockNodes[i].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < maxConnectionDist) {
+                        const strength = 1 - (dist / maxConnectionDist);
+                        connections.push({
+                            from: blockNodes[i],
+                            to: blockNodes[j],
+                            strength: strength,
+                            flowPhase: Math.random() * Math.PI * 2
+                        });
+                    }
+                }
+            }
+        }
+
+        // Calculate gravitational forces
+        function calculateForces() {
+            // Reset forces
+            for (let p of particles) {
+                p.ax = 0;
+                p.ay = 0;
+            }
+
+            const G = config.gravity * 100;
+            const softening = 10;
+
+            // Block nodes attract everything
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = 0; j < blockNodes.length; j++) {
+                    if (particles[i] === blockNodes[j]) continue;
+
+                    const dx = blockNodes[j].x - particles[i].x;
+                    const dy = blockNodes[j].y - particles[i].y;
+                    const distSq = dx * dx + dy * dy + softening * softening;
+                    const dist = Math.sqrt(distSq);
+
+                    const force = (G * particles[i].mass * blockNodes[j].mass) / distSq;
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
+
+                    particles[i].ax += fx / particles[i].mass;
+                    particles[i].ay += fy / particles[i].mass;
+                }
+            }
+
+            // Block nodes interact with each other
+            for (let i = 0; i < blockNodes.length; i++) {
+                for (let j = i + 1; j < blockNodes.length; j++) {
+                    const dx = blockNodes[j].x - blockNodes[i].x;
+                    const dy = blockNodes[j].y - blockNodes[i].y;
+                    const distSq = dx * dx + dy * dy + softening * softening;
+                    const dist = Math.sqrt(distSq);
+
+                    const force = (G * blockNodes[i].mass * blockNodes[j].mass) / distSq;
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
+
+                    blockNodes[i].ax += fx / blockNodes[i].mass;
+                    blockNodes[i].ay += fy / blockNodes[i].mass;
+                    blockNodes[j].ax -= fx / blockNodes[j].mass;
+                    blockNodes[j].ay -= fy / blockNodes[j].mass;
+                }
+            }
+        }
+
+        // Draw connections
+        function drawConnections() {
+            if (!config.showConnections) return;
+
+            for (let conn of connections) {
+                const x1 = (conn.from.x - camera.x) * camera.zoom + width / 2;
+                const y1 = (conn.from.y - camera.y) * camera.zoom + height / 2;
+                const x2 = (conn.to.x - camera.x) * camera.zoom + width / 2;
+                const y2 = (conn.to.y - camera.y) * camera.zoom + height / 2;
+
+                // Draw connection line
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = `rgba(0, 212, 255, ${conn.strength * 0.3})`;
+                ctx.lineWidth = conn.strength * 2;
+                ctx.stroke();
+
+                // Draw transaction flow
+                if (config.showTransactions) {
+                    conn.flowPhase += 0.05;
+                    if (conn.flowPhase > Math.PI * 2) conn.flowPhase -= Math.PI * 2;
+
+                    const flowPos = (Math.sin(conn.flowPhase) + 1) / 2;
+                    const flowX = x1 + (x2 - x1) * flowPos;
+                    const flowY = y1 + (y2 - y1) * flowPos;
+
+                    const flowGradient = ctx.createRadialGradient(flowX, flowY, 0, flowX, flowY, 10);
+                    flowGradient.addColorStop(0, 'rgba(236, 72, 153, 0.8)');
+                    flowGradient.addColorStop(0.5, 'rgba(236, 72, 153, 0.4)');
+                    flowGradient.addColorStop(1, 'rgba(236, 72, 153, 0)');
+
+                    ctx.fillStyle = flowGradient;
+                    ctx.beginPath();
+                    ctx.arc(flowX, flowY, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('totalParticles').textContent = particles.length;
+            document.getElementById('blockNodeCount').textContent = blockNodes.length;
+            document.getElementById('dustParticleCount').textContent = particles.length - blockNodes.length;
+            document.getElementById('connectionCount').textContent = connections.length;
+            document.getElementById('transactionRate').textContent = Math.floor(connections.length * 2.5) + ' tx/s';
+
+            // Generate fake hash
+            const hash = Array.from({length: 8}, () =>
+                Math.floor(Math.random() * 16).toString(16)
+            ).join('').toUpperCase();
+            document.getElementById('networkHash').textContent = hash + '...';
+
+            document.getElementById('fps').textContent = Math.round(fps) + ' FPS';
+        }
+
+        // Animation loop
+        function animate() {
+            // Calculate delta time
+            const currentTime = performance.now();
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1) * config.timeSpeed;
+            lastTime = currentTime;
+
+            // Calculate FPS
+            if (frameCount % 30 === 0) {
+                fps = fps * 0.9 + (1000 / (dt * 1000)) * 0.1;
+            }
+
+            // Clear canvas with trail effect
+            ctx.fillStyle = 'rgba(10, 14, 26, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update physics
+            calculateForces();
+            for (let p of particles) {
+                p.update(dt);
+            }
+
+            // Update connections periodically
+            if (frameCount % 30 === 0) {
+                updateConnections();
+            }
+
+            // Draw
+            drawConnections();
+            for (let p of particles) {
+                p.draw();
+            }
+
+            // Update stats periodically
+            if (frameCount % 30 === 0) {
+                updateStats();
+            }
+
+            frameCount++;
+            requestAnimationFrame(animate);
+        }
+
+        // Camera controls
+        function resetCamera() {
+            camera = { x: 0, y: 0, zoom: 1 };
+        }
+
+        // Mouse controls
+        canvas.addEventListener('mousedown', (e) => {
+            mouse.down = true;
+            mouse.lastX = e.clientX;
+            mouse.lastY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (mouse.down) {
+                const dx = e.clientX - mouse.lastX;
+                const dy = e.clientY - mouse.lastY;
+                camera.x -= dx / camera.zoom;
+                camera.y -= dy / camera.zoom;
+                mouse.lastX = e.clientX;
+                mouse.lastY = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouse.down = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            camera.zoom *= zoomFactor;
+            camera.zoom = Math.max(0.1, Math.min(5, camera.zoom));
+        });
+
+        // Control panel event listeners
+        document.getElementById('showTrails').addEventListener('change', (e) => {
+            config.showTrails = e.target.checked;
+        });
+
+        document.getElementById('showConnections').addEventListener('change', (e) => {
+            config.showConnections = e.target.checked;
+        });
+
+        document.getElementById('showGlow').addEventListener('change', (e) => {
+            config.showGlow = e.target.checked;
+        });
+
+        document.getElementById('showDustField').addEventListener('change', (e) => {
+            config.showDustField = e.target.checked;
+        });
+
+        document.getElementById('showTransactions').addEventListener('change', (e) => {
+            config.showTransactions = e.target.checked;
+        });
+
+        document.getElementById('timeSpeed').addEventListener('input', (e) => {
+            config.timeSpeed = parseFloat(e.target.value);
+            document.getElementById('timeSpeedValue').textContent = config.timeSpeed.toFixed(1) + 'x';
+        });
+
+        document.getElementById('dustDensity').addEventListener('input', (e) => {
+            config.dustDensity = parseInt(e.target.value);
+            document.getElementById('dustDensityValue').textContent = config.dustDensity;
+        });
+
+        document.getElementById('blockNodes').addEventListener('input', (e) => {
+            config.blockNodeCount = parseInt(e.target.value);
+            document.getElementById('blockNodesValue').textContent = config.blockNodeCount;
+        });
+
+        document.getElementById('gravity').addEventListener('input', (e) => {
+            config.gravity = parseFloat(e.target.value);
+            document.getElementById('gravityValue').textContent = config.gravity.toFixed(1);
+        });
+
+        document.getElementById('trailLength').addEventListener('input', (e) => {
+            config.trailLength = parseInt(e.target.value);
+            document.getElementById('trailLengthValue').textContent = config.trailLength;
+        });
+
+        // Initialize
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        initBlockchainNetwork();
+        animate();
+    </script>
+</body>
+</html>
