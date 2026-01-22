@@ -258,6 +258,39 @@
             color: #6b9bd1;
         }
 
+        /* Tactical Map */
+        .tactical-map {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 280px;
+            height: 280px;
+            background: rgba(15, 20, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(107, 155, 209, 0.3);
+            border-radius: 12px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .tactical-map canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .map-label {
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            font-size: 0.65rem;
+            color: #6b9bd1;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
         .controls::-webkit-scrollbar {
             width: 6px;
         }
@@ -304,6 +337,10 @@
                 <span class="stat-value" id="energy">0.00</span>
             </div>
             <div class="stat-line">
+                <span class="stat-label">Massive Bodies:</span>
+                <span class="stat-value" id="massiveBodies">0</span>
+            </div>
+            <div class="stat-line">
                 <span class="stat-label">FPS:</span>
                 <span class="stat-value" id="fps">60</span>
             </div>
@@ -348,6 +385,18 @@
             <input type="range" id="softening" min="0.01" max="1" step="0.01" value="0.1">
         </div>
 
+        <div class="section-title">Massive Bodies</div>
+        <div class="control-group">
+            <label>Spawn Celestial Object</label>
+            <select id="massiveBodyType">
+                <option value="neutron">Neutron Star (M=100)</option>
+                <option value="pulsar">Pulsar (M=150)</option>
+                <option value="blackhole">Black Hole (M=500)</option>
+                <option value="supermassive">Supermassive BH (M=2000)</option>
+            </select>
+            <button id="spawnMassiveBtn">Spawn at Center</button>
+        </div>
+
         <div class="section-title">Camera Control</div>
         <div class="camera-mode">
             <button class="cam-btn active" data-mode="free">Free Fly</button>
@@ -378,6 +427,16 @@
         <div class="control-group">
             <label>
                 <input type="checkbox" id="showGrid"> Reference Grid
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showGravityWaves"> Gravity Waves (Immersion)
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="showMinimap" checked> Tactical Map
             </label>
         </div>
 
@@ -438,6 +497,11 @@
         </div>
     </div>
 
+    <div class="tactical-map">
+        <div class="map-label">Tactical Map</div>
+        <canvas id="minimap" width="280" height="280"></canvas>
+    </div>
+
     <script type="importmap">
     {
         "imports": {
@@ -457,13 +521,57 @@
         class PhysicsEngine {
             constructor() {
                 this.particles = [];
+                this.massiveBodies = [];
                 this.dt = 0.01;
                 this.softening = 0.1;
                 this.G = 1.0;
             }
 
+            addMassiveBody(type, position = {x: 0, y: 0, z: 0}) {
+                const massiveBody = {
+                    x: position.x,
+                    y: position.y,
+                    z: position.z,
+                    vx: 0,
+                    vy: 0,
+                    vz: 0,
+                    ax: 0,
+                    ay: 0,
+                    az: 0,
+                    mass: 100,
+                    type: type,
+                    isMassive: true
+                };
+
+                // Set mass based on type
+                switch(type) {
+                    case 'neutron':
+                        massiveBody.mass = 100;
+                        break;
+                    case 'pulsar':
+                        massiveBody.mass = 150;
+                        break;
+                    case 'blackhole':
+                        massiveBody.mass = 500;
+                        break;
+                    case 'supermassive':
+                        massiveBody.mass = 2000;
+                        break;
+                }
+
+                this.massiveBodies.push(massiveBody);
+                // Also add to main particle array for physics
+                this.particles.push(massiveBody);
+                return massiveBody;
+            }
+
+            getMassiveBodies() {
+                return this.massiveBodies;
+            }
+
             initialize(scenario, count) {
                 this.particles = [];
+                this.massiveBodies = [];
 
                 if (scenario === 'galaxy') {
                     this.createGalaxy(count / 2, -20, 0, 1);
@@ -678,7 +786,9 @@
             showVelocity: false,
             showGrid: false,
             spatialAudio: false,
-            audioVolume: 0.5
+            audioVolume: 0.5,
+            showGravityWaves: false,
+            showMinimap: true
         };
 
         physics.initialize(config.scenario, config.particleCount);
@@ -908,6 +1018,18 @@
         gridHelper.visible = false;
         scene.add(gridHelper);
 
+        // Massive bodies group
+        let massiveBodiesGroup = new THREE.Group();
+        scene.add(massiveBodiesGroup);
+
+        // Gravity wave visualization (ripple effects)
+        let gravityWaveGroup = new THREE.Group();
+        scene.add(gravityWaveGroup);
+
+        // Minimap canvas
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
         // Camera
         camera.position.set(0, 30, 60);
         camera.lookAt(0, 0, 0);
@@ -1029,6 +1151,216 @@
             particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
             document.getElementById('particleCount').textContent = particles.length;
+            document.getElementById('massiveBodies').textContent = physics.massiveBodies.length;
+        }
+
+        function updateMassiveBodies() {
+            // Clear existing massive body meshes
+            massiveBodiesGroup.children = [];
+
+            const massiveBodies = physics.getMassiveBodies();
+
+            massiveBodies.forEach(body => {
+                let geometry, material;
+                let size = 2;
+
+                // Different visuals based on type
+                switch(body.type) {
+                    case 'neutron':
+                        size = 2;
+                        geometry = new THREE.SphereGeometry(size, 16, 16);
+                        material = new THREE.MeshBasicMaterial({
+                            color: 0x00ffff,
+                            transparent: true,
+                            opacity: 0.9
+                        });
+                        break;
+                    case 'pulsar':
+                        size = 2.5;
+                        geometry = new THREE.SphereGeometry(size, 16, 16);
+                        material = new THREE.MeshBasicMaterial({
+                            color: 0xff00ff,
+                            transparent: true,
+                            opacity: 0.9
+                        });
+                        break;
+                    case 'blackhole':
+                        size = 3;
+                        geometry = new THREE.SphereGeometry(size, 20, 20);
+                        material = new THREE.MeshBasicMaterial({
+                            color: 0x000000,
+                            transparent: true,
+                            opacity: 1.0
+                        });
+                        break;
+                    case 'supermassive':
+                        size = 5;
+                        geometry = new THREE.SphereGeometry(size, 24, 24);
+                        material = new THREE.MeshBasicMaterial({
+                            color: 0x000000,
+                            transparent: true,
+                            opacity: 1.0
+                        });
+                        break;
+                }
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(body.x, body.y, body.z);
+
+                // Add glow effect
+                const glowGeometry = new THREE.SphereGeometry(size * 1.5, 16, 16);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: body.type === 'blackhole' || body.type === 'supermassive' ? 0xff6600 : 0x00ffff,
+                    transparent: true,
+                    opacity: 0.2,
+                    blending: THREE.AdditiveBlending
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                mesh.add(glow);
+
+                massiveBodiesGroup.add(mesh);
+            });
+        }
+
+        function renderMinimap() {
+            if (!config.showMinimap) return;
+
+            const ctx = minimapCtx;
+            const w = minimapCanvas.width;
+            const h = minimapCanvas.height;
+
+            // Clear
+            ctx.fillStyle = 'rgba(0, 5, 10, 0.95)';
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(107, 155, 209, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < w; i += 28) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, h);
+                ctx.stroke();
+            }
+            for (let i = 0; i < h; i += 28) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(w, i);
+                ctx.stroke();
+            }
+
+            // Map scale
+            const scale = 2.5;
+            const centerX = w / 2;
+            const centerY = h / 2;
+
+            // Draw particles
+            const particles = physics.getParticles();
+            ctx.fillStyle = 'rgba(107, 155, 209, 0.6)';
+            particles.forEach(p => {
+                if (p.isMassive) return; // Skip massive bodies for now
+
+                const mx = centerX + p.x * scale;
+                const my = centerY + p.z * scale;
+
+                if (mx >= 0 && mx < w && my >= 0 && my < h) {
+                    ctx.fillRect(mx, my, 2, 2);
+                }
+            });
+
+            // Draw massive bodies
+            physics.getMassiveBodies().forEach(body => {
+                const mx = centerX + body.x * scale;
+                const my = centerY + body.z * scale;
+
+                let color, size;
+                switch(body.type) {
+                    case 'neutron':
+                        color = '#00ffff';
+                        size = 6;
+                        break;
+                    case 'pulsar':
+                        color = '#ff00ff';
+                        size = 7;
+                        break;
+                    case 'blackhole':
+                        color = '#ff6600';
+                        size = 10;
+                        break;
+                    case 'supermassive':
+                        color = '#ff0000';
+                        size = 14;
+                        break;
+                }
+
+                // Glow
+                ctx.fillStyle = color + '40';
+                ctx.beginPath();
+                ctx.arc(mx, my, size * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(mx, my, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Label
+                ctx.fillStyle = color;
+                ctx.font = '8px JetBrains Mono';
+                ctx.fillText(body.type.toUpperCase(), mx + size + 4, my + 3);
+            });
+
+            // Draw camera position
+            const camX = centerX + camera.position.x * scale;
+            const camY = centerY + camera.position.z * scale;
+
+            ctx.strokeStyle = '#ffdd00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(camX, camY, 5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffdd00';
+            ctx.beginPath();
+            ctx.arc(camX, camY, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function updateGravityWaves() {
+            if (!config.showGravityWaves) {
+                gravityWaveGroup.children = [];
+                return;
+            }
+
+            // Clear old waves
+            gravityWaveGroup.children = [];
+
+            const massiveBodies = physics.getMassiveBodies();
+            const time = Date.now() * 0.001;
+
+            massiveBodies.forEach(body => {
+                // Create expanding ripple rings
+                for (let i = 0; i < 3; i++) {
+                    const radius = 5 + ((time * 5 + i * 5) % 15);
+                    const opacity = 1 - ((time * 5 + i * 5) % 15) / 15;
+
+                    const geometry = new THREE.RingGeometry(radius, radius + 0.5, 32);
+                    const material = new THREE.MeshBasicMaterial({
+                        color: body.type.includes('black') ? 0xff6600 : 0x00ffff,
+                        transparent: true,
+                        opacity: opacity * 0.3,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending
+                    });
+
+                    const ring = new THREE.Mesh(geometry, material);
+                    ring.position.set(body.x, body.y, body.z);
+                    ring.rotation.x = Math.PI / 2;
+
+                    gravityWaveGroup.add(ring);
+                }
+            });
         }
 
         let frameCount = 0;
@@ -1040,7 +1372,10 @@
             // Update physics
             physics.update();
             updateParticles();
+            updateMassiveBodies();
             updateCamera();
+            updateGravityWaves();
+            renderMinimap();
 
             // Update spatial audio
             if (config.spatialAudio && spatialAudio.enabled) {
@@ -1183,6 +1518,21 @@
             config.audioVolume = parseInt(e.target.value) / 100;
             spatialAudio.setVolume(config.audioVolume);
             document.getElementById('volumeDisplay').textContent = e.target.value;
+        });
+
+        document.getElementById('showGravityWaves').addEventListener('change', (e) => {
+            config.showGravityWaves = e.target.checked;
+        });
+
+        document.getElementById('showMinimap').addEventListener('change', (e) => {
+            config.showMinimap = e.target.checked;
+            document.querySelector('.tactical-map').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('spawnMassiveBtn').addEventListener('click', () => {
+            const type = document.getElementById('massiveBodyType').value;
+            physics.addMassiveBody(type, {x: 0, y: 0, z: 0});
+            updateMassiveBodies();
         });
 
         window.addEventListener('resize', () => {
