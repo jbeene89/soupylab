@@ -454,6 +454,16 @@
             <input type="range" id="volume" min="0" max="100" step="5" value="50">
         </div>
 
+        <div class="section-title">Quality Mode</div>
+        <div class="control-group">
+            <label>Rendering Quality</label>
+            <select id="qualityMode">
+                <option value="visual">Visual Heavy (Better Graphics)</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="physics">Physics Accurate (Precise)</option>
+            </select>
+        </div>
+
         <div class="section-title">Graphics</div>
         <div class="control-group">
             <label>
@@ -788,10 +798,74 @@
             spatialAudio: false,
             audioVolume: 0.5,
             showGravityWaves: false,
-            showMinimap: true
+            showMinimap: true,
+            qualityMode: 'balanced'
         };
 
         physics.initialize(config.scenario, config.particleCount);
+
+        // Quality Mode Configuration
+        function applyQualityMode(mode) {
+            config.qualityMode = mode;
+
+            if (mode === 'visual') {
+                // Visual Heavy Mode: Better graphics, simplified physics
+                bloomPass.strength = 3.0;
+                particleMaterial.size = 1.5;
+                physics.dt = 0.02;
+                physics.softening = 0.25;
+
+                // Update UI displays
+                document.getElementById('bloomDisplay').textContent = '3.0';
+                document.getElementById('sizeDisplay').textContent = '1.5';
+                document.getElementById('timeStepDisplay').textContent = '0.020';
+                document.getElementById('softeningDisplay').textContent = '0.25';
+
+                // Update sliders
+                document.getElementById('bloom').value = 3.0;
+                document.getElementById('particleSize').value = 1.5;
+                document.getElementById('timeStep').value = 0.02;
+                document.getElementById('softening').value = 0.25;
+
+            } else if (mode === 'physics') {
+                // Physics Accurate Mode: Precise calculations, simpler visuals
+                bloomPass.strength = 0.8;
+                particleMaterial.size = 0.5;
+                physics.dt = 0.005;
+                physics.softening = 0.05;
+
+                // Update UI displays
+                document.getElementById('bloomDisplay').textContent = '0.8';
+                document.getElementById('sizeDisplay').textContent = '0.5';
+                document.getElementById('timeStepDisplay').textContent = '0.005';
+                document.getElementById('softeningDisplay').textContent = '0.05';
+
+                // Update sliders
+                document.getElementById('bloom').value = 0.8;
+                document.getElementById('particleSize').value = 0.5;
+                document.getElementById('timeStep').value = 0.005;
+                document.getElementById('softening').value = 0.05;
+
+            } else {
+                // Balanced Mode: Default values
+                bloomPass.strength = 1.5;
+                particleMaterial.size = 1.0;
+                physics.dt = 0.01;
+                physics.softening = 0.1;
+
+                // Update UI displays
+                document.getElementById('bloomDisplay').textContent = '1.5';
+                document.getElementById('sizeDisplay').textContent = '1.0';
+                document.getElementById('timeStepDisplay').textContent = '0.010';
+                document.getElementById('softeningDisplay').textContent = '0.10';
+
+                // Update sliders
+                document.getElementById('bloom').value = 1.5;
+                document.getElementById('particleSize').value = 1.0;
+                document.getElementById('timeStep').value = 0.01;
+                document.getElementById('softening').value = 0.1;
+            }
+        }
 
         // Spatial Audio System (For Fun!)
         class SpatialAudioEngine {
@@ -1533,6 +1607,10 @@
             const type = document.getElementById('massiveBodyType').value;
             physics.addMassiveBody(type, {x: 0, y: 0, z: 0});
             updateMassiveBodies();
+        });
+
+        document.getElementById('qualityMode').addEventListener('change', (e) => {
+            applyQualityMode(e.target.value);
         });
 
         window.addEventListener('resize', () => {
