@@ -508,13 +508,42 @@
     </div>
 
     <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import createGRBModule from './grb_engine.js';
 
         let Module, grb;
-        let canvas, ctx;
-        let spectrumCanvas, spectrumCtx;
+        let canvas, spectrumCanvas, spectrumCtx;
         let isRunning = false;
+
+        // Three.js components
+        let scene, camera, renderer, composer;
+        let earthMesh, grbSourceMesh, wavefrontMesh, impactEffectsGroup;
         let cameraZoom = 1.0;
+        let qualityMode = 'balanced';
+
+        // Create circular sprite texture
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
 
         async function init() {
             try {
@@ -522,27 +551,170 @@
                 grb = new Module.GammaRayBurst();
 
                 canvas = document.getElementById('grbCanvas');
-                ctx = canvas.getContext('2d');
-
                 spectrumCanvas = document.getElementById('spectrumCanvas');
                 spectrumCtx = spectrumCanvas.getContext('2d');
+
+                // Three.js Setup
+                scene = new THREE.Scene();
+                scene.fog = new THREE.Fog(0x000000, 100, 800);
+
+                camera = new THREE.PerspectiveCamera(75, canvas.width / canvas.height, 0.1, 2000);
+                camera.position.set(0, 50, 150);
+                camera.lookAt(0, 0, 0);
+
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                renderer.setSize(canvas.width, canvas.height);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                // Post-processing with stronger bloom for radiation effects
+                composer = new EffectComposer(renderer);
+                composer.addPass(new RenderPass(scene, camera));
+                const bloomPass = new UnrealBloomPass(
+                    new THREE.Vector2(canvas.width, canvas.height),
+                    2.0, 0.5, 0.9
+                );
+                composer.addPass(bloomPass);
+
+                // Ambient lighting
+                const ambientLight = new THREE.AmbientLight(0x111122, 0.5);
+                scene.add(ambientLight);
+
+                // Create starfield
+                createStarfield();
+
+                // Create Earth
+                createEarth();
+
+                // Create GRB source (distant star)
+                createGRBSource();
+
+                // Create impact effects group
+                impactEffectsGroup = new THREE.Group();
+                scene.add(impactEffectsGroup);
 
                 setupControls();
                 setupCameraControls();
                 animate();
                 isRunning = true;
 
-                console.log('⚡ Gamma Ray Burst simulator initialized');
+                console.log('⚡ Gamma Ray Burst simulator initialized with Three.js');
             } catch (error) {
                 console.error('Failed to initialize:', error);
-                canvas = document.getElementById('grbCanvas');
-                ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ff4444';
-                ctx.font = '20px Orbitron';
-                ctx.fillText('WebAssembly module not found', 50, 50);
-                ctx.font = '14px Orbitron';
-                ctx.fillText('Compile grb_engine.cpp with Emscripten first', 50, 80);
             }
+        }
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starCount = 8000;
+            const positions = new Float32Array(starCount * 3);
+            const colors = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount; i++) {
+                const radius = 500 + Math.random() * 500;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+
+                const color = new THREE.Color().setHSL(0.6 + Math.random() * 0.2, 0.8, 0.7);
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            starsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const starsMaterial = new THREE.PointsMaterial({
+                size: 0.8,
+                vertexColors: true,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.9
+            });
+
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+
+        function createEarth() {
+            const earthGeometry = new THREE.SphereGeometry(15, 64, 64);
+            const earthMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a90e2,
+                emissive: 0x1a3a6e,
+                emissiveIntensity: 0.3,
+                metalness: 0.1,
+                roughness: 0.7
+            });
+            earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+            earthMesh.castShadow = true;
+            earthMesh.receiveShadow = true;
+            scene.add(earthMesh);
+
+            // Ozone layer (initially visible)
+            const ozoneGeometry = new THREE.SphereGeometry(16.5, 32, 32);
+            const ozoneMaterial = new THREE.MeshBasicMaterial({
+                color: 0x64c8ff,
+                transparent: true,
+                opacity: 0.25,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            const ozoneLayer = new THREE.Mesh(ozoneGeometry, ozoneMaterial);
+            ozoneLayer.userData.isOzoneLayer = true;
+            earthMesh.add(ozoneLayer);
+
+            // Atmosphere layers
+            for (let i = 1; i <= 3; i++) {
+                const layerGeo = new THREE.SphereGeometry(15 + i * 1.2, 32, 32);
+                const layerMat = new THREE.MeshBasicMaterial({
+                    color: 0x6496ff,
+                    transparent: true,
+                    opacity: 0.06 / i,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.BackSide
+                });
+                const layer = new THREE.Mesh(layerGeo, layerMat);
+                earthMesh.add(layer);
+            }
+        }
+
+        function createGRBSource() {
+            // Distant star that will emit GRB
+            const sourceGeometry = new THREE.SphereGeometry(4, 32, 32);
+            const sourceMaterial = new THREE.MeshStandardMaterial({
+                color: 0x8a2be2,
+                emissive: 0xff00ff,
+                emissiveIntensity: 2.0,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            grbSourceMesh = new THREE.Mesh(sourceGeometry, sourceMaterial);
+            grbSourceMesh.position.set(-150, 0, 0);
+            scene.add(grbSourceMesh);
+
+            // Add glow layers
+            for (let i = 1; i <= 4; i++) {
+                const glowGeometry = new THREE.SphereGeometry(4 * (1 + i * 0.3), 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff00ff,
+                    transparent: true,
+                    opacity: 0.2 / i,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.BackSide
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                grbSourceMesh.add(glow);
+            }
+
+            // Add point light
+            const sourceLight = new THREE.PointLight(0xff00ff, 100, 200);
+            grbSourceMesh.add(sourceLight);
         }
 
         function setupControls() {
@@ -706,113 +878,179 @@
             }
         }
 
-        function drawScene() {
-            const w = canvas.width;
-            const h = canvas.height;
-
-            // Clear with space background
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, w, h);
-
-            // Draw stars
-            ctx.fillStyle = '#ffffff';
-            for (let i = 0; i < 200; i++) {
-                const x = (i * 7919) % w;
-                const y = (i * 4273) % h;
-                const size = (i % 3) * 0.5 + 0.5;
-                ctx.fillRect(x, y, size, size);
+        function updateWavefront() {
+            // Remove old wavefront
+            if (wavefrontMesh) {
+                scene.remove(wavefrontMesh);
+                wavefrontMesh = null;
             }
 
-            ctx.save();
-            ctx.translate(w / 2, h / 2);
-            ctx.scale(cameraZoom, cameraZoom);
-
-            // Draw Earth
-            const earthSize = 30;
-            const earthGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, earthSize);
-            earthGrad.addColorStop(0, '#4a90e2');
-            earthGrad.addColorStop(0.7, '#2d5aa3');
-            earthGrad.addColorStop(1, '#1a3a6e');
-            ctx.fillStyle = earthGrad;
-            ctx.beginPath();
-            ctx.arc(0, 0, earthSize, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Ozone layer
-            const ozoneLevel = grb.getCurrentOzoneLevel();
-            const ozoneOpacity = ozoneLevel / 100;
-            ctx.strokeStyle = `rgba(100, 200, 255, ${ozoneOpacity * 0.5})`;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(0, 0, earthSize + 10, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // GRB source (distant star)
             const distance = grb.getDistance();
-            const grbX = -300;
-            const grbY = 0;
-
-            ctx.fillStyle = '#8A2BE2';
-            ctx.shadowColor = '#FF00FF';
-            ctx.shadowBlur = 20;
-            ctx.beginPath();
-            ctx.arc(grbX, grbY, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Wavefront expanding
             const wavefront = grb.getWavefrontDistance();
-            const wavefrontRadius = (wavefront / distance) * 300;
+            const wavefrontProgress = wavefront / distance;
 
-            if (wavefrontRadius < 300) {
-                ctx.strokeStyle = 'rgba(255, 0, 255, 0.6)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(grbX, grbY, wavefrontRadius, 0, Math.PI * 2);
-                ctx.stroke();
+            if (wavefrontProgress < 1.0) {
+                const wavefrontRadius = wavefrontProgress * 150;
 
-                // Radiation rays
-                for (let i = 0; i < 16; i++) {
-                    const angle = (i / 16) * Math.PI * 2;
-                    const x1 = grbX + Math.cos(angle) * wavefrontRadius;
-                    const y1 = grbY + Math.sin(angle) * wavefrontRadius;
-                    const x2 = grbX + Math.cos(angle) * (wavefrontRadius - 20);
-                    const y2 = grbY + Math.sin(angle) * (wavefrontRadius - 20);
+                // Create expanding spherical wavefront
+                const wavefrontGeometry = new THREE.SphereGeometry(wavefrontRadius, 64, 64);
+                const wavefrontMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff00ff,
+                    transparent: true,
+                    opacity: 0.3,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.BackSide,
+                    wireframe: true
+                });
+                wavefrontMesh = new THREE.Mesh(wavefrontGeometry, wavefrontMaterial);
+                wavefrontMesh.position.copy(grbSourceMesh.position);
+                scene.add(wavefrontMesh);
 
-                    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-                    gradient.addColorStop(0, 'rgba(255, 0, 255, 0.6)');
-                    gradient.addColorStop(1, 'rgba(255, 0, 255, 0)');
+                // Add radiation ray particles
+                const rayCount = 32;
+                const raysGeometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(rayCount * 3);
+                const colors = new Float32Array(rayCount * 3);
 
-                    ctx.strokeStyle = gradient;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.stroke();
+                for (let i = 0; i < rayCount; i++) {
+                    const angle = (i / rayCount) * Math.PI * 2;
+                    const phi = Math.acos(2 * (i / rayCount) - 1);
+
+                    positions[i * 3] = grbSourceMesh.position.x + Math.sin(phi) * Math.cos(angle) * wavefrontRadius;
+                    positions[i * 3 + 1] = Math.sin(phi) * Math.sin(angle) * wavefrontRadius;
+                    positions[i * 3 + 2] = Math.cos(phi) * wavefrontRadius;
+
+                    const color = new THREE.Color().setHSL(0.8, 1.0, 0.6);
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
                 }
-            }
 
-            // Impact effect
-            if (grb.reachedEarth()) {
+                raysGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                raysGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const raysMaterial = new THREE.PointsMaterial({
+                    size: 2.0,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending,
+                    map: createCircleTexture(),
+                    depthWrite: false
+                });
+
+                const rays = new THREE.Points(raysGeometry, raysMaterial);
+                scene.add(rays);
+                rays.userData.isRays = true;
+            }
+        }
+
+        function updateImpactEffects() {
+            // Clear old effects
+            impactEffectsGroup.clear();
+
+            const reached = grb.reachedEarth();
+            if (reached) {
                 const ionization = grb.getAtmosphericIonization();
+                const ozoneLevel = grb.getCurrentOzoneLevel();
+
+                // Update ozone layer opacity
+                earthMesh.children.forEach(child => {
+                    if (child.userData.isOzoneLayer) {
+                        child.material.opacity = (ozoneLevel / 100) * 0.25;
+                    }
+                });
+
+                // Ionization glow effect
                 if (ionization > 0) {
-                    const impactGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, earthSize + 40);
-                    impactGrad.addColorStop(0, `rgba(255, 0, 255, ${ionization / 100})`);
-                    impactGrad.addColorStop(0.5, `rgba(138, 43, 226, ${ionization / 200})`);
-                    impactGrad.addColorStop(1, 'rgba(138, 43, 226, 0)');
-                    ctx.fillStyle = impactGrad;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, earthSize + 40, 0, Math.PI * 2);
-                    ctx.fill();
+                    for (let i = 1; i <= 4; i++) {
+                        const ionizationGeo = new THREE.SphereGeometry(15 + i * 5, 32, 32);
+                        const ionizationMat = new THREE.MeshBasicMaterial({
+                            color: 0xff00ff,
+                            transparent: true,
+                            opacity: (ionization / 100) * (0.2 / i),
+                            blending: THREE.AdditiveBlending,
+                            side: THREE.BackSide
+                        });
+                        const ionizationGlow = new THREE.Mesh(ionizationGeo, ionizationMat);
+                        impactEffectsGroup.add(ionizationGlow);
+                    }
+
+                    // Add radiation burst light
+                    const radiationLight = new THREE.PointLight(0xff00ff, (ionization / 100) * 100, 100);
+                    impactEffectsGroup.add(radiationLight);
+
+                    // Atmospheric damage particles
+                    const particleCount = 300;
+                    const particlesGeometry = new THREE.BufferGeometry();
+                    const positions = new Float32Array(particleCount * 3);
+                    const colors = new Float32Array(particleCount * 3);
+
+                    for (let i = 0; i < particleCount; i++) {
+                        const theta = Math.random() * Math.PI * 2;
+                        const phi = Math.random() * Math.PI;
+                        const radius = 17 + Math.random() * 10;
+
+                        positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                        positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                        positions[i * 3 + 2] = radius * Math.cos(phi);
+
+                        const color = new THREE.Color().setHSL(0.8, 1.0, 0.5 + Math.random() * 0.3);
+                        colors[i * 3] = color.r;
+                        colors[i * 3 + 1] = color.g;
+                        colors[i * 3 + 2] = color.b;
+                    }
+
+                    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                    const particlesMaterial = new THREE.PointsMaterial({
+                        size: 0.8,
+                        vertexColors: true,
+                        transparent: true,
+                        opacity: ionization / 100,
+                        blending: THREE.AdditiveBlending,
+                        map: createCircleTexture(),
+                        depthWrite: false
+                    });
+
+                    const damageParticles = new THREE.Points(particlesGeometry, particlesMaterial);
+                    impactEffectsGroup.add(damageParticles);
                 }
             }
+        }
 
-            ctx.restore();
+        function drawScene() {
+            // Update wavefront expansion
+            updateWavefront();
 
-            // Draw distance label
-            ctx.fillStyle = '#00FFFF';
-            ctx.font = '14px Orbitron';
-            ctx.fillText(`Distance: ${distance.toFixed(0)} light-years`, 20, 30);
+            // Update impact effects
+            updateImpactEffects();
+
+            // Rotate Earth
+            if (earthMesh) {
+                earthMesh.rotation.y += 0.002;
+            }
+
+            // Pulse GRB source
+            if (grbSourceMesh) {
+                const pulse = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+                grbSourceMesh.scale.setScalar(1 + pulse * 0.2);
+            }
+
+            // Remove old ray particles
+            scene.children.forEach(child => {
+                if (child.userData.isRays) {
+                    scene.remove(child);
+                }
+            });
+
+            // Update camera zoom
+            camera.position.z = 150 / cameraZoom;
+            camera.position.y = 50 / cameraZoom;
+
+            // Render with post-processing
+            composer.render();
         }
 
         function drawSpectrum() {

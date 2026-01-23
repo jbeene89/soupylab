@@ -443,12 +443,21 @@
     </div>
 
     <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import createNuclearModule from './nuclear_war_engine.js';
 
         let Module, war;
-        let canvas, ctx;
+        let canvas;
         let isRunning = false;
+
+        // Three.js components
+        let scene, camera, renderer, composer;
+        let earthMesh, blastGroup, falloutGroup, smokeGroup;
         let cameraZoom = 1.0;
+        let qualityMode = 'balanced';
 
         // Camera for pan
         let cameraX = 0;
@@ -459,30 +468,198 @@
         let panStartX = 0;
         let panStartY = 0;
 
+        // Create circular sprite texture
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
         async function init() {
             try {
                 Module = await createNuclearModule();
                 war = new Module.NuclearWar();
 
                 canvas = document.getElementById('warCanvas');
-                ctx = canvas.getContext('2d');
+
+                // Three.js Setup
+                scene = new THREE.Scene();
+                scene.fog = new THREE.Fog(0x000000, 100, 800);
+
+                camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 2000);
+                camera.position.set(0, 200, 300);
+                camera.lookAt(0, 0, 0);
+
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                renderer.setSize(canvas.width, canvas.height);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                // Post-processing with intense bloom for nuclear effects
+                composer = new EffectComposer(renderer);
+                composer.addPass(new RenderPass(scene, camera));
+                const bloomPass = new UnrealBloomPass(
+                    new THREE.Vector2(canvas.width, canvas.height),
+                    2.5, 0.6, 0.95
+                );
+                composer.addPass(bloomPass);
+
+                // Dark ambient lighting for apocalyptic atmosphere
+                const ambientLight = new THREE.AmbientLight(0x1a0a0a, 0.4);
+                scene.add(ambientLight);
+
+                // Create Earth globe
+                createEarth();
+
+                // Create starfield
+                createStarfield();
+
+                // Create blast/fallout/smoke groups
+                blastGroup = new THREE.Group();
+                scene.add(blastGroup);
+
+                falloutGroup = new THREE.Group();
+                scene.add(falloutGroup);
+
+                smokeGroup = new THREE.Group();
+                scene.add(smokeGroup);
 
                 setupControls();
                 setupCameraControls();
                 animate();
                 isRunning = true;
 
-                console.log('☢️ Nuclear war simulator initialized');
+                console.log('☢️ Nuclear war simulator initialized with Three.js');
             } catch (error) {
                 console.error('Failed to initialize:', error);
-                canvas = document.getElementById('warCanvas');
-                ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ff4444';
-                ctx.font = '20px Orbitron';
-                ctx.fillText('WebAssembly module not found', 50, 50);
-                ctx.font = '14px Orbitron';
-                ctx.fillText('Compile nuclear_war_engine.cpp with Emscripten first', 50, 80);
             }
+        }
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starCount = 6000;
+            const positions = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount; i++) {
+                const radius = 500 + Math.random() * 500;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.6,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.7
+            });
+
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
+        }
+
+        function createEarth() {
+            // Earth as a large sphere with continents
+            const earthGeometry = new THREE.SphereGeometry(80, 128, 128);
+
+            // Create simple continent texture using canvas
+            const textureCanvas = document.createElement('canvas');
+            textureCanvas.width = 1024;
+            textureCanvas.height = 512;
+            const texCtx = textureCanvas.getContext('2d');
+
+            // Ocean
+            texCtx.fillStyle = '#1a2a3a';
+            texCtx.fillRect(0, 0, 1024, 512);
+
+            // Simple land masses (very rough approximation)
+            texCtx.fillStyle = '#2a4a2a';
+            // North America
+            texCtx.fillRect(100, 150, 200, 150);
+            // South America
+            texCtx.fillRect(150, 300, 100, 150);
+            // Europe/Africa
+            texCtx.fillRect(450, 150, 150, 200);
+            // Asia
+            texCtx.fillRect(600, 100, 300, 200);
+            // Australia
+            texCtx.fillRect(750, 350, 100, 80);
+
+            const earthTexture = new THREE.CanvasTexture(textureCanvas);
+
+            const earthMaterial = new THREE.MeshStandardMaterial({
+                map: earthTexture,
+                emissive: 0x0a1a0a,
+                emissiveIntensity: 0.2,
+                metalness: 0.1,
+                roughness: 0.8
+            });
+
+            earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+            earthMesh.rotation.y = -Math.PI / 2; // Rotate to show continents better
+            earthMesh.castShadow = true;
+            earthMesh.receiveShadow = true;
+            scene.add(earthMesh);
+
+            // Atmosphere
+            const atmosphereGeometry = new THREE.SphereGeometry(82, 64, 64);
+            const atmosphereMaterial = new THREE.MeshBasicMaterial({
+                color: 0x6496ff,
+                transparent: true,
+                opacity: 0.1,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            earthMesh.add(atmosphere);
+
+            // City lights (dim initially)
+            const lightsGeometry = new THREE.BufferGeometry();
+            const lightCount = 500;
+            const lightPositions = new Float32Array(lightCount * 3);
+
+            for (let i = 0; i < lightCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                lightPositions[i * 3] = 80.2 * Math.sin(phi) * Math.cos(theta);
+                lightPositions[i * 3 + 1] = 80.2 * Math.sin(phi) * Math.sin(theta);
+                lightPositions[i * 3 + 2] = 80.2 * Math.cos(phi);
+            }
+
+            lightsGeometry.setAttribute('position', new THREE.BufferAttribute(lightPositions, 3));
+
+            const lightsMaterial = new THREE.PointsMaterial({
+                color: 0xffaa00,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+
+            const cityLights = new THREE.Points(lightsGeometry, lightsMaterial);
+            earthMesh.add(cityLights);
         }
 
         function setupControls() {
@@ -625,26 +802,24 @@
             }
         }
 
-        function drawScene() {
-            const w = canvas.width;
-            const h = canvas.height;
+        function latLonToSphere(lat, lon, radius = 80) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
 
-            // Clear with dark background
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, w, h);
+            const x = -(radius * Math.sin(phi) * Math.cos(theta));
+            const y = radius * Math.cos(phi);
+            const z = radius * Math.sin(phi) * Math.sin(theta);
 
-            ctx.save();
-            ctx.translate(w / 2 - cameraX, h / 2 - cameraY);
-            ctx.scale(cameraZoom, cameraZoom);
+            return new THREE.Vector3(x, y, z);
+        }
 
-            // Draw world map (simplified)
-            drawWorldMap();
+        function updateBlasts() {
+            // Clear old blasts
+            blastGroup.clear();
 
-            // Draw warhead positions and detonations
-            const positions = war.getWarheadPositions();
             const radii = war.getBlastRadii();
 
-            // Draw blast radii
+            // Create blast effects for each detonation
             for (let i = 0; i < radii.length; i += 6) {
                 const lat = radii[i];
                 const lon = radii[i + 1];
@@ -653,91 +828,179 @@
                 const thermal = radii[i + 4];
                 const fireball = radii[i + 5];
 
-                const pos = latLonToCanvas(lat, lon, w, h);
+                const position = latLonToSphere(lat, lon);
 
-                // Thermal radius (yellow)
-                ctx.fillStyle = 'rgba(255, 200, 0, 0.1)';
-                ctx.beginPath();
-                const thermalSize = (thermal / 100000) * w * 0.3;
-                ctx.arc(pos.x, pos.y, thermalSize, 0, Math.PI * 2);
-                ctx.fill();
+                // Fireball (core)
+                const fireballSize = Math.max(1, (fireball / 100000) * 8);
+                const fireballGeometry = new THREE.SphereGeometry(fireballSize, 16, 16);
+                const fireballMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending
+                });
+                const fireballMesh = new THREE.Mesh(fireballGeometry, fireballMaterial);
+                fireballMesh.position.copy(position);
+                blastGroup.add(fireballMesh);
 
-                // 5 psi blast (orange)
-                ctx.fillStyle = 'rgba(255, 100, 0, 0.2)';
-                ctx.beginPath();
-                const blast5Size = (blast5 / 100000) * w * 0.3;
-                ctx.arc(pos.x, pos.y, blast5Size, 0, Math.PI * 2);
-                ctx.fill();
-
-                // 20 psi blast (red)
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
-                ctx.beginPath();
-                const blast20Size = (blast20 / 100000) * w * 0.3;
-                ctx.arc(pos.x, pos.y, blast20Size, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Fireball (white)
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.shadowColor = '#FF0000';
-                ctx.shadowBlur = 20;
-                ctx.beginPath();
-                const fireballSize = Math.max(3, (fireball / 100000) * w * 0.3);
-                ctx.arc(pos.x, pos.y, fireballSize, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            }
-
-            // Draw warheads (launch trails)
-            for (let i = 0; i < positions.length; i += 4) {
-                const lat = positions[i];
-                const lon = positions[i + 1];
-                const detonated = positions[i + 2] > 0.5;
-                const progress = positions[i + 3];
-
-                if (!detonated && progress > 0) {
-                    const pos = latLonToCanvas(lat, lon, w, h);
-
-                    // Draw launch marker
-                    ctx.fillStyle = `rgba(255, 0, 0, ${progress})`;
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, 2 / cameraZoom, 0, Math.PI * 2);
-                    ctx.fill();
+                // Fireball glow layers
+                for (let j = 1; j <= 3; j++) {
+                    const glowSize = fireballSize * (1 + j * 0.4);
+                    const glowGeometry = new THREE.SphereGeometry(glowSize, 16, 16);
+                    const glowMaterial = new THREE.MeshBasicMaterial({
+                        color: j === 1 ? 0xffff00 : j === 2 ? 0xff8800 : 0xff0000,
+                        transparent: true,
+                        opacity: 0.3 / j,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.BackSide
+                    });
+                    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                    glow.position.copy(position);
+                    blastGroup.add(glow);
                 }
-            }
 
-            ctx.restore();
+                // Add point light for illumination
+                const blastLight = new THREE.PointLight(0xffffff, 50, 100);
+                blastLight.position.copy(position);
+                blastGroup.add(blastLight);
+
+                // Blast wave rings (20 psi and 5 psi)
+                const blast20Size = (blast20 / 100000) * 80;
+                const blast5Size = (blast5 / 100000) * 80;
+
+                [
+                    { size: blast20Size, color: 0xff0000, opacity: 0.4 },
+                    { size: blast5Size, color: 0xff6600, opacity: 0.2 }
+                ].forEach(ring => {
+                    const ringGeometry = new THREE.RingGeometry(ring.size * 0.8, ring.size, 32);
+                    const ringMaterial = new THREE.MeshBasicMaterial({
+                        color: ring.color,
+                        transparent: true,
+                        opacity: ring.opacity,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.DoubleSide
+                    });
+                    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ringMesh.position.copy(position);
+                    ringMesh.lookAt(0, 0, 0);
+                    blastGroup.add(ringMesh);
+                });
+
+                // Mushroom cloud particles
+                const cloudParticleCount = 100;
+                const cloudGeometry = new THREE.BufferGeometry();
+                const cloudPositions = new Float32Array(cloudParticleCount * 3);
+                const cloudColors = new Float32Array(cloudParticleCount * 3);
+
+                const normal = position.clone().normalize();
+
+                for (let j = 0; j < cloudParticleCount; j++) {
+                    const height = Math.random() * 15;
+                    const spread = Math.random() * fireballSize * 2;
+                    const angle = Math.random() * Math.PI * 2;
+
+                    const cloudPos = position.clone();
+                    cloudPos.add(normal.clone().multiplyScalar(height));
+                    cloudPos.x += Math.cos(angle) * spread;
+                    cloudPos.z += Math.sin(angle) * spread;
+
+                    cloudPositions[j * 3] = cloudPos.x;
+                    cloudPositions[j * 3 + 1] = cloudPos.y;
+                    cloudPositions[j * 3 + 2] = cloudPos.z;
+
+                    const color = new THREE.Color().setHSL(0.05, 0.4, 0.2 + Math.random() * 0.2);
+                    cloudColors[j * 3] = color.r;
+                    cloudColors[j * 3 + 1] = color.g;
+                    cloudColors[j * 3 + 2] = color.b;
+                }
+
+                cloudGeometry.setAttribute('position', new THREE.BufferAttribute(cloudPositions, 3));
+                cloudGeometry.setAttribute('color', new THREE.BufferAttribute(cloudColors, 3));
+
+                const cloudMaterial = new THREE.PointsMaterial({
+                    size: 1.5,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.7,
+                    blending: THREE.AdditiveBlending,
+                    map: createCircleTexture(),
+                    depthWrite: false
+                });
+
+                const cloudParticles = new THREE.Points(cloudGeometry, cloudMaterial);
+                blastGroup.add(cloudParticles);
+            }
         }
 
-        function drawWorldMap() {
-            // Simplified continents (outlines)
-            ctx.strokeStyle = 'rgba(50, 50, 50, 0.5)';
-            ctx.fillStyle = 'rgba(20, 40, 20, 0.3)';
-            ctx.lineWidth = 1 / cameraZoom;
+        function updateNuclearWinter() {
+            const tempDrop = war.getTemperatureDrop();
 
-            // Draw grid
-            ctx.strokeStyle = 'rgba(50, 50, 50, 0.2)';
-            for (let lat = -90; lat <= 90; lat += 30) {
-                ctx.beginPath();
-                const y = -lat * 3;
-                ctx.moveTo(-600, y);
-                ctx.lineTo(600, y);
-                ctx.stroke();
-            }
+            // Add global smoke/ash layer effect
+            if (tempDrop > 5.0) {
+                smokeGroup.clear();
 
-            for (let lon = -180; lon <= 180; lon += 30) {
-                ctx.beginPath();
-                const x = lon * 3;
-                ctx.moveTo(x, -270);
-                ctx.lineTo(x, 270);
-                ctx.stroke();
+                // Create darkening atmosphere
+                const smokeGeometry = new THREE.SphereGeometry(85, 64, 64);
+                const smokeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x1a0a00,
+                    transparent: true,
+                    opacity: Math.min(tempDrop / 20, 0.5),
+                    blending: THREE.NormalBlending,
+                    side: THREE.BackSide
+                });
+                const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
+                smokeGroup.add(smoke);
+
+                // Add swirling ash particles
+                const ashCount = 2000;
+                const ashGeometry = new THREE.BufferGeometry();
+                const ashPositions = new Float32Array(ashCount * 3);
+
+                for (let i = 0; i < ashCount; i++) {
+                    const radius = 86 + Math.random() * 10;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI;
+
+                    ashPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                    ashPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                    ashPositions[i * 3 + 2] = radius * Math.cos(phi);
+                }
+
+                ashGeometry.setAttribute('position', new THREE.BufferAttribute(ashPositions, 3));
+
+                const ashMaterial = new THREE.PointsMaterial({
+                    color: 0x4a3020,
+                    size: 0.5,
+                    transparent: true,
+                    opacity: 0.4,
+                    blending: THREE.NormalBlending
+                });
+
+                const ashParticles = new THREE.Points(ashGeometry, ashMaterial);
+                smokeGroup.add(ashParticles);
             }
         }
 
-        function latLonToCanvas(lat, lon, w, h) {
-            // Simple equirectangular projection
-            const x = lon * 3;
-            const y = -lat * 3;
-            return { x, y };
+        function drawScene() {
+            // Update blast visualizations
+            updateBlasts();
+
+            // Update nuclear winter effects
+            updateNuclearWinter();
+
+            // Rotate Earth slowly
+            if (earthMesh) {
+                earthMesh.rotation.y += 0.001;
+            }
+
+            // Update camera based on zoom and pan
+            camera.position.x = cameraX;
+            camera.position.y = 200 / cameraZoom;
+            camera.position.z = 300 / cameraZoom + cameraY;
+            camera.lookAt(cameraX, 0, cameraY);
+
+            // Render with post-processing
+            composer.render();
         }
 
         init();
