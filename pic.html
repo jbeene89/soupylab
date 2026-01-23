@@ -281,6 +281,33 @@
                 </div>
             </div>
 
+            <div class="section">
+                <h3>QUALITY MODE</h3>
+                <select id="qualityMode" onchange="applyQualityMode(this.value)" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: var(--text); border-radius: 4px; margin-bottom: 8px; font-size: 0.75rem;">
+                    <option value="visual">Visual Heavy (Better Graphics)</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="physics">Physics Accurate (Precise)</option>
+                </select>
+            </div>
+
+            <div class="section">
+                <h3>GRAPHICS</h3>
+                <div class="slider-row">
+                    <label>Bloom Intensity <span id="bloomVal">1.5</span></label>
+                    <div class="slider-input-row">
+                        <input type="range" id="bloom" min="0" max="5" step="0.1" value="1.5" oninput="syncSlider('bloom')">
+                        <input type="number" id="bloom_num" min="0" max="5" step="0.1" value="1.5" onchange="syncNumber('bloom')">
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <label>Particle Glow <span id="glowVal">0.8</span></label>
+                    <div class="slider-input-row">
+                        <input type="range" id="glow" min="0" max="2" step="0.1" value="0.8" oninput="syncSlider('glow')">
+                        <input type="number" id="glow_num" min="0" max="2" step="0.1" value="0.8" onchange="syncNumber('glow')">
+                    </div>
+                </div>
+            </div>
+
             <button class="btn-action" onclick="resetSim()">↺ RESET SIMULATION</button>
 
             <div class="legend">
@@ -325,13 +352,25 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         // Physics constants
         const e = 1.6e-19, me = 9.1e-31, mi = 1.67e-27;
 
         // THREE.JS Setup
-        let scene, camera, renderer;
+        let scene, camera, renderer, composer, bloomPass;
         let electronSystem, ionSystem;
         let fieldLines = [];
         let confinementBox;
@@ -370,8 +409,19 @@
             // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
             container.appendChild(renderer.domElement);
+
+            // Post-processing
+            composer = new EffectComposer(renderer);
+            composer.addPass(new RenderPass(scene, camera));
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(container.clientWidth, container.clientHeight),
+                1.5, 0.4, 0.85
+            );
+            composer.addPass(bloomPass);
 
             // Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -706,7 +756,7 @@
                 line.material.opacity = 0.3 + Math.sin(time * 3 + i * 0.5) * 0.1;
             });
 
-            renderer.render(scene, camera);
+            composer.render();
         }
 
         function onWindowResize() {
@@ -714,6 +764,7 @@
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
+            composer.setSize(container.clientWidth, container.clientHeight);
         }
 
         function setCamera(view) {
@@ -734,12 +785,70 @@
             }
         }
 
+        // === QUALITY MODE ===
+        function applyQualityMode(mode) {
+            if (mode === 'visual') {
+                // Visual Heavy Mode: Better graphics
+                bloomPass.strength = 3.0;
+                if (electronSystem) electronSystem.material.size = 2.5;
+                if (ionSystem) ionSystem.material.size = 3.0;
+
+                // Update UI
+                document.getElementById('bloom').value = 3.0;
+                document.getElementById('bloom_num').value = 3.0;
+                document.getElementById('bloomVal').textContent = '3.0';
+                document.getElementById('glow').value = 1.5;
+                document.getElementById('glow_num').value = 1.5;
+                document.getElementById('glowVal').textContent = '1.5';
+
+            } else if (mode === 'physics') {
+                // Physics Accurate Mode: Precise visuals
+                bloomPass.strength = 0.8;
+                if (electronSystem) electronSystem.material.size = 1.0;
+                if (ionSystem) ionSystem.material.size = 1.2;
+
+                // Update UI
+                document.getElementById('bloom').value = 0.8;
+                document.getElementById('bloom_num').value = 0.8;
+                document.getElementById('bloomVal').textContent = '0.8';
+                document.getElementById('glow').value = 0.5;
+                document.getElementById('glow_num').value = 0.5;
+                document.getElementById('glowVal').textContent = '0.5';
+
+            } else {
+                // Balanced Mode: Default values
+                bloomPass.strength = 1.5;
+                if (electronSystem) electronSystem.material.size = 1.5;
+                if (ionSystem) ionSystem.material.size = 2.0;
+
+                // Update UI
+                document.getElementById('bloom').value = 1.5;
+                document.getElementById('bloom_num').value = 1.5;
+                document.getElementById('bloomVal').textContent = '1.5';
+                document.getElementById('glow').value = 0.8;
+                document.getElementById('glow_num').value = 0.8;
+                document.getElementById('glowVal').textContent = '0.8';
+            }
+        }
+
         // === UI CONTROLS ===
         function syncSlider(id) {
             const slider = document.getElementById(id);
             const numInput = document.getElementById(id + '_num');
             if (numInput) numInput.value = slider.value;
-            updateParams();
+
+            // Handle graphics parameters directly
+            if (id === 'bloom') {
+                bloomPass.strength = parseFloat(slider.value);
+                document.getElementById('bloomVal').textContent = slider.value;
+            } else if (id === 'glow') {
+                const glowVal = parseFloat(slider.value);
+                if (electronSystem) electronSystem.material.opacity = glowVal;
+                if (ionSystem) ionSystem.material.opacity = glowVal;
+                document.getElementById('glowVal').textContent = slider.value;
+            } else {
+                updateParams();
+            }
         }
 
         function syncNumber(id) {
@@ -750,8 +859,19 @@
                 val = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), val));
                 slider.value = val;
                 numInput.value = val;
+
+                // Handle graphics parameters directly
+                if (id === 'bloom') {
+                    bloomPass.strength = val;
+                    document.getElementById('bloomVal').textContent = val;
+                } else if (id === 'glow') {
+                    if (electronSystem) electronSystem.material.opacity = val;
+                    if (ionSystem) ionSystem.material.opacity = val;
+                    document.getElementById('glowVal').textContent = val;
+                } else {
+                    updateParams();
+                }
             }
-            updateParams();
         }
 
         function updateParams() {
@@ -850,6 +970,15 @@
             initThreeJS();
             updateParams();
         });
+
+        // Make functions globally available for HTML onclick handlers
+        window.applyQualityMode = applyQualityMode;
+        window.syncSlider = syncSlider;
+        window.syncNumber = syncNumber;
+        window.setCamera = setCamera;
+        window.setPreset = setPreset;
+        window.resetSim = resetSim;
+        window.updateParams = updateParams;
     </script>
 </body>
 </html>
