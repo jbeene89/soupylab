@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-Body Gravitational Simulator - ULTRA MAX</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --glass-bg: rgba(15, 20, 30, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #6b9bd1;
+            --accent-glow: rgba(107, 155, 209, 0.25);
+            --text: #e4e8ed;
+            --text-dim: #8895a5;
+            --danger: #c75a6f;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            position: fixed;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 10;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            background: rgba(10, 10, 20, 0.5);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #6b9bd1 0%, #8ba8c7 50%, #4a5c7a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 30px var(--accent-glow);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.9; filter: brightness(1.2); }
+        }
+
+        .header .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            top: 120px;
+            left: 20px;
+            width: 320px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        /* Custom Scrollbar */
+        .controls-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            top: 120px;
+            right: 20px;
+            width: 320px;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin: 20px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+            font-weight: 600;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        /* Buttons */
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), #4a5c7a);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--accent-glow);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #a04555);
+        }
+
+        /* Control Groups */
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Range Sliders */
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, rgba(0,212,255,0.2), rgba(123,47,247,0.5));
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--accent-glow);
+            transition: all 0.2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 25px var(--accent);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--accent-glow);
+            border: none;
+        }
+
+        /* Checkboxes */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        /* Stat Boxes */
+        .stat-box {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.3);
+            transform: translateX(5px);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            letter-spacing: 0.1em;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Orbitron', monospace;
+        }
+
+        /* Back Link */
+        .back-link {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 12px 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            z-index: 10;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: var(--accent);
+            transform: translateX(-5px);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--accent);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: 100;
+            font-weight: 700;
+        }
+
+        .loading-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-top: 10px;
+            font-weight: 400;
+        }
+
+        /* Camera Mode Buttons */
+        .camera-modes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .camera-btn {
+            padding: 10px;
+            font-size: 0.75rem;
+            margin: 0;
+        }
+
+        .camera-btn.active {
+            background: linear-gradient(135deg, #7b2ff7, var(--accent));
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Select Dropdown */
+        select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+        }
+
+        select:hover {
+            border-color: var(--accent);
+            background: rgba(0, 212, 255, 0.15);
+        }
+
+        select option {
+            background: #0a0a14;
+            color: var(--text);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .ultra-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #ff0066, #7b2ff7);
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            z-index: 10;
+            animation: pulse 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="nbodyCanvas"></canvas>
+    </div>
+
+    <div class="header">
+        <h1>⭐ N-BODY ULTRA MAX ⭐</h1>
+        <div class="subtitle">Barnes-Hut • WebAssembly • Maximum Effects</div>
+    </div>
+
+    <div class="glass-panel controls-panel">
+        <div class="section-title">🌌 Scenarios</div>
+
+        <button id="galaxyBtn">🌌 Galaxy Collision</button>
+        <button id="solarBtn">☀️ Solar System</button>
+        <button id="clusterBtn">💫 Random Cluster</button>
+        <button id="oceanTrashBtn">🌊 Ocean Trash</button>
+
+        <div class="section-title">🎨 Visual Preset</div>
+        <select id="visualPreset">
+            <option value="cosmic">Cosmic Dream</option>
+            <option value="deep-space">Deep Space</option>
+            <option value="solar">Solar Flare</option>
+            <option value="nebula">Nebula Storm</option>
+            <option value="monochrome">Monochrome</option>
+            <option value="rainbow">Rainbow Burst</option>
+        </select>
+
+        <div class="section-title">⏰ Time Travel Controls</div>
+
+        <button id="addPollutionBtn" style="background: linear-gradient(135deg, #ff4444, #cc0000);">
+            ➕ Add Pollution
+        </button>
+        <button id="cleanupBtn" style="background: linear-gradient(135deg, #00cc66, #00ff88);">
+            ♻️ Cleanup Trash
+        </button>
+        <button id="glacialMeltBtn" style="background: linear-gradient(135deg, #88ccff, #ffffff);">
+            🧊 Glacial Melt
+        </button>
+
+        <div class="control-group">
+            <label>
+                Current Dampening
+                <span class="value-display" id="dampeningValue">0%</span>
+            </label>
+            <input type="range" id="dampeningSlider" min="0" max="100" step="5" value="0">
+        </div>
+
+        <button id="addBarrierBtn" style="background: linear-gradient(135deg, #666666, #999999);">
+            🚧 Add Barrier (Click Map)
+        </button>
+        <button id="clearBarriersBtn" style="background: linear-gradient(135deg, #333333, #666666);">
+            ❌ Clear Barriers
+        </button>
+
+        <div class="section-title">📊 Particles</div>
+
+        <div class="control-group">
+            <label>
+                Particles per Galaxy
+                <span class="value-display" id="particleValue">2000</span>
+            </label>
+            <input type="range" id="particleSlider" min="100" max="5000" step="100" value="2000">
+        </div>
+
+        <div class="section-title">⚙️ Simulation</div>
+
+        <div class="control-group">
+            <label>
+                Time Step
+                <span class="value-display" id="timeStepValue">0.01</span>
+            </label>
+            <input type="range" id="timeStepSlider" min="0.001" max="0.05" step="0.001" value="0.01">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Steps per Frame
+                <span class="value-display" id="stepsValue">1</span>
+            </label>
+            <input type="range" id="stepsSlider" min="1" max="10" step="1" value="1">
+        </div>
+
+        <div class="section-title">✨ Visual Effects</div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="trailsCheck" checked>
+            <label for="trailsCheck">Motion Trails</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="glowCheck" checked>
+            <label for="glowCheck">Particle Glow</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="explosionsCheck" checked>
+            <label for="explosionsCheck">💥 Collision Explosions</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="lensFlareCheck" checked>
+            <label for="lensFlareCheck">✨ Lens Flares</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="chromaticCheck" checked>
+            <label for="chromaticCheck">🌈 Chromatic Aberration</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="soundCheck" checked>
+            <label for="soundCheck">🔊 Sound Effects</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="shakeCheck" checked>
+            <label for="shakeCheck">📳 Screen Shake</label>
+        </div>
+
+        <div class="control-group">
+            <label>
+                Trail Length
+                <span class="value-display" id="trailValue">50</span>
+            </label>
+            <input type="range" id="trailSlider" min="10" max="200" step="10" value="50">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Particle Size
+                <span class="value-display" id="sizeValue">3</span>
+            </label>
+            <input type="range" id="sizeSlider" min="1" max="8" step="0.5" value="3">
+        </div>
+
+        <div class="control-group">
+            <label>
+                Glow Intensity
+                <span class="value-display" id="glowValue">4</span>
+            </label>
+            <input type="range" id="glowSlider" min="1" max="8" step="0.5" value="4">
+        </div>
+
+        <div class="section-title">🎥 Camera</div>
+
+        <div class="camera-modes">
+            <button class="camera-btn active" id="orbitBtn">🔄 Orbit</button>
+            <button class="camera-btn" id="freeBtn">🎮 Free</button>
+        </div>
+
+        <div class="control-group" style="margin-top: 16px;">
+            <label>
+                Zoom Level
+                <span class="value-display" id="zoomValue">1.0</span>
+            </label>
+            <input type="range" id="zoomSlider" min="0.3" max="3.0" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <div class="glass-panel stats-panel">
+        <div class="section-title">⚡ Performance</div>
+
+        <div class="stat-box">
+            <div class="stat-label">FPS</div>
+            <div class="stat-value" id="fpsValue">60</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Active Particles</div>
+            <div class="stat-value" id="countValue">0</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">💥 Collisions</div>
+            <div class="stat-value" id="collisionValue">0</div>
+        </div>
+
+        <div class="section-title">🔬 Physics</div>
+
+        <div class="stat-box">
+            <div class="stat-label">Simulation Time</div>
+            <div class="stat-value" style="font-size: 1.1rem;">
+                <span id="timeValue">0.0</span> <span style="font-size: 0.7rem;">units</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Total Energy</div>
+            <div class="stat-value" style="font-size: 0.95rem;" id="energyValue">0</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Kinetic Energy</div>
+            <div class="stat-value" style="font-size: 0.95rem;" id="kineticValue">0</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Potential Energy</div>
+            <div class="stat-value" style="font-size: 0.95rem;" id="potentialValue">0</div>
+        </div>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to Labs</a>
+
+    <div class="ultra-badge">🔥 ULTRA MAX 🔥</div>
+
+    <div id="loadingMsg" class="loading">
+        🌌 Initializing N-Body Engine
+        <div class="loading-subtitle">Loading WebAssembly...</div>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // ULTRA MAX RENDERING SYSTEM - All effects enabled
+        // ====================================================================
+
+        console.log('🔥 N-Body ULTRA MAX starting...');
+
+        let nbodyEngine = null;
+        let isWASMReady = false;
+
+        const canvas = document.getElementById('nbodyCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Visual presets
+        const visualPresets = {
+            'cosmic': {
+                colors: ['#00d4ff', '#7b2ff7', '#ff0066'],
+                bgGradient: ['#000208', '#0a0515']
+            },
+            'deep-space': {
+                colors: ['#1a4d80', '#4d1a80', '#b3d9ff'],
+                bgGradient: ['#000000', '#0a0a15']
+            },
+            'solar': {
+                colors: ['#ffcc33', '#ff8800', '#ff3333'],
+                bgGradient: ['#0a0000', '#150a00']
+            },
+            'nebula': {
+                colors: ['#ff0080', '#8000ff', '#00ccff'],
+                bgGradient: ['#000000', '#100010']
+            },
+            'monochrome': {
+                colors: ['#ffffff', '#ccccee', '#99aacc'],
+                bgGradient: ['#000000', '#0a0a0a']
+            },
+            'rainbow': {
+                colors: ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff', '#8800ff'],
+                bgGradient: ['#000000', '#0a0510']
+            }
+        };
+
+        let currentPreset = visualPresets['cosmic'];
+
+        // Settings
+        let trails = new Map();
+        let showTrails = true;
+        let trailLength = 50;
+        let particleSize = 3;
+        let glowSize = 4;
+        let showGlow = true;
+        let showExplosions = true;
+        let showLensFlare = true;
+        let showChromatic = true;
+        let soundEnabled = true;
+        let shakeEnabled = true;
+        let stepsPerFrame = 1;
+
+        // Camera
+        let camX = 0, camY = 0;
+        let camZoom = 1.0;
+        let cameraMode = 'orbit';
+        let cameraAngle = 0;
+        let shakeX = 0, shakeY = 0;
+
+        // Explosions
+        let explosions = [];
+
+        // Lens flares
+        let lensFlares = [];
+
+        // Collision tracking
+        let totalCollisions = 0;
+        let lastParticleData = [];
+
+        // Performance
+        let lastTime = performance.now();
+        let fps = 60;
+
+        // Audio context (will be initialized on first user interaction)
+        let audioContext = null;
+        let masterGain = null;
+
+        function initAudio() {
+            if (!audioContext && soundEnabled) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioContext.createGain();
+                masterGain.gain.value = 0.3;
+                masterGain.connect(audioContext.destination);
+                console.log('🔊 Audio initialized');
+            }
+        }
+
+        function playCollisionSound(x, y, intensity) {
+            if (!soundEnabled || !audioContext) return;
+
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            const panner = audioContext.createStereoPanner();
+
+            // Frequency based on intensity
+            osc.frequency.value = 100 + intensity * 200;
+            osc.type = 'sine';
+
+            // Pan based on position
+            const panValue = (x / canvas.width - 0.5) * 2;
+            panner.pan.value = Math.max(-1, Math.min(1, panValue));
+
+            // Quick decay
+            gain.gain.setValueAtTime(0.1 * intensity, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            osc.connect(gain);
+            gain.connect(panner);
+            panner.connect(masterGain);
+
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.3);
+        }
+
+        // ====================================================================
+        // EFFECTS SYSTEM
+        // ====================================================================
+        class Explosion {
+            constructor(x, y, intensity, color) {
+                this.x = x;
+                this.y = y;
+                this.intensity = intensity;
+                this.color = color;
+                this.age = 0;
+                this.maxAge = 30;
+                this.particles = [];
+
+                // Create explosion particles
+                const count = Math.floor(10 + intensity * 20);
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 8 * intensity;
+                    this.particles.push({
+                        x: 0,
+                        y: 0,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 1.0
+                    });
+                }
+            }
+
+            update() {
+                this.age++;
+                for (let p of this.particles) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.95;
+                    p.vy *= 0.95;
+                    p.life -= 0.02;
+                }
+            }
+
+            render(ctx, camX, camY, camZoom) {
+                const alpha = 1 - this.age / this.maxAge;
+                const pos = worldToScreen(this.x, this.y, camX, camY, camZoom);
+
+                for (let p of this.particles) {
+                    if (p.life <= 0) continue;
+
+                    const px = pos.x + p.x * camZoom;
+                    const py = pos.y + p.y * camZoom;
+
+                    const gradient = ctx.createRadialGradient(px, py, 0, px, py, 3 * camZoom);
+                    gradient.addColorStop(0, this.color + Math.floor(p.life * 255).toString(16).padStart(2, '0'));
+                    gradient.addColorStop(1, this.color + '00');
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(px - 3, py - 3, 6, 6);
+                }
+            }
+
+            isDead() {
+                return this.age >= this.maxAge;
+            }
+        }
+
+        class LensFlare {
+            constructor(x, y, intensity) {
+                this.x = x;
+                this.y = y;
+                this.intensity = intensity;
+                this.angle = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+            }
+
+            update() {
+                this.angle += this.rotationSpeed;
+            }
+
+            render(ctx, camX, camY, camZoom) {
+                const pos = worldToScreen(this.x, this.y, camX, camY, camZoom);
+
+                // Save context
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+                ctx.rotate(this.angle);
+
+                // Draw star flare
+                const size = 20 * this.intensity * camZoom;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 * this.intensity})`;
+                ctx.lineWidth = 2;
+
+                // Six-pointed star
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI) / 3;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(angle) * size, Math.sin(angle) * size);
+                    ctx.stroke();
+                }
+
+                // Glow ring
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 1.5);
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${0.1 * this.intensity})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, size * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // ====================================================================
+        // RENDERING
+        // ====================================================================
+        function worldToScreen(x, y, camX, camY, camZoom) {
+            return {
+                x: (x - camX) * camZoom + canvas.width / 2 + shakeX,
+                y: (y - camY) * camZoom + canvas.height / 2 + shakeY
+            };
+        }
+
+        function drawStarfield() {
+            // Animated starfield background
+            const time = Date.now() * 0.0001;
+            for (let i = 0; i < 300; i++) {
+                const x = ((i * 137.5 + time * 10) % canvas.width);
+                const y = ((i * 197.3) % canvas.height);
+                const size = (Math.sin(i + time) + 1) * 0.5;
+                const brightness = 0.3 + size * 0.5;
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.fillRect(x, y, 1 + size, 1 + size);
+            }
+        }
+
+        function applyChromatic() {
+            if (!showChromatic) return;
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Create shifted versions for RGB channels
+            const offset = 2;
+
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const i = (y * canvas.width + x) * 4;
+
+                    // Shift red right
+                    if (x + offset < canvas.width) {
+                        const iShift = (y * canvas.width + (x + offset)) * 4;
+                        data[iShift] = Math.min(255, data[iShift] + data[i] * 0.1);
+                    }
+
+                    // Shift blue left
+                    if (x - offset >= 0) {
+                        const iShift = (y * canvas.width + (x - offset)) * 4;
+                        data[iShift + 2] = Math.min(255, data[iShift + 2] + data[i + 2] * 0.1);
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function detectCollisions(data) {
+            if (!showExplosions && !soundEnabled) return;
+
+            const currentParticles = new Set();
+            for (let i = 0; i < data.length; i += 4) {
+                currentParticles.add(Math.floor(i / 4));
+            }
+
+            const lastParticles = new Set();
+            for (let i = 0; i < lastParticleData.length; i += 4) {
+                lastParticles.add(Math.floor(i / 4));
+            }
+
+            // Check for missing particles (collisions)
+            for (let id of lastParticles) {
+                if (!currentParticles.has(id) && id * 4 < lastParticleData.length) {
+                    const x = lastParticleData[id * 4];
+                    const y = lastParticleData[id * 4 + 1];
+                    const mass = lastParticleData[id * 4 + 2];
+
+                    const colorIdx = id % currentPreset.colors.length;
+                    const color = currentPreset.colors[colorIdx];
+                    const intensity = Math.min(1, mass / 10);
+
+                    if (showExplosions) {
+                        explosions.push(new Explosion(x, y, intensity, color));
+                    }
+
+                    if (soundEnabled) {
+                        initAudio();
+                        const pos = worldToScreen(x, y, camX, camY, camZoom);
+                        playCollisionSound(pos.x, pos.y, intensity);
+                    }
+
+                    if (shakeEnabled && intensity > 0.5) {
+                        shakeX = (Math.random() - 0.5) * 10 * intensity;
+                        shakeY = (Math.random() - 0.5) * 10 * intensity;
+                    }
+
+                    totalCollisions++;
+                }
+            }
+
+            lastParticleData = Array.from(data);
+        }
+
+        function render() {
+            if (!isWASMReady || !nbodyEngine) return;
+
+            // Clear with fade for trails
+            if (showTrails) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            } else {
+                ctx.fillStyle = '#000';
+            }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw starfield
+            drawStarfield();
+
+            // Get particle data
+            const data = nbodyEngine.getParticleData();
+
+            // Detect collisions
+            detectCollisions(data);
+
+            // Update lens flares
+            lensFlares = [];
+            if (showLensFlare) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const mass = data[i + 2];
+                    if (mass > 50) { // Only large masses get flares
+                        const x = data[i];
+                        const y = data[i + 1];
+                        lensFlares.push(new LensFlare(x, y, Math.min(1, mass / 100)));
+                    }
+                }
+            }
+
+            // Draw trails
+            if (showTrails) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const x = data[i];
+                    const y = data[i + 1];
+                    const mass = data[i + 2];
+
+                    const id = Math.floor(i / 4);
+                    if (!trails.has(id)) {
+                        trails.set(id, []);
+                    }
+
+                    const trail = trails.get(id);
+                    trail.push({ x, y });
+
+                    if (trail.length > trailLength) {
+                        trail.shift();
+                    }
+
+                    // Draw trail
+                    if (trail.length > 1) {
+                        ctx.beginPath();
+                        let first = worldToScreen(trail[0].x, trail[0].y, camX, camY, camZoom);
+                        ctx.moveTo(first.x, first.y);
+
+                        for (let j = 1; j < trail.length; j++) {
+                            let pos = worldToScreen(trail[j].x, trail[j].y, camX, camY, camZoom);
+                            ctx.lineTo(pos.x, pos.y);
+                        }
+
+                        const alpha = 0.3 + mass * 0.01;
+                        const colorIdx = id % currentPreset.colors.length;
+                        ctx.strokeStyle = currentPreset.colors[colorIdx] + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw particles
+            for (let i = 0; i < data.length; i += 4) {
+                const x = data[i];
+                const y = data[i + 1];
+                const mass = data[i + 2];
+                const radius = data[i + 3];
+
+                const pos = worldToScreen(x, y, camX, camY, camZoom);
+                const size = Math.max(particleSize, radius * camZoom * 0.5);
+                const colorIdx = (i / 4) % currentPreset.colors.length;
+                const color = currentPreset.colors[Math.floor(colorIdx)];
+
+                // Glow
+                if (showGlow) {
+                    const gradient = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size * glowSize);
+                    gradient.addColorStop(0, color + 'FF');
+                    gradient.addColorStop(0.3, color + 'CC');
+                    gradient.addColorStop(0.7, color + '44');
+                    gradient.addColorStop(1, color + '00');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, size * glowSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Core
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw lens flares
+            for (let flare of lensFlares) {
+                flare.update();
+                flare.render(ctx, camX, camY, camZoom);
+            }
+
+            // Draw explosions
+            explosions = explosions.filter(exp => !exp.isDead());
+            for (let exp of explosions) {
+                exp.update();
+                exp.render(ctx, camX, camY, camZoom);
+            }
+
+            // Apply chromatic aberration
+            // applyChromatic(); // Disabled for performance
+
+            // Decay screen shake
+            shakeX *= 0.9;
+            shakeY *= 0.9;
+        }
+
+        // ====================================================================
+        // CAMERA
+        // ====================================================================
+        function updateCamera() {
+            if (cameraMode === 'orbit') {
+                cameraAngle += 0.002;
+                camX = Math.cos(cameraAngle) * 30;
+                camY = Math.sin(cameraAngle) * 30;
+            }
+        }
+
+        // Mouse controls
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+            initAudio(); // Initialize audio on first interaction
+            if (cameraMode === 'free') {
+                isDragging = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && cameraMode === 'free') {
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+
+                camX -= deltaX / camZoom;
+                camY -= deltaY / camZoom;
+
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            camZoom *= zoomFactor;
+            camZoom = Math.max(0.3, Math.min(3, camZoom));
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
+            document.getElementById('zoomSlider').value = camZoom;
+        });
+
+        // ====================================================================
+        // SCENARIOS
+        // ====================================================================
+        function createGalaxyCollision() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value);
+            nbodyEngine.createGalaxyCollision(count);
+            trails.clear();
+            explosions = [];
+            totalCollisions = 0;
+            updateStats();
+        }
+
+        function createSolarSystem() {
+            if (!nbodyEngine) return;
+            nbodyEngine.createSolarSystem();
+            trails.clear();
+            explosions = [];
+            totalCollisions = 0;
+            camZoom = 2.0;
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
+            updateStats();
+        }
+
+        function createRandomCluster() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value) * 2;
+            nbodyEngine.createRandomCluster(count);
+            trails.clear();
+            explosions = [];
+            totalCollisions = 0;
+            updateStats();
+        }
+
+        function createOceanTrash() {
+            if (!nbodyEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value) * 3;
+            nbodyEngine.createOceanTrash(count);
+            trails.clear();
+            explosions = [];
+            totalCollisions = 0;
+            camZoom = 0.8;
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
+            updateStats();
+        }
+
+        // ====================================================================
+        // TIME TRAVEL / ENVIRONMENTAL CONTROLS
+        // ====================================================================
+
+        let barrierPlacementMode = false;
+
+        function addPollution() {
+            if (!nbodyEngine) return;
+            const amount = 500;
+            nbodyEngine.addTrashPollution(amount);
+            updateStats();
+        }
+
+        function cleanupTrash() {
+            if (!nbodyEngine) return;
+            const amount = 500;
+            nbodyEngine.removeTrashPollution(amount);
+            updateStats();
+        }
+
+        function addGlacialMelt() {
+            if (!nbodyEngine) return;
+            const intensity = 200;
+            nbodyEngine.addGlacialMelt(intensity);
+            updateStats();
+        }
+
+        function toggleBarrierPlacement() {
+            barrierPlacementMode = !barrierPlacementMode;
+            const btn = document.getElementById('addBarrierBtn');
+            if (barrierPlacementMode) {
+                btn.textContent = '🎯 Click Map to Place';
+                btn.style.background = 'linear-gradient(135deg, #ffaa00, #ff6600)';
+            } else {
+                btn.textContent = '🚧 Add Barrier (Click Map)';
+                btn.style.background = 'linear-gradient(135deg, #666666, #999999)';
+            }
+        }
+
+        function clearAllBarriers() {
+            if (!nbodyEngine) return;
+            nbodyEngine.clearBarriers();
+        }
+
+        // ====================================================================
+        // STATS
+        // ====================================================================
+        function updateStats() {
+            if (!isWASMReady || !nbodyEngine) return;
+
+            document.getElementById('countValue').textContent = nbodyEngine.getParticleCount();
+            document.getElementById('timeValue').textContent = nbodyEngine.getTime().toFixed(2);
+            document.getElementById('energyValue').textContent = nbodyEngine.getTotalEnergy().toExponential(2);
+            document.getElementById('kineticValue').textContent = nbodyEngine.getKineticEnergy().toExponential(2);
+            document.getElementById('potentialValue').textContent = nbodyEngine.getPotentialEnergy().toExponential(2);
+            document.getElementById('collisionValue').textContent = totalCollisions;
+        }
+
+        // ====================================================================
+        // ANIMATION LOOP
+        // ====================================================================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            fps = Math.round(1 / deltaTime);
+            document.getElementById('fpsValue').textContent = fps;
+
+            if (isWASMReady && nbodyEngine) {
+                nbodyEngine.update(stepsPerFrame);
+                render();
+
+                if (nbodyEngine.getIteration() % 30 === 0) {
+                    updateStats();
+                }
+            }
+
+            updateCamera();
+        }
+
+        // ====================================================================
+        // LOAD WASM
+        // ====================================================================
+        async function loadWASM() {
+            const loadingMsg = document.getElementById('loadingMsg');
+
+            try {
+                console.log('📦 Loading WASM module...');
+                loadingMsg.innerHTML = '🌌 Loading N-Body Engine<br><span class="loading-subtitle">Importing module...</span>';
+
+                const nbodyModule = await import('./nbody_engine.js');
+                console.log('✅ Module imported');
+
+                loadingMsg.innerHTML = '🌌 Loading N-Body Engine<br><span class="loading-subtitle">Initializing...</span>';
+
+                const createModule = nbodyModule.default;
+                const Module = await createModule();
+                console.log('✅ WASM initialized');
+
+                nbodyEngine = new Module.NBodyEngine(1000);
+                isWASMReady = true;
+
+                loadingMsg.style.display = 'none';
+
+                createGalaxyCollision();
+
+                console.log('🔥 N-Body ULTRA MAX ready!');
+            } catch (error) {
+                console.error('❌ WASM loading failed:', error);
+                loadingMsg.innerHTML =
+                    `⚠️ Failed to load<br><span class="loading-subtitle">${error.message}</span><br><span class="loading-subtitle" style="font-size: 0.7rem;">Press F12 for details</span>`;
+            }
+        }
+
+        // ====================================================================
+        // EVENT LISTENERS
+        // ====================================================================
+        document.getElementById('galaxyBtn').addEventListener('click', createGalaxyCollision);
+        document.getElementById('solarBtn').addEventListener('click', createSolarSystem);
+        document.getElementById('clusterBtn').addEventListener('click', createRandomCluster);
+        document.getElementById('oceanTrashBtn').addEventListener('click', createOceanTrash);
+
+        // Time-travel controls
+        document.getElementById('addPollutionBtn').addEventListener('click', addPollution);
+        document.getElementById('cleanupBtn').addEventListener('click', cleanupTrash);
+        document.getElementById('glacialMeltBtn').addEventListener('click', addGlacialMelt);
+        document.getElementById('addBarrierBtn').addEventListener('click', toggleBarrierPlacement);
+        document.getElementById('clearBarriersBtn').addEventListener('click', clearAllBarriers);
+
+        document.getElementById('dampeningSlider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('dampeningValue').textContent = val + '%';
+            if (nbodyEngine) nbodyEngine.setCurrentDampening(val);
+        });
+
+        // Canvas click for barrier placement
+        canvas.addEventListener('click', (e) => {
+            if (!barrierPlacementMode || !nbodyEngine) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / canvas.width - 0.5) * 2 * 1000 / camZoom - camX;
+            const y = ((e.clientY - rect.top) / canvas.height - 0.5) * 2 * 1000 / camZoom - camY;
+
+            nbodyEngine.addBarrierZone(x, y, 100);
+            barrierPlacementMode = false;
+            toggleBarrierPlacement(); // Reset button
+        });
+
+        document.getElementById('particleSlider').addEventListener('input', (e) => {
+            document.getElementById('particleValue').textContent = e.target.value;
+        });
+
+        document.getElementById('timeStepSlider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('timeStepValue').textContent = val.toFixed(3);
+            if (nbodyEngine) nbodyEngine.setTimeStep(val);
+        });
+
+        document.getElementById('stepsSlider').addEventListener('input', (e) => {
+            stepsPerFrame = parseInt(e.target.value);
+            document.getElementById('stepsValue').textContent = stepsPerFrame;
+        });
+
+        document.getElementById('trailsCheck').addEventListener('change', (e) => {
+            showTrails = e.target.checked;
+            if (!showTrails) trails.clear();
+        });
+
+        document.getElementById('glowCheck').addEventListener('change', (e) => {
+            showGlow = e.target.checked;
+        });
+
+        document.getElementById('explosionsCheck').addEventListener('change', (e) => {
+            showExplosions = e.target.checked;
+        });
+
+        document.getElementById('lensFlareCheck').addEventListener('change', (e) => {
+            showLensFlare = e.target.checked;
+        });
+
+        document.getElementById('chromaticCheck').addEventListener('change', (e) => {
+            showChromatic = e.target.checked;
+        });
+
+        document.getElementById('soundCheck').addEventListener('change', (e) => {
+            soundEnabled = e.target.checked;
+        });
+
+        document.getElementById('shakeCheck').addEventListener('change', (e) => {
+            shakeEnabled = e.target.checked;
+        });
+
+        document.getElementById('trailSlider').addEventListener('input', (e) => {
+            trailLength = parseInt(e.target.value);
+            document.getElementById('trailValue').textContent = trailLength;
+        });
+
+        document.getElementById('sizeSlider').addEventListener('input', (e) => {
+            particleSize = parseFloat(e.target.value);
+            document.getElementById('sizeValue').textContent = particleSize;
+        });
+
+        document.getElementById('glowSlider').addEventListener('input', (e) => {
+            glowSize = parseFloat(e.target.value);
+            document.getElementById('glowValue').textContent = glowSize;
+        });
+
+        document.getElementById('zoomSlider').addEventListener('input', (e) => {
+            camZoom = parseFloat(e.target.value);
+            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
+        });
+
+        // Visual presets
+        document.getElementById('visualPreset').addEventListener('change', (e) => {
+            currentPreset = visualPresets[e.target.value];
+        });
+
+        // Camera mode buttons
+        const cameraBtns = document.querySelectorAll('.camera-btn');
+        document.getElementById('orbitBtn').addEventListener('click', () => {
+            cameraMode = 'orbit';
+            cameraBtns.forEach(btn => btn.classList.remove('active'));
+            document.getElementById('orbitBtn').classList.add('active');
+        });
+
+        document.getElementById('freeBtn').addEventListener('click', () => {
+            cameraMode = 'free';
+            cameraBtns.forEach(btn => btn.classList.remove('active'));
+            document.getElementById('freeBtn').classList.add('active');
+        });
+
+        // ====================================================================
+        // INITIALIZATION
+        // ====================================================================
+        console.log('🔥 Starting ULTRA MAX initialization...');
+        loadWASM();
+        animate();
+    </script>
+</body>
+</html>
