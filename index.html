@@ -172,9 +172,26 @@
             color: var(--dim);
             font-size: 0.75rem;
         }
+
+        /* Dynamic Three.js Background */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+            transition: opacity 1s ease;
+        }
+
+        .grid:hover ~ #bg-canvas {
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
+    <canvas id="bg-canvas"></canvas>
     <div class="header">
         <h1>SOUPY LABS</h1>
         <p>Technical Physics Simulation Modules</p>
@@ -524,5 +541,446 @@
         SOUPY LABS © 2024 | Glen St. Mary, FL | Created by John Beene<br>
         <span style="color: #444; font-size: 0.65rem;">Physics simulation suite for fusion reactor concepts, plasma physics, space & orbital mechanics, chemistry & materials, navigation systems, apocalypse scenarios, and field visualization</span>
     </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // Setup
+        const canvas = document.getElementById('bg-canvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        camera.position.z = 50;
+
+        // Background scenes
+        const backgrounds = {
+            fusion: null,
+            plasma: null,
+            magnetic: null,
+            chemistry: null,
+            propulsion: null,
+            navigation: null,
+            apocalypse: null,
+            orbital: null
+        };
+
+        let currentBackground = null;
+        let targetOpacity = 0;
+
+        // Create Earth with atmosphere for apocalypse section
+        function createEarthBackground() {
+            const group = new THREE.Group();
+
+            // Earth
+            const earthGeometry = new THREE.SphereGeometry(15, 64, 64);
+            const earthMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a4d2e,
+                emissive: 0x0a1a0f,
+                emissiveIntensity: 0.2,
+                metalness: 0.1,
+                roughness: 0.8
+            });
+            const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            group.add(earth);
+
+            // Atmosphere glow
+            for (let i = 1; i <= 3; i++) {
+                const glowGeometry = new THREE.SphereGeometry(15 + i * 0.8, 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x6496ff,
+                    transparent: true,
+                    opacity: 0.15 / i,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.BackSide
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                group.add(glow);
+            }
+
+            // Add point light
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(30, 20, 30);
+            group.add(light);
+
+            group.visible = false;
+            return group;
+        }
+
+        // Create cloud particles for aerodynamics/propulsion
+        function createCloudBackground() {
+            const group = new THREE.Group();
+
+            const particleCount = 1000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 100;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+
+                const color = new THREE.Color().setHSL(0.6, 0.3, 0.7 + Math.random() * 0.2);
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            group.add(particles);
+            group.visible = false;
+            group.userData.particles = particles;
+            return group;
+        }
+
+        // Create atomic structure for chemistry/particle physics
+        function createAtomBackground() {
+            const group = new THREE.Group();
+
+            // Nucleus
+            const nucleusGeometry = new THREE.SphereGeometry(2, 32, 32);
+            const nucleusMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff6b35,
+                emissive: 0xff4500,
+                emissiveIntensity: 0.5,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+            group.add(nucleus);
+
+            // Electron orbits
+            for (let i = 0; i < 3; i++) {
+                const orbitRadius = 8 + i * 5;
+                const electronGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const electronMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff9d,
+                    emissive: 0x00ff9d,
+                    emissiveIntensity: 1.0
+                });
+                const electron = new THREE.Mesh(electronGeometry, electronMaterial);
+
+                electron.userData.orbitRadius = orbitRadius;
+                electron.userData.orbitSpeed = 0.5 + i * 0.3;
+                electron.userData.orbitAngle = (i * Math.PI * 2) / 3;
+                electron.userData.orbitTilt = (i * Math.PI) / 6;
+
+                group.add(electron);
+                group.userData[`electron${i}`] = electron;
+            }
+
+            // Nucleus glow
+            const glowGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff6b35,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            group.add(glow);
+
+            const light = new THREE.PointLight(0xff6b35, 2, 50);
+            group.add(light);
+
+            group.visible = false;
+            return group;
+        }
+
+        // Create plasma energy field for fusion/plasma
+        function createPlasmaBackground() {
+            const group = new THREE.Group();
+
+            const particleCount = 2000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const radius = 20 + Math.random() * 30;
+
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+
+                const color = new THREE.Color().setHSL(
+                    Math.random() < 0.5 ? 0.15 : 0.55, // Orange or cyan
+                    1.0,
+                    0.5 + Math.random() * 0.3
+                );
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 2,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            group.add(particles);
+            group.userData.particles = particles;
+
+            // Add central glow
+            const glowGeometry = new THREE.SphereGeometry(5, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff6b35,
+                transparent: true,
+                opacity: 0.5,
+                blending: THREE.AdditiveBlending
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            group.add(glow);
+
+            group.visible = false;
+            return group;
+        }
+
+        // Create satellite network for navigation
+        function createNavigationBackground() {
+            const group = new THREE.Group();
+
+            // Central Earth
+            const earthGeometry = new THREE.SphereGeometry(8, 32, 32);
+            const earthMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a90e2,
+                emissive: 0x1a3a6e,
+                emissiveIntensity: 0.3
+            });
+            const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            group.add(earth);
+
+            // Satellites
+            for (let i = 0; i < 8; i++) {
+                const satGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+                const satMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffcd00,
+                    emissive: 0xffcd00,
+                    emissiveIntensity: 1.0
+                });
+                const satellite = new THREE.Mesh(satGeometry, satMaterial);
+
+                satellite.userData.orbitRadius = 15 + Math.random() * 5;
+                satellite.userData.orbitSpeed = 0.3 + Math.random() * 0.2;
+                satellite.userData.orbitAngle = (i * Math.PI * 2) / 8;
+                satellite.userData.orbitTilt = (Math.random() - 0.5) * Math.PI / 4;
+
+                group.add(satellite);
+                group.userData[`satellite${i}`] = satellite;
+            }
+
+            const light = new THREE.PointLight(0x4a90e2, 1, 50);
+            light.position.set(20, 10, 20);
+            group.add(light);
+
+            group.visible = false;
+            return group;
+        }
+
+        // Create orbital debris for space section
+        function createOrbitalBackground() {
+            const group = new THREE.Group();
+
+            // Central Earth
+            const earthGeometry = new THREE.SphereGeometry(10, 32, 32);
+            const earthMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2a5a7a,
+                emissive: 0x1a2a3a,
+                emissiveIntensity: 0.2
+            });
+            const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+            group.add(earth);
+
+            // Debris field
+            const debrisCount = 500;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(debrisCount * 3);
+
+            for (let i = 0; i < debrisCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const radius = 12 + Math.random() * 15;
+
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.3,
+                color: 0xcccccc,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const debris = new THREE.Points(geometry, material);
+            group.add(debris);
+            group.userData.debris = debris;
+
+            const light = new THREE.PointLight(0xffffff, 0.5, 50);
+            light.position.set(30, 20, 20);
+            group.add(light);
+
+            group.visible = false;
+            return group;
+        }
+
+        // Initialize all backgrounds
+        backgrounds.apocalypse = createEarthBackground();
+        backgrounds.propulsion = createCloudBackground();
+        backgrounds.chemistry = createAtomBackground();
+        backgrounds.fusion = createPlasmaBackground();
+        backgrounds.plasma = createPlasmaBackground();
+        backgrounds.magnetic = createAtomBackground();
+        backgrounds.navigation = createNavigationBackground();
+        backgrounds.orbital = createOrbitalBackground();
+
+        Object.values(backgrounds).forEach(bg => scene.add(bg));
+
+        // Ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        // Track which section is being hovered
+        const sectionTitles = document.querySelectorAll('.section-title');
+        const grids = document.querySelectorAll('.grid');
+
+        grids.forEach((grid, index) => {
+            const cards = grid.querySelectorAll('.card');
+
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    // Determine background type based on card class
+                    let bgType = 'magnetic';
+                    if (card.classList.contains('fusion')) bgType = 'fusion';
+                    else if (card.classList.contains('plasma')) bgType = 'propulsion';
+                    else if (card.classList.contains('magnetic')) bgType = 'magnetic';
+                    else if (card.classList.contains('navigation')) bgType = 'navigation';
+                    else if (card.classList.contains('apocalypse')) bgType = 'apocalypse';
+
+                    // Check parent section
+                    const prevTitle = grid.previousElementSibling;
+                    if (prevTitle && prevTitle.classList.contains('section-title')) {
+                        if (prevTitle.textContent.includes('CHEMISTRY')) bgType = 'chemistry';
+                        else if (prevTitle.textContent.includes('SPACE & ORBITAL')) bgType = 'orbital';
+                    }
+
+                    switchBackground(bgType);
+                });
+            });
+        });
+
+        function switchBackground(type) {
+            if (currentBackground === type) return;
+
+            // Hide all backgrounds
+            Object.entries(backgrounds).forEach(([key, bg]) => {
+                bg.visible = (key === type);
+            });
+
+            currentBackground = type;
+        }
+
+        // Animation
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = Date.now() * 0.001;
+
+            // Animate current background
+            if (currentBackground) {
+                const bg = backgrounds[currentBackground];
+
+                if (bg) {
+                    // Rotate entire background slowly
+                    bg.rotation.y += 0.002;
+
+                    // Specific animations
+                    if (currentBackground === 'apocalypse' || currentBackground === 'navigation' || currentBackground === 'orbital') {
+                        bg.children[0].rotation.y += 0.005; // Rotate Earth
+                    }
+
+                    // Animate electrons for atom backgrounds
+                    if (currentBackground === 'chemistry' || currentBackground === 'magnetic') {
+                        for (let i = 0; i < 3; i++) {
+                            const electron = bg.userData[`electron${i}`];
+                            if (electron) {
+                                electron.userData.orbitAngle += electron.userData.orbitSpeed * 0.02;
+                                const radius = electron.userData.orbitRadius;
+                                electron.position.x = Math.cos(electron.userData.orbitAngle) * radius;
+                                electron.position.y = Math.sin(electron.userData.orbitAngle) * radius * Math.cos(electron.userData.orbitTilt);
+                                electron.position.z = Math.sin(electron.userData.orbitAngle) * radius * Math.sin(electron.userData.orbitTilt);
+                            }
+                        }
+                    }
+
+                    // Animate satellites
+                    if (currentBackground === 'navigation') {
+                        for (let i = 0; i < 8; i++) {
+                            const satellite = bg.userData[`satellite${i}`];
+                            if (satellite) {
+                                satellite.userData.orbitAngle += satellite.userData.orbitSpeed * 0.01;
+                                const radius = satellite.userData.orbitRadius;
+                                satellite.position.x = Math.cos(satellite.userData.orbitAngle) * radius;
+                                satellite.position.y = Math.sin(satellite.userData.orbitAngle) * radius * Math.cos(satellite.userData.orbitTilt);
+                                satellite.position.z = Math.sin(satellite.userData.orbitAngle) * radius * Math.sin(satellite.userData.orbitTilt);
+                                satellite.rotation.y += 0.05;
+                            }
+                        }
+                    }
+
+                    // Animate plasma/cloud particles
+                    if (bg.userData.particles) {
+                        bg.userData.particles.rotation.y += 0.005;
+                        bg.userData.particles.rotation.x = Math.sin(time * 0.3) * 0.2;
+                    }
+
+                    // Animate orbital debris
+                    if (bg.userData.debris) {
+                        bg.userData.debris.rotation.y += 0.003;
+                        bg.userData.debris.rotation.x += 0.001;
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start animation
+        animate();
+    </script>
 </body>
 </html>

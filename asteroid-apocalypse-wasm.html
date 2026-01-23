@@ -534,13 +534,42 @@
     </div>
 
     <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import createAsteroidModule from './asteroid_impact_engine.js';
 
         let Module, asteroid;
-        let canvas, ctx;
+        let canvas;
         let isRunning = false;
 
+        // Three.js components
+        let scene, camera, renderer, composer;
+        let earthMesh, asteroidMesh, impactEffects;
         let cameraZoom = 1.0;
+        let qualityMode = 'balanced'; // 'visual', 'balanced', 'physics'
+
+        // Create circular sprite texture for particles
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
 
         async function init() {
             try {
@@ -548,24 +577,129 @@
                 asteroid = new Module.AsteroidImpact();
 
                 canvas = document.getElementById('impactCanvas');
-                ctx = canvas.getContext('2d');
+
+                // Three.js Setup
+                scene = new THREE.Scene();
+                scene.fog = new THREE.Fog(0x000000, 50, 500);
+
+                camera = new THREE.PerspectiveCamera(75, canvas.width / canvas.height, 0.1, 1000);
+                camera.position.set(0, 50, 100);
+                camera.lookAt(0, 0, 0);
+
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                renderer.setSize(canvas.width, canvas.height);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                // Post-processing
+                composer = new EffectComposer(renderer);
+                composer.addPass(new RenderPass(scene, camera));
+                const bloomPass = new UnrealBloomPass(
+                    new THREE.Vector2(canvas.width, canvas.height),
+                    1.5, 0.4, 0.85
+                );
+                composer.addPass(bloomPass);
+
+                // Add ambient lighting
+                const ambientLight = new THREE.AmbientLight(0x222244, 0.3);
+                scene.add(ambientLight);
+
+                // Add sun light
+                const sunLight = new THREE.DirectionalLight(0xffffee, 1.5);
+                sunLight.position.set(50, 50, 50);
+                sunLight.castShadow = true;
+                sunLight.shadow.mapSize.width = 2048;
+                sunLight.shadow.mapSize.height = 2048;
+                scene.add(sunLight);
+
+                // Create Earth
+                createEarth();
+
+                // Create starfield background
+                createStarfield();
 
                 setupControls();
                 setupCameraControls();
                 animate();
                 isRunning = true;
 
-                console.log('☄️ Asteroid impact simulator initialized');
+                console.log('☄️ Asteroid impact simulator initialized with Three.js');
             } catch (error) {
                 console.error('Failed to initialize:', error);
-                canvas = document.getElementById('impactCanvas');
-                ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ff4444';
-                ctx.font = '20px Orbitron';
-                ctx.fillText('WebAssembly module not found', 50, 50);
-                ctx.font = '14px Orbitron';
-                ctx.fillText('Compile asteroid_impact_engine.cpp with Emscripten first', 50, 80);
             }
+        }
+
+        function createEarth() {
+            // Earth sphere with high-resolution geometry
+            const earthGeometry = new THREE.SphereGeometry(20, 128, 128);
+            const earthMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a4d2e,
+                emissive: 0x0a1a0f,
+                emissiveIntensity: 0.2,
+                metalness: 0.1,
+                roughness: 0.8
+            });
+            earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+            earthMesh.castShadow = true;
+            earthMesh.receiveShadow = true;
+            scene.add(earthMesh);
+
+            // Atmosphere glow
+            const atmosphereGeometry = new THREE.SphereGeometry(21, 64, 64);
+            const atmosphereMaterial = new THREE.MeshBasicMaterial({
+                color: 0x6496ff,
+                transparent: true,
+                opacity: 0.15,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            earthMesh.add(atmosphere);
+
+            // Additional atmosphere layers
+            for (let i = 1; i <= 3; i++) {
+                const layerGeo = new THREE.SphereGeometry(20 + i * 1.5, 32, 32);
+                const layerMat = new THREE.MeshBasicMaterial({
+                    color: 0x6496ff,
+                    transparent: true,
+                    opacity: 0.08 / i,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.BackSide
+                });
+                const layer = new THREE.Mesh(layerGeo, layerMat);
+                earthMesh.add(layer);
+            }
+        }
+
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starCount = 5000;
+            const positions = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount * 3; i += 3) {
+                const radius = 300 + Math.random() * 200;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+
+                positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i + 2] = radius * Math.cos(phi);
+            }
+
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.7,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
         }
 
         function setupControls() {
@@ -757,131 +891,204 @@
             }
         }
 
-        function drawScene() {
-            const w = canvas.width;
-            const h = canvas.height;
-
-            // Clear with space background
-            const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w);
-            gradient.addColorStop(0, '#000000');
-            gradient.addColorStop(1, '#0a0a0a');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, w, h);
-
-            ctx.save();
-            ctx.translate(w / 2, h / 2);
-            ctx.scale(cameraZoom, cameraZoom);
-
-            // Draw Earth
-            const earthRadius = 200;
-            const earthGrad = ctx.createRadialGradient(0, 0, earthRadius * 0.7, 0, 0, earthRadius);
-            earthGrad.addColorStop(0, '#1a4d2e');
-            earthGrad.addColorStop(0.7, '#0d2818');
-            earthGrad.addColorStop(1, '#000000');
-            ctx.fillStyle = earthGrad;
-            ctx.beginPath();
-            ctx.arc(0, 0, earthRadius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Atmosphere glow
-            const atmGrad = ctx.createRadialGradient(0, 0, earthRadius, 0, 0, earthRadius + 30);
-            atmGrad.addColorStop(0, 'rgba(100, 150, 255, 0)');
-            atmGrad.addColorStop(0.8, 'rgba(100, 150, 255, 0.3)');
-            atmGrad.addColorStop(1, 'rgba(100, 150, 255, 0)');
-            ctx.fillStyle = atmGrad;
-            ctx.beginPath();
-            ctx.arc(0, 0, earthRadius + 30, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw asteroid if not impacted
+        function updateAsteroid() {
             const altitude = asteroid.getAltitude();
             const impacted = asteroid.impacted();
 
+            // Remove old asteroid if exists
+            if (asteroidMesh) {
+                scene.remove(asteroidMesh);
+                asteroidMesh = null;
+            }
+
+            // Create/update asteroid if not impacted
             if (!impacted && altitude > 0) {
-                const altitudePixels = (altitude / 100000) * 400; // Scale altitude
-                const asteroidY = -earthRadius - altitudePixels;
+                const altitudeScaled = (altitude / 100000) * 80;
                 const diameter = asteroid.getDiameter();
-                const asteroidSize = Math.max(3, Math.min(diameter / 10, 50));
+                const asteroidSize = Math.max(0.3, Math.min(diameter / 50, 5));
 
-                // Asteroid with glow
-                ctx.fillStyle = '#8B4513';
-                ctx.shadowColor = '#FF4500';
-                ctx.shadowBlur = 20;
-                ctx.beginPath();
-                ctx.arc(0, asteroidY, asteroidSize, 0, Math.PI * 2);
-                ctx.fill();
+                const asteroidGeometry = new THREE.SphereGeometry(asteroidSize, 32, 32);
+                const asteroidMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x8b4513,
+                    emissive: altitude < 80000 ? 0xff4500 : 0x000000,
+                    emissiveIntensity: altitude < 80000 ? (80000 - altitude) / 80000 * 2.0 : 0,
+                    metalness: 0.3,
+                    roughness: 0.9
+                });
 
-                // Atmospheric heating
+                asteroidMesh = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+                asteroidMesh.position.set(0, 20 + altitudeScaled, 0);
+                asteroidMesh.castShadow = true;
+                scene.add(asteroidMesh);
+
+                // Add atmospheric heating glow
                 if (altitude < 80000) {
                     const heatIntensity = (80000 - altitude) / 80000;
-                    const heatGrad = ctx.createRadialGradient(0, asteroidY, 0, 0, asteroidY, asteroidSize * 3);
-                    heatGrad.addColorStop(0, `rgba(255, 100, 0, ${heatIntensity * 0.8})`);
-                    heatGrad.addColorStop(0.5, `rgba(255, 50, 0, ${heatIntensity * 0.4})`);
-                    heatGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
-                    ctx.fillStyle = heatGrad;
-                    ctx.beginPath();
-                    ctx.arc(0, asteroidY, asteroidSize * 3, 0, Math.PI * 2);
-                    ctx.fill();
+                    for (let i = 1; i <= 3; i++) {
+                        const glowGeometry = new THREE.SphereGeometry(asteroidSize * (1 + i * 0.5), 16, 16);
+                        const glowMaterial = new THREE.MeshBasicMaterial({
+                            color: 0xff4500,
+                            transparent: true,
+                            opacity: (heatIntensity * 0.3) / i,
+                            blending: THREE.AdditiveBlending,
+                            side: THREE.BackSide
+                        });
+                        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                        asteroidMesh.add(glow);
+                    }
+
+                    // Add point light for heating
+                    const heatLight = new THREE.PointLight(0xff4500, heatIntensity * 50, 50);
+                    asteroidMesh.add(heatLight);
                 }
             }
 
-            // Draw impact effects
+            // Update impact effects
+            updateImpactEffects();
+        }
+
+        function updateImpactEffects() {
+            const impacted = asteroid.impacted();
+
+            // Remove old effects
+            if (impactEffects) {
+                scene.remove(impactEffects);
+                impactEffects = null;
+            }
+
             if (impacted) {
-                ctx.shadowBlur = 0;
+                impactEffects = new THREE.Group();
 
                 // Crater
-                const crater = asteroid.getCraterDiameter();
-                const craterSize = (crater / 100000) * earthRadius * 2;
-                ctx.fillStyle = '#4a2a2a';
-                ctx.beginPath();
-                ctx.arc(0, -earthRadius, craterSize, 0, Math.PI * 2);
-                ctx.fill();
+                const craterDiameter = asteroid.getCraterDiameter();
+                const craterSize = (craterDiameter / 100000) * 40;
+                const craterGeometry = new THREE.CircleGeometry(craterSize, 32);
+                const craterMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x4a2a2a,
+                    emissive: 0x2a1515,
+                    emissiveIntensity: 0.3,
+                    metalness: 0.1,
+                    roughness: 0.95
+                });
+                const crater = new THREE.Mesh(craterGeometry, craterMaterial);
+                crater.position.set(0, 20.1, 0);
+                crater.rotation.x = -Math.PI / 2;
+                impactEffects.add(crater);
 
                 // Fireball
                 const thermal = asteroid.getThermalPulse();
                 if (thermal > 0) {
-                    const fireballGrad = ctx.createRadialGradient(0, -earthRadius, 0, 0, -earthRadius, 100 * thermal);
-                    fireballGrad.addColorStop(0, `rgba(255, 255, 255, ${thermal})`);
-                    fireballGrad.addColorStop(0.3, `rgba(255, 200, 0, ${thermal * 0.8})`);
-                    fireballGrad.addColorStop(0.6, `rgba(255, 69, 0, ${thermal * 0.5})`);
-                    fireballGrad.addColorStop(1, 'rgba(139, 0, 0, 0)');
-                    ctx.fillStyle = fireballGrad;
-                    ctx.beginPath();
-                    ctx.arc(0, -earthRadius, 100 * thermal, 0, Math.PI * 2);
-                    ctx.fill();
+                    const fireballSize = 10 * thermal;
+                    const fireballGeometry = new THREE.SphereGeometry(fireballSize, 32, 32);
+                    const fireballMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: thermal * 0.8,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const fireball = new THREE.Mesh(fireballGeometry, fireballMaterial);
+                    fireball.position.set(0, 20, 0);
+                    impactEffects.add(fireball);
+
+                    // Fireball glow layers
+                    for (let i = 1; i <= 3; i++) {
+                        const glowGeo = new THREE.SphereGeometry(fireballSize * (1 + i * 0.3), 32, 32);
+                        const glowMat = new THREE.MeshBasicMaterial({
+                            color: i === 1 ? 0xffc800 : i === 2 ? 0xff4500 : 0x8b0000,
+                            transparent: true,
+                            opacity: (thermal * 0.4) / i,
+                            blending: THREE.AdditiveBlending,
+                            side: THREE.BackSide
+                        });
+                        const glow = new THREE.Mesh(glowGeo, glowMat);
+                        glow.position.copy(fireball.position);
+                        impactEffects.add(glow);
+                    }
+
+                    // Impact point light
+                    const impactLight = new THREE.PointLight(0xffffff, thermal * 200, 100);
+                    impactLight.position.set(0, 20, 0);
+                    impactEffects.add(impactLight);
                 }
 
-                // Shockwave
+                // Shockwave ring
                 const shockwave = asteroid.getShockwaveFront();
                 if (shockwave > 0 && shockwave < 500000) {
-                    const shockSize = (shockwave / 100000) * earthRadius;
-                    ctx.strokeStyle = `rgba(255, 100, 0, ${1 - shockwave / 500000})`;
-                    ctx.lineWidth = 3 / cameraZoom;
-                    ctx.beginPath();
-                    ctx.arc(0, -earthRadius, shockSize, 0, Math.PI * 2);
-                    ctx.stroke();
+                    const shockSize = (shockwave / 100000) * 40;
+                    const shockOpacity = 1 - shockwave / 500000;
+                    const shockGeometry = new THREE.RingGeometry(shockSize * 0.9, shockSize, 64);
+                    const shockMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xff6400,
+                        transparent: true,
+                        opacity: shockOpacity * 0.7,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.DoubleSide
+                    });
+                    const shockRing = new THREE.Mesh(shockGeometry, shockMaterial);
+                    shockRing.position.set(0, 20.2, 0);
+                    shockRing.rotation.x = -Math.PI / 2;
+                    impactEffects.add(shockRing);
                 }
 
-                // Ejecta plume
-                const ejecta = asteroid.getEjectaRadius();
-                const ejectaSize = (ejecta / 100000) * earthRadius;
-                ctx.fillStyle = 'rgba(100, 50, 25, 0.3)';
-                ctx.beginPath();
-                ctx.ellipse(0, -earthRadius - 50, ejectaSize * 0.5, ejectaSize, 0, 0, Math.PI * 2);
-                ctx.fill();
+                // Ejecta plume particles
+                const ejectaRadius = asteroid.getEjectaRadius();
+                if (ejectaRadius > 0) {
+                    const particleCount = 500;
+                    const particlesGeometry = new THREE.BufferGeometry();
+                    const positions = new Float32Array(particleCount * 3);
+                    const colors = new Float32Array(particleCount * 3);
+
+                    for (let i = 0; i < particleCount; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * (ejectaRadius / 10000) * 20;
+                        const height = Math.random() * 30;
+
+                        positions[i * 3] = Math.cos(angle) * radius;
+                        positions[i * 3 + 1] = 20 + height;
+                        positions[i * 3 + 2] = Math.sin(angle) * radius;
+
+                        const color = new THREE.Color().setHSL(0.05, 0.6, 0.3 + Math.random() * 0.2);
+                        colors[i * 3] = color.r;
+                        colors[i * 3 + 1] = color.g;
+                        colors[i * 3 + 2] = color.b;
+                    }
+
+                    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                    const particlesMaterial = new THREE.PointsMaterial({
+                        size: 0.5,
+                        vertexColors: true,
+                        transparent: true,
+                        opacity: 0.6,
+                        blending: THREE.AdditiveBlending,
+                        map: createCircleTexture(),
+                        depthWrite: false
+                    });
+
+                    const ejectaParticles = new THREE.Points(particlesGeometry, particlesMaterial);
+                    impactEffects.add(ejectaParticles);
+                }
+
+                scene.add(impactEffects);
+            }
+        }
+
+        function drawScene() {
+            // Update asteroid and effects
+            updateAsteroid();
+
+            // Rotate Earth slightly for visual interest
+            if (earthMesh) {
+                earthMesh.rotation.y += 0.001;
             }
 
-            ctx.restore();
+            // Update camera zoom
+            camera.position.z = 100 / cameraZoom;
+            camera.position.y = 50 / cameraZoom;
 
-            // Draw labels
-            ctx.fillStyle = '#FFD700';
-            ctx.font = '14px Orbitron';
-            if (!impacted) {
-                ctx.fillText(`Altitude: ${(altitude / 1000).toFixed(1)} km`, 20, 30);
-            } else {
-                ctx.fillText('IMPACT EVENT', 20, 30);
-                ctx.fillText(`Energy: ${asteroid.getMegatons().toFixed(0)} MT`, 20, 50);
-            }
+            // Render with post-processing
+            composer.render();
         }
 
         init();
