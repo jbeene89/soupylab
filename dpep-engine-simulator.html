@@ -208,6 +208,39 @@
             box-shadow: 0 4px 12px rgba(242, 178, 102, 0.35);
         }
 
+        .action-btn {
+            width: 100%;
+            padding: 0.7rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            background: linear-gradient(135deg, #8a4a22 0%, #d38a3a 100%);
+            border: 1px solid rgba(211, 138, 58, 0.6);
+            color: #1b0f05;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(211, 138, 58, 0.35);
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 0.75rem;
+        }
+
+        .action-btn.secondary {
+            background: rgba(211, 138, 58, 0.15);
+            color: var(--accent-glow);
+            border-color: rgba(211, 138, 58, 0.4);
+        }
+
         .stat-box {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -461,6 +494,15 @@
                 </div>
             </div>
 
+            <div class="section-title">Action Controls</div>
+            <div class="action-grid">
+                <button class="action-btn" id="pressurizeBtn">Pressurize</button>
+                <button class="action-btn secondary" id="depressurizeBtn">Depressurize</button>
+                <button class="action-btn" id="fireEngineBtn">Fire Engine</button>
+                <button class="action-btn secondary" id="purgeFlowBtn">Purge Flow</button>
+            </div>
+
+            <button id="applyBtn">Apply Settings</button>
             <button id="resetBtn">Reset to Defaults</button>
         </div>
 
@@ -471,7 +513,7 @@
                 <canvas id="flowCanvas" width="800" height="350"></canvas>
                 <div class="legend">
                     <div class="legend-item">
-                        <div class="legend-color" style="background: rgba(100, 200, 255, 0.6);"></div>
+                        <div class="legend-color" style="background: rgba(130, 160, 185, 0.6);"></div>
                         <span>Gas Bubbles</span>
                     </div>
                     <div class="legend-item">
@@ -479,7 +521,7 @@
                         <span>Liquid Propellant</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-color" style="background: rgba(255, 100, 50, 0.8);"></div>
+                        <div class="legend-color" style="background: rgba(220, 130, 60, 0.8);"></div>
                         <span>Combustion Zone</span>
                     </div>
                 </div>
@@ -649,6 +691,19 @@
         let v_injection = 25;  // Injection velocity (m/s)
         let bubbleDensityParam = 400;
 
+        const defaultSettings = {
+            propellantKey: 'LOX-RP1',
+            glr: 0.15,
+            chamberPressure: 100,
+            chamberTemp: 3400,
+            throatDiameter: 20,
+            expansionRatio: 40,
+            injectionVelocity: 25,
+            bubbleDensity: 400
+        };
+
+        let pendingSettings = { ...defaultSettings };
+
         // Particle system for visualization
         let bubbles = [];
         let liquidParticles = [];
@@ -675,6 +730,10 @@
 
             // Setup event listeners
             setupEventListeners();
+
+            // Sync defaults
+            updateDisplaysFromPending();
+            applySettings();
 
             // Start animation
             updateSimulation();
@@ -1467,82 +1526,131 @@
         function setupEventListeners() {
             // Propellant type
             document.getElementById('propellantType').addEventListener('change', (e) => {
-                currentPropellant = PROPELLANTS[e.target.value];
+                pendingSettings.propellantKey = e.target.value;
             });
 
             // GLR
             document.getElementById('glr').addEventListener('input', (e) => {
-                glr = parseFloat(e.target.value);
-                document.getElementById('glrValue').textContent = glr.toFixed(2);
+                pendingSettings.glr = parseFloat(e.target.value);
+                document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
             });
 
             // Chamber pressure
             document.getElementById('chamberPressure').addEventListener('input', (e) => {
-                P_chamber = parseFloat(e.target.value) * 1e5;  // Convert bar to Pa
-                document.getElementById('chamberPressureValue').textContent = e.target.value + ' bar';
+                pendingSettings.chamberPressure = parseFloat(e.target.value);
+                document.getElementById('chamberPressureValue').textContent = `${pendingSettings.chamberPressure} bar`;
             });
 
             // Chamber temperature
             document.getElementById('chamberTemp').addEventListener('input', (e) => {
-                T_chamber = parseFloat(e.target.value);
-                document.getElementById('chamberTempValue').textContent = e.target.value + ' K';
+                pendingSettings.chamberTemp = parseFloat(e.target.value);
+                document.getElementById('chamberTempValue').textContent = `${pendingSettings.chamberTemp} K`;
             });
 
             // Throat diameter
             document.getElementById('throatDiameter').addEventListener('input', (e) => {
-                D_throat = parseFloat(e.target.value) / 100;  // Convert cm to m
-                document.getElementById('throatDiameterValue').textContent = e.target.value + ' cm';
+                pendingSettings.throatDiameter = parseFloat(e.target.value);
+                document.getElementById('throatDiameterValue').textContent = `${pendingSettings.throatDiameter} cm`;
             });
 
             // Expansion ratio
             document.getElementById('expansionRatio').addEventListener('input', (e) => {
-                expansionRatio = parseFloat(e.target.value);
-                document.getElementById('expansionRatioValue').textContent = e.target.value;
+                pendingSettings.expansionRatio = parseFloat(e.target.value);
+                document.getElementById('expansionRatioValue').textContent = pendingSettings.expansionRatio;
             });
 
             // Injection velocity
             document.getElementById('injectionVelocity').addEventListener('input', (e) => {
-                v_injection = parseFloat(e.target.value);
-                document.getElementById('injectionVelocityValue').textContent = e.target.value + ' m/s';
+                pendingSettings.injectionVelocity = parseFloat(e.target.value);
+                document.getElementById('injectionVelocityValue').textContent = `${pendingSettings.injectionVelocity} m/s`;
             });
 
             // Bubble density
             document.getElementById('bubbleDensity').addEventListener('input', (e) => {
-                bubbleDensityParam = parseFloat(e.target.value);
-                document.getElementById('bubbleDensityValue').textContent = e.target.value;
+                pendingSettings.bubbleDensity = parseFloat(e.target.value);
+                document.getElementById('bubbleDensityValue').textContent = pendingSettings.bubbleDensity;
             });
+
+            document.getElementById('pressurizeBtn').addEventListener('click', () => {
+                adjustChamberPressure(10);
+            });
+
+            document.getElementById('depressurizeBtn').addEventListener('click', () => {
+                adjustChamberPressure(-10);
+            });
+
+            document.getElementById('fireEngineBtn').addEventListener('click', fireEnginePulse);
+
+            document.getElementById('purgeFlowBtn').addEventListener('click', purgeFlow);
+
+            // Apply settings button
+            document.getElementById('applyBtn').addEventListener('click', applySettings);
 
             // Reset button
             document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
         }
 
+        function adjustChamberPressure(deltaBar) {
+            pendingSettings.chamberPressure = Math.min(
+                200,
+                Math.max(5, pendingSettings.chamberPressure + deltaBar)
+            );
+            syncControlsToPending();
+            updateDisplaysFromPending();
+            applySettings();
+        }
+
+        function fireEnginePulse() {
+            pendingSettings.chamberTemp = Math.min(4000, pendingSettings.chamberTemp + 150);
+            updateDisplaysFromPending();
+            applySettings();
+            initializeParticles();
+        }
+
+        function purgeFlow() {
+            bubbles = [];
+            liquidParticles = [];
+        }
+
+        function applySettings() {
+            currentPropellant = PROPELLANTS[pendingSettings.propellantKey];
+            glr = pendingSettings.glr;
+            P_chamber = pendingSettings.chamberPressure * 1e5;
+            T_chamber = pendingSettings.chamberTemp;
+            D_throat = pendingSettings.throatDiameter / 100;
+            expansionRatio = pendingSettings.expansionRatio;
+            v_injection = pendingSettings.injectionVelocity;
+            bubbleDensityParam = pendingSettings.bubbleDensity;
+        }
+
+        function updateDisplaysFromPending() {
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
+            document.getElementById('chamberPressureValue').textContent = `${pendingSettings.chamberPressure} bar`;
+            document.getElementById('chamberTempValue').textContent = `${pendingSettings.chamberTemp} K`;
+            document.getElementById('throatDiameterValue').textContent = `${pendingSettings.throatDiameter} cm`;
+            document.getElementById('expansionRatioValue').textContent = pendingSettings.expansionRatio;
+            document.getElementById('injectionVelocityValue').textContent = `${pendingSettings.injectionVelocity} m/s`;
+            document.getElementById('bubbleDensityValue').textContent = pendingSettings.bubbleDensity;
+            document.getElementById('chamberTemp').value = pendingSettings.chamberTemp;
+        }
+
+        function syncControlsToPending() {
+            document.getElementById('propellantType').value = pendingSettings.propellantKey;
+            document.getElementById('glr').value = pendingSettings.glr;
+            document.getElementById('chamberPressure').value = pendingSettings.chamberPressure;
+            document.getElementById('chamberTemp').value = pendingSettings.chamberTemp;
+            document.getElementById('throatDiameter').value = pendingSettings.throatDiameter;
+            document.getElementById('expansionRatio').value = pendingSettings.expansionRatio;
+            document.getElementById('injectionVelocity').value = pendingSettings.injectionVelocity;
+            document.getElementById('bubbleDensity').value = pendingSettings.bubbleDensity;
+        }
+
         function resetToDefaults() {
-            document.getElementById('propellantType').value = 'LOX-RP1';
-            document.getElementById('glr').value = '0.15';
-            document.getElementById('chamberPressure').value = '100';
-            document.getElementById('chamberTemp').value = '3400';
-            document.getElementById('throatDiameter').value = '20';
-            document.getElementById('expansionRatio').value = '40';
-            document.getElementById('injectionVelocity').value = '25';
-            document.getElementById('bubbleDensity').value = '400';
-
-            currentPropellant = PROPELLANTS['LOX-RP1'];
-            glr = 0.15;
-            P_chamber = 100e5;
-            T_chamber = 3400;
-            D_throat = 0.2;
-            expansionRatio = 40;
-            v_injection = 25;
-            bubbleDensityParam = 400;
-
-            // Update displays
-            document.getElementById('glrValue').textContent = '0.15';
-            document.getElementById('chamberPressureValue').textContent = '100 bar';
-            document.getElementById('chamberTempValue').textContent = '3400 K';
-            document.getElementById('throatDiameterValue').textContent = '20 cm';
-            document.getElementById('expansionRatioValue').textContent = '40';
-            document.getElementById('injectionVelocityValue').textContent = '25 m/s';
-            document.getElementById('bubbleDensityValue').textContent = '400';
+            pendingSettings = { ...defaultSettings };
+            syncControlsToPending();
+            updateDisplaysFromPending();
+            applySettings();
+            T_chamber = pendingSettings.chamberTemp;
 
             // Reset particles
             initializeParticles();

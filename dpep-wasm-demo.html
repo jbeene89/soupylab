@@ -356,6 +356,14 @@
                 </label>
                 <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1">
             </div>
+
+            <button class="action-btn" id="applySettingsBtn">Apply Settings</button>
+            <div class="action-grid">
+                <button class="action-btn" id="pressurizeBtn">Pressurize</button>
+                <button class="action-btn secondary" id="depressurizeBtn">Depressurize</button>
+                <button class="action-btn" id="firePulseBtn">Fire Pulse</button>
+                <button class="action-btn secondary" id="ventFlowBtn">Vent Flow</button>
+            </div>
         </div>
 
         <!-- Center: Visualization -->
@@ -557,6 +565,11 @@
         let simSpeed = 1.0;
 
         function updateJS(dt) {
+            // Simplified JS physics (much slower!)
+            const spawnRate = activeSettings.glr * 10;
+            const speedFactor = activeSettings.speed;
+
+            if (Math.random() < spawnRate * 0.1 && jsBubbles.length < 500) {
             // DPEP physics calculation
             const glr = parseFloat(document.getElementById('glrSlider').value);
             const chamberPressure = parseFloat(document.getElementById('pressureSlider').value);
@@ -705,26 +718,69 @@
         });
 
         document.getElementById('glrSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('glrValue').textContent = val.toFixed(2);
-            if (dpepEngine) dpepEngine.setGasToLiquidRatio(val);
+            pendingSettings.glr = parseFloat(e.target.value);
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
         });
 
         document.getElementById('pressureSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('pressureValue').textContent = val;
-            if (dpepEngine) dpepEngine.setChamberPressure(val);
+            pendingSettings.pressure = parseFloat(e.target.value);
+            document.getElementById('pressureValue').textContent = pendingSettings.pressure;
         });
 
         document.getElementById('speedSlider').addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            document.getElementById('speedValue').textContent = val.toFixed(1);
-            if (dpepEngine) dpepEngine.setSimulationSpeed(val);
+            pendingSettings.speed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = pendingSettings.speed.toFixed(1);
         });
 
         document.getElementById('propellantSelect').addEventListener('change', (e) => {
-            if (dpepEngine) dpepEngine.setPropellant(parseInt(e.target.value));
+            pendingSettings.propellant = parseInt(e.target.value);
         });
+
+        document.getElementById('applySettingsBtn').addEventListener('click', applySettings);
+
+        document.getElementById('pressurizeBtn').addEventListener('click', () => {
+            adjustPressure(10);
+        });
+
+        document.getElementById('depressurizeBtn').addEventListener('click', () => {
+            adjustPressure(-10);
+        });
+
+        document.getElementById('firePulseBtn').addEventListener('click', firePulse);
+
+        document.getElementById('ventFlowBtn').addEventListener('click', ventFlow);
+
+        function adjustPressure(delta) {
+            pendingSettings.pressure = Math.min(100, Math.max(5, pendingSettings.pressure + delta));
+            document.getElementById('pressureSlider').value = pendingSettings.pressure;
+            document.getElementById('pressureValue').textContent = pendingSettings.pressure;
+            applySettings();
+        }
+
+        function firePulse() {
+            pendingSettings.glr = Math.min(0.5, Math.max(0.01, pendingSettings.glr + 0.05));
+            document.getElementById('glrSlider').value = pendingSettings.glr;
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
+            applySettings();
+        }
+
+        function ventFlow() {
+            pendingSettings.glr = Math.max(0.01, pendingSettings.glr - 0.05);
+            document.getElementById('glrSlider').value = pendingSettings.glr;
+            document.getElementById('glrValue').textContent = pendingSettings.glr.toFixed(2);
+            applySettings();
+        }
+
+        function applySettings() {
+            activeSettings = { ...pendingSettings };
+
+            if (dpepEngine) {
+                dpepEngine.setGasToLiquidRatio(activeSettings.glr);
+                dpepEngine.setChamberPressure(activeSettings.pressure);
+                dpepEngine.setSimulationSpeed(activeSettings.speed);
+                dpepEngine.setPropellant(activeSettings.propellant);
+            }
+        }
 
         // ====================================================================
         // INITIALIZATION
