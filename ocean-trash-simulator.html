@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ocean Trash Simulator - Environmental Crisis</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --glass-bg: rgba(5, 20, 30, 0.4);
+            --glass-border: rgba(0, 200, 200, 0.2);
+            --accent: #00ffcc;
+            --accent-glow: rgba(0, 255, 204, 0.3);
+            --text: #e0f7fa;
+            --text-dim: #80cbc4;
+            --danger: #ff6b6b;
+            --ocean: #006994;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #001a25 0%, #003d5c 100%);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            position: fixed;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 10;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            background: rgba(5, 20, 30, 0.5);
+            border-color: rgba(0, 200, 200, 0.3);
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ffcc 0%, #00c9a7 50%, #006994 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 40px var(--accent-glow);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.9; filter: brightness(1.2); }
+        }
+
+        .header .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* Controls Panel */
+        .controls-panel {
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            bottom: 20px;
+            left: 20px;
+            min-width: 280px;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--ocean), #00c9a7);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 201, 167, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .control-group {
+            margin: 16px 0;
+        }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .value-display {
+            color: var(--accent);
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 8px 0;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--ocean), var(--accent));
+            border-radius: 3px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+        }
+
+        .stat-value {
+            color: var(--accent);
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #loadingMsg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            font-size: 1.2rem;
+            z-index: 100;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="header">
+        <h1>🌊 OCEAN TRASH</h1>
+        <div class="subtitle">Environmental Crisis Simulation</div>
+    </div>
+
+    <div id="loadingMsg">Loading Ocean Engine...</div>
+
+    <div class="glass-panel controls-panel">
+        <div class="section-title">🌊 Scenarios</div>
+
+        <button id="oceanTrashBtn">🌊 Create Ocean Trash</button>
+
+        <div class="section-title">⏰ Time Travel</div>
+
+        <button id="addPollutionBtn" style="background: linear-gradient(135deg, #ff4444, #cc0000);">
+            ➕ Add Pollution
+        </button>
+        <button id="cleanupBtn" style="background: linear-gradient(135deg, #00cc66, #00ff88);">
+            ♻️ Cleanup Trash
+        </button>
+        <button id="glacialMeltBtn" style="background: linear-gradient(135deg, #88ccff, #ffffff);">
+            🧊 Glacial Melt
+        </button>
+
+        <div class="control-group">
+            <label>
+                <span>Current Dampening</span>
+                <span class="value-display" id="dampeningValue">0%</span>
+            </label>
+            <input type="range" id="dampeningSlider" min="0" max="100" step="5" value="0">
+        </div>
+
+        <div class="control-group">
+            <label>
+                <span>Ocean Temperature</span>
+                <span class="value-display" id="tempValue">20°C</span>
+            </label>
+            <input type="range" id="tempSlider" min="0" max="35" step="1" value="20">
+        </div>
+
+        <button id="addBarrierBtn" style="background: linear-gradient(135deg, #666666, #999999);">
+            🚧 Add Barrier (Click Map)
+        </button>
+        <button id="clearBarriersBtn" style="background: linear-gradient(135deg, #333333, #666666);">
+            ❌ Clear Barriers
+        </button>
+
+        <div class="section-title">⚙️ Simulation</div>
+
+        <div class="control-group">
+            <label>
+                <span>Trash Count</span>
+                <span class="value-display" id="particleValue">6000</span>
+            </label>
+            <input type="range" id="particleSlider" min="1000" max="10000" step="500" value="6000">
+        </div>
+
+        <div class="control-group">
+            <label>
+                <span>Simulation Speed</span>
+                <span class="value-display" id="speedValue">1x</span>
+            </label>
+            <input type="range" id="speedSlider" min="1" max="5" step="1" value="1">
+        </div>
+    </div>
+
+    <div class="glass-panel stats-panel">
+        <div class="section-title">📊 Statistics</div>
+
+        <div class="stat-row">
+            <span class="stat-label">Trash Particles:</span>
+            <span class="stat-value" id="countValue">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Ice Masses:</span>
+            <span class="stat-value" id="iceCount">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Ocean Vortices:</span>
+            <span class="stat-value" id="vortexCount">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Simulation Time:</span>
+            <span class="stat-value" id="timeValue">0 s</span>
+        </div>
+    </div>
+
+    <script type="module">
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingMsg = document.getElementById('loadingMsg');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let oceanEngine = null;
+        let isWASMReady = false;
+        let stepsPerFrame = 1;
+        let camX = 0, camY = 0, camZoom = 0.8;
+        let barrierPlacementMode = false;
+
+        // Trash type colors
+        const TRASH_COLORS = {
+            0: '#ffaa00', // Bottles - orange
+            1: '#ff6b6b', // Bags - red
+            2: '#888888', // Microplastics - gray
+            3: '#663300'  // Debris - brown
+        };
+
+        // Load WASM
+        async function loadWASM() {
+            try {
+                const oceanModule = await import('./ocean_trash_engine.js');
+                const createModule = oceanModule.default;
+                const Module = await createModule();
+
+                oceanEngine = new Module.OceanTrashEngine(1000);
+                isWASMReady = true;
+
+                loadingMsg.style.display = 'none';
+
+                createOceanTrash();
+
+                console.log('🌊 Ocean Engine ready!');
+            } catch (error) {
+                console.error('❌ WASM loading failed:', error);
+                loadingMsg.innerHTML = '❌ Failed to load<br><small>' + error.message + '</small>';
+            }
+        }
+
+        // Scenarios
+        function createOceanTrash() {
+            if (!oceanEngine) return;
+            const count = parseInt(document.getElementById('particleSlider').value);
+            oceanEngine.createOceanTrash(count);
+            updateStats();
+        }
+
+        // Time-travel controls
+        function addPollution() {
+            if (!oceanEngine) return;
+            oceanEngine.addTrashPollution(500);
+            updateStats();
+        }
+
+        function cleanupTrash() {
+            if (!oceanEngine) return;
+            oceanEngine.removeTrashPollution(500);
+            updateStats();
+        }
+
+        function addGlacialMelt() {
+            if (!oceanEngine) return;
+            oceanEngine.addGlacialMelt(200);
+            updateStats();
+        }
+
+        function toggleBarrierPlacement() {
+            barrierPlacementMode = !barrierPlacementMode;
+            const btn = document.getElementById('addBarrierBtn');
+            if (barrierPlacementMode) {
+                btn.textContent = '🎯 Click Map to Place';
+                btn.style.background = 'linear-gradient(135deg, #ffaa00, #ff6600)';
+            } else {
+                btn.textContent = '🚧 Add Barrier (Click Map)';
+                btn.style.background = 'linear-gradient(135deg, #666666, #999999)';
+            }
+        }
+
+        function clearAllBarriers() {
+            if (!oceanEngine) return;
+            oceanEngine.clearBarriers();
+        }
+
+        // Update stats
+        function updateStats() {
+            if (!isWASMReady || !oceanEngine) return;
+
+            document.getElementById('countValue').textContent = oceanEngine.getParticleCount();
+            document.getElementById('iceCount').textContent = oceanEngine.getIceCount();
+
+            const vortexData = oceanEngine.getVortexData();
+            document.getElementById('vortexCount').textContent = vortexData.length / 4;
+
+            document.getElementById('timeValue').textContent = oceanEngine.getTime().toFixed(0) + ' s';
+        }
+
+        // World to screen
+        function worldToScreen(x, y) {
+            return {
+                x: (x - camX) * camZoom + canvas.width / 2,
+                y: (y - camY) * camZoom + canvas.height / 2
+            };
+        }
+
+        // Render
+        function render() {
+            if (!isWASMReady || !oceanEngine) return;
+
+            // Clear
+            ctx.fillStyle = '#001a25';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw vortices (subtle circular patterns)
+            const vortexData = oceanEngine.getVortexData();
+            ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
+            ctx.lineWidth = 2;
+
+            for (let i = 0; i < vortexData.length; i += 4) {
+                const x = vortexData[i];
+                const y = vortexData[i + 1];
+                const radius = vortexData[i + 2];
+
+                const screen = worldToScreen(x, y);
+
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, radius * camZoom, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Draw ice masses
+            const iceData = oceanEngine.getIceData();
+            for (let i = 0; i < iceData.length; i += 3) {
+                const x = iceData[i];
+                const y = iceData[i + 1];
+                const radius = iceData[i + 2];
+
+                const screen = worldToScreen(x, y);
+
+                // Ice gradient
+                const gradient = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, radius * camZoom);
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(0.5, '#88ccff');
+                gradient.addColorStop(1, '#4488aa');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, radius * camZoom, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw trash particles
+            const particleData = oceanEngine.getParticleData();
+
+            for (let i = 0; i < particleData.length; i += 5) {
+                const x = particleData[i];
+                const y = particleData[i + 1];
+                const mass = particleData[i + 2];
+                const radius = particleData[i + 3];
+                const type = particleData[i + 4];
+
+                const screen = worldToScreen(x, y);
+                const r = radius * camZoom;
+
+                // Glow
+                const gradient = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, r * 2);
+                gradient.addColorStop(0, TRASH_COLORS[type] + 'AA');
+                gradient.addColorStop(0.5, TRASH_COLORS[type] + '44');
+                gradient.addColorStop(1, TRASH_COLORS[type] + '00');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, r * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = TRASH_COLORS[type];
+                ctx.beginPath();
+                ctx.arc(screen.x, screen.y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            if (isWASMReady && oceanEngine) {
+                oceanEngine.update(stepsPerFrame);
+                render();
+                updateStats();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        document.getElementById('oceanTrashBtn').addEventListener('click', createOceanTrash);
+        document.getElementById('addPollutionBtn').addEventListener('click', addPollution);
+        document.getElementById('cleanupBtn').addEventListener('click', cleanupTrash);
+        document.getElementById('glacialMeltBtn').addEventListener('click', addGlacialMelt);
+        document.getElementById('addBarrierBtn').addEventListener('click', toggleBarrierPlacement);
+        document.getElementById('clearBarriersBtn').addEventListener('click', clearAllBarriers);
+
+        document.getElementById('dampeningSlider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('dampeningValue').textContent = val + '%';
+            if (oceanEngine) oceanEngine.setCurrentDampening(val);
+        });
+
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('tempValue').textContent = val + '°C';
+            if (oceanEngine) oceanEngine.setGlobalTemp(val);
+        });
+
+        document.getElementById('particleSlider').addEventListener('input', (e) => {
+            document.getElementById('particleValue').textContent = e.target.value;
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            stepsPerFrame = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = stepsPerFrame + 'x';
+        });
+
+        // Canvas click for barrier placement
+        canvas.addEventListener('click', (e) => {
+            if (!barrierPlacementMode || !oceanEngine) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / canvas.width - 0.5) * 2 * 1000 / camZoom - camX;
+            const y = ((e.clientY - rect.top) / canvas.height - 0.5) * 2 * 1000 / camZoom - camY;
+
+            oceanEngine.addBarrierZone(x, y, 100);
+            barrierPlacementMode = false;
+            toggleBarrierPlacement();
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Start
+        loadWASM();
+        animate();
+    </script>
+</body>
+</html>

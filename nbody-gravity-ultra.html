@@ -424,7 +424,6 @@
         <button id="galaxyBtn">🌌 Galaxy Collision</button>
         <button id="solarBtn">☀️ Solar System</button>
         <button id="clusterBtn">💫 Random Cluster</button>
-        <button id="oceanTrashBtn">🌊 Ocean Trash</button>
 
         <div class="section-title">🎨 Visual Preset</div>
         <select id="visualPreset">
@@ -435,33 +434,6 @@
             <option value="monochrome">Monochrome</option>
             <option value="rainbow">Rainbow Burst</option>
         </select>
-
-        <div class="section-title">⏰ Time Travel Controls</div>
-
-        <button id="addPollutionBtn" style="background: linear-gradient(135deg, #ff4444, #cc0000);">
-            ➕ Add Pollution
-        </button>
-        <button id="cleanupBtn" style="background: linear-gradient(135deg, #00cc66, #00ff88);">
-            ♻️ Cleanup Trash
-        </button>
-        <button id="glacialMeltBtn" style="background: linear-gradient(135deg, #88ccff, #ffffff);">
-            🧊 Glacial Melt
-        </button>
-
-        <div class="control-group">
-            <label>
-                Current Dampening
-                <span class="value-display" id="dampeningValue">0%</span>
-            </label>
-            <input type="range" id="dampeningSlider" min="0" max="100" step="5" value="0">
-        </div>
-
-        <button id="addBarrierBtn" style="background: linear-gradient(135deg, #666666, #999999);">
-            🚧 Add Barrier (Click Map)
-        </button>
-        <button id="clearBarriersBtn" style="background: linear-gradient(135deg, #333333, #666666);">
-            ❌ Clear Barriers
-        </button>
 
         <div class="section-title">📊 Particles</div>
 
@@ -1169,62 +1141,6 @@
             updateStats();
         }
 
-        function createOceanTrash() {
-            if (!nbodyEngine) return;
-            const count = parseInt(document.getElementById('particleSlider').value) * 3;
-            nbodyEngine.createOceanTrash(count);
-            trails.clear();
-            explosions = [];
-            totalCollisions = 0;
-            camZoom = 0.8;
-            document.getElementById('zoomValue').textContent = camZoom.toFixed(1);
-            updateStats();
-        }
-
-        // ====================================================================
-        // TIME TRAVEL / ENVIRONMENTAL CONTROLS
-        // ====================================================================
-
-        let barrierPlacementMode = false;
-
-        function addPollution() {
-            if (!nbodyEngine) return;
-            const amount = 500;
-            nbodyEngine.addTrashPollution(amount);
-            updateStats();
-        }
-
-        function cleanupTrash() {
-            if (!nbodyEngine) return;
-            const amount = 500;
-            nbodyEngine.removeTrashPollution(amount);
-            updateStats();
-        }
-
-        function addGlacialMelt() {
-            if (!nbodyEngine) return;
-            const intensity = 200;
-            nbodyEngine.addGlacialMelt(intensity);
-            updateStats();
-        }
-
-        function toggleBarrierPlacement() {
-            barrierPlacementMode = !barrierPlacementMode;
-            const btn = document.getElementById('addBarrierBtn');
-            if (barrierPlacementMode) {
-                btn.textContent = '🎯 Click Map to Place';
-                btn.style.background = 'linear-gradient(135deg, #ffaa00, #ff6600)';
-            } else {
-                btn.textContent = '🚧 Add Barrier (Click Map)';
-                btn.style.background = 'linear-gradient(135deg, #666666, #999999)';
-            }
-        }
-
-        function clearAllBarriers() {
-            if (!nbodyEngine) return;
-            nbodyEngine.clearBarriers();
-        }
-
         // ====================================================================
         // STATS
         // ====================================================================
@@ -1304,33 +1220,6 @@
         document.getElementById('galaxyBtn').addEventListener('click', createGalaxyCollision);
         document.getElementById('solarBtn').addEventListener('click', createSolarSystem);
         document.getElementById('clusterBtn').addEventListener('click', createRandomCluster);
-        document.getElementById('oceanTrashBtn').addEventListener('click', createOceanTrash);
-
-        // Time-travel controls
-        document.getElementById('addPollutionBtn').addEventListener('click', addPollution);
-        document.getElementById('cleanupBtn').addEventListener('click', cleanupTrash);
-        document.getElementById('glacialMeltBtn').addEventListener('click', addGlacialMelt);
-        document.getElementById('addBarrierBtn').addEventListener('click', toggleBarrierPlacement);
-        document.getElementById('clearBarriersBtn').addEventListener('click', clearAllBarriers);
-
-        document.getElementById('dampeningSlider').addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            document.getElementById('dampeningValue').textContent = val + '%';
-            if (nbodyEngine) nbodyEngine.setCurrentDampening(val);
-        });
-
-        // Canvas click for barrier placement
-        canvas.addEventListener('click', (e) => {
-            if (!barrierPlacementMode || !nbodyEngine) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / canvas.width - 0.5) * 2 * 1000 / camZoom - camX;
-            const y = ((e.clientY - rect.top) / canvas.height - 0.5) * 2 * 1000 / camZoom - camY;
-
-            nbodyEngine.addBarrierZone(x, y, 100);
-            barrierPlacementMode = false;
-            toggleBarrierPlacement(); // Reset button
-        });
 
         document.getElementById('particleSlider').addEventListener('input', (e) => {
             document.getElementById('particleValue').textContent = e.target.value;
