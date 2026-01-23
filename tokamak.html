@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tokamak Reactor 3D - Soupy Labs</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -324,6 +323,35 @@
                     </div>
                 </div>
             </div>
+
+            <div class="section">
+                <h3>QUALITY MODE</h3>
+                <div class="param-group">
+                    <select id="qualityMode" onchange="applyQualityMode(this.value)">
+                        <option value="visual">Visual Heavy (Better Graphics)</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="physics">Physics Accurate (Precise)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>GRAPHICS</h3>
+                <div class="slider-row">
+                    <label><span>Bloom Intensity</span><span id="bloom_lbl">1.5</span></label>
+                    <div class="slider-input-row">
+                        <input type="range" id="bloom" min="0" max="5" step="0.1" value="1.5" oninput="syncFromSlider('bloom')">
+                        <input type="number" id="bloom_num" value="1.5" step="0.1" onchange="syncFromNumber('bloom')">
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <label><span>Particle Glow</span><span id="glow_lbl">0.8</span></label>
+                    <div class="slider-input-row">
+                        <input type="range" id="glow" min="0" max="2" step="0.1" value="0.8" oninput="syncFromSlider('glow')">
+                        <input type="number" id="glow_num" value="0.8" step="0.1" onchange="syncFromNumber('glow')">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 3D Viewport -->
@@ -390,9 +418,23 @@
         </div>
     </div>
 
-    <script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
         // ===== THREE.JS 3D TOKAMAK =====
-        let scene, camera, renderer;
+        let scene, camera, renderer, composer, bloomPass;
         let plasmaTorus, tfCoils = [], pfCoils = [];
         let particleSystem, fieldLines = [];
         let viewMode = 'perspective';
@@ -403,7 +445,9 @@
             n: 1.0, T: 15, Ip: 15, Zeff: 1.5,
             BT: 5.3, q95: 3.0, betaN: 2.0,
             NBI: 33, ICRH: 20, ECRH: 20,
-            H: 1.0
+            H: 1.0,
+            bloom: 1.5,
+            glow: 0.8
         };
 
         function initThreeJS() {
@@ -422,8 +466,20 @@
             // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
+
+            // Post-processing
+            composer = new EffectComposer(renderer);
+            composer.addPass(new RenderPass(scene, camera));
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(container.clientWidth, container.clientHeight),
+                1.5, 0.4, 0.85
+            );
+            composer.addPass(bloomPass);
 
             // Lights
             const ambientLight = new THREE.AmbientLight(0x222244, 0.5);
@@ -715,7 +771,7 @@
                 line.rotation.y += 0.001;
             });
 
-            renderer.render(scene, camera);
+            composer.render();
         }
 
         function onWindowResize() {
@@ -723,6 +779,7 @@
             camera.aspect = container.clientWidth / container.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(container.clientWidth, container.clientHeight);
+            composer.setSize(container.clientWidth, container.clientHeight);
         }
 
         // ===== PHYSICS CALCULATIONS =====
@@ -778,6 +835,55 @@
             }
         }
 
+        // Quality Mode System
+        function applyQualityMode(mode) {
+            if (mode === 'visual') {
+                // Visual Heavy Mode: Better graphics, simplified physics
+                bloomPass.strength = 3.0;
+                particleSystem.material.size = 0.25;
+
+                // Update UI displays
+                document.getElementById('bloom_lbl').textContent = '3.0';
+                document.getElementById('bloom').value = 3.0;
+                document.getElementById('bloom_num').value = 3.0;
+                document.getElementById('glow_lbl').textContent = '1.5';
+                document.getElementById('glow').value = 1.5;
+                document.getElementById('glow_num').value = 1.5;
+
+            } else if (mode === 'physics') {
+                // Physics Accurate Mode: Precise visuals
+                bloomPass.strength = 0.8;
+                particleSystem.material.size = 0.10;
+
+                // Update UI displays
+                document.getElementById('bloom_lbl').textContent = '0.8';
+                document.getElementById('bloom').value = 0.8;
+                document.getElementById('bloom_num').value = 0.8;
+                document.getElementById('glow_lbl').textContent = '0.5';
+                document.getElementById('glow').value = 0.5;
+                document.getElementById('glow_num').value = 0.5;
+
+            } else {
+                // Balanced Mode: Default values
+                bloomPass.strength = 1.5;
+                particleSystem.material.size = 0.15;
+
+                // Update UI displays
+                document.getElementById('bloom_lbl').textContent = '1.5';
+                document.getElementById('bloom').value = 1.5;
+                document.getElementById('bloom_num').value = 1.5;
+                document.getElementById('glow_lbl').textContent = '0.8';
+                document.getElementById('glow').value = 0.8;
+                document.getElementById('glow_num').value = 0.8;
+            }
+
+            // Update plasma glow based on glow setting
+            const glowIntensity = parseFloat(document.getElementById('glow').value);
+            if (plasmaTorus) {
+                plasmaTorus.material.emissiveIntensity = glowIntensity;
+            }
+        }
+
         function updateParamGroup() {
             const group = document.getElementById('paramGroup').value;
             document.querySelectorAll('.param-set').forEach(el => el.classList.add('hidden'));
@@ -788,6 +894,16 @@
             const slider = document.getElementById(id);
             const numInput = document.getElementById(id + '_num');
             if (numInput) numInput.value = slider.value;
+
+            // Handle graphics parameters directly
+            if (id === 'bloom') {
+                bloomPass.strength = parseFloat(slider.value);
+            } else if (id === 'glow') {
+                if (plasmaTorus) {
+                    plasmaTorus.material.emissiveIntensity = parseFloat(slider.value);
+                }
+            }
+
             update();
         }
 
@@ -799,6 +915,15 @@
                 val = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), val));
                 slider.value = val;
                 numInput.value = val;
+
+                // Handle graphics parameters directly
+                if (id === 'bloom') {
+                    bloomPass.strength = val;
+                } else if (id === 'glow') {
+                    if (plasmaTorus) {
+                        plasmaTorus.material.emissiveIntensity = val;
+                    }
+                }
             }
             update();
         }
@@ -807,6 +932,13 @@
         initThreeJS();
         update();
         animate();
+
+        // Make functions globally available for HTML onclick handlers
+        window.applyQualityMode = applyQualityMode;
+        window.updateParamGroup = updateParamGroup;
+        window.syncFromSlider = syncFromSlider;
+        window.syncFromNumber = syncFromNumber;
+        window.setView = setView;
     </script>
 </body>
 </html>
