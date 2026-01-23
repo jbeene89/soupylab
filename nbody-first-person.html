@@ -774,6 +774,8 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementById('container').appendChild(renderer.domElement);
 
         // Post-processing
@@ -1070,6 +1072,27 @@
 
         const spatialAudio = new SpatialAudioEngine();
 
+        // Create circular sprite texture for particles
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
         // Particle system
         let particleGeometry = new THREE.BufferGeometry();
         let particleMaterial = new THREE.PointsMaterial({
@@ -1078,7 +1101,10 @@
             transparent: true,
             opacity: 0.9,
             blending: THREE.AdditiveBlending,
-            sizeAttenuation: true
+            sizeAttenuation: true,
+            map: createCircleTexture(),
+            alphaTest: 0.01,
+            depthWrite: false
         });
         let particleSystem = new THREE.Points(particleGeometry, particleMaterial);
         scene.add(particleSystem);
@@ -1099,6 +1125,10 @@
         // Gravity wave visualization (ripple effects)
         let gravityWaveGroup = new THREE.Group();
         scene.add(gravityWaveGroup);
+
+        // Add ambient lighting for realistic rendering
+        const ambientLight = new THREE.AmbientLight(0x222244, 0.3);
+        scene.add(ambientLight);
 
         // Minimap canvas
         const minimapCanvas = document.getElementById('minimap');
@@ -1237,60 +1267,160 @@
             massiveBodies.forEach(body => {
                 let geometry, material;
                 let size = 2;
+                let lightColor, lightIntensity;
 
                 // Different visuals based on type
                 switch(body.type) {
                     case 'neutron':
                         size = 2;
-                        geometry = new THREE.SphereGeometry(size, 16, 16);
-                        material = new THREE.MeshBasicMaterial({
+                        geometry = new THREE.SphereGeometry(size, 64, 64);
+                        material = new THREE.MeshStandardMaterial({
                             color: 0x00ffff,
+                            emissive: 0x00ffff,
+                            emissiveIntensity: 1.2,
+                            metalness: 0.8,
+                            roughness: 0.2,
                             transparent: true,
-                            opacity: 0.9
+                            opacity: 0.95
                         });
+                        lightColor = 0x00ffff;
+                        lightIntensity = 100;
                         break;
                     case 'pulsar':
                         size = 2.5;
-                        geometry = new THREE.SphereGeometry(size, 16, 16);
-                        material = new THREE.MeshBasicMaterial({
+                        geometry = new THREE.SphereGeometry(size, 64, 64);
+                        material = new THREE.MeshStandardMaterial({
                             color: 0xff00ff,
+                            emissive: 0xff00ff,
+                            emissiveIntensity: 1.5,
+                            metalness: 0.9,
+                            roughness: 0.1,
                             transparent: true,
-                            opacity: 0.9
+                            opacity: 0.95
                         });
+                        lightColor = 0xff00ff;
+                        lightIntensity = 150;
                         break;
                     case 'blackhole':
                         size = 3;
-                        geometry = new THREE.SphereGeometry(size, 20, 20);
-                        material = new THREE.MeshBasicMaterial({
+                        geometry = new THREE.SphereGeometry(size, 64, 64);
+                        material = new THREE.MeshStandardMaterial({
                             color: 0x000000,
-                            transparent: true,
+                            emissive: 0x000000,
+                            metalness: 1.0,
+                            roughness: 0.0,
                             opacity: 1.0
                         });
+                        lightColor = 0xff6600;
+                        lightIntensity = 200;
                         break;
                     case 'supermassive':
                         size = 5;
-                        geometry = new THREE.SphereGeometry(size, 24, 24);
-                        material = new THREE.MeshBasicMaterial({
+                        geometry = new THREE.SphereGeometry(size, 64, 64);
+                        material = new THREE.MeshStandardMaterial({
                             color: 0x000000,
-                            transparent: true,
+                            emissive: 0x000000,
+                            metalness: 1.0,
+                            roughness: 0.0,
                             opacity: 1.0
                         });
+                        lightColor = 0xff6600;
+                        lightIntensity = 400;
                         break;
                 }
 
                 const mesh = new THREE.Mesh(geometry, material);
                 mesh.position.set(body.x, body.y, body.z);
+                mesh.castShadow = true;
 
-                // Add glow effect
-                const glowGeometry = new THREE.SphereGeometry(size * 1.5, 16, 16);
-                const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: body.type === 'blackhole' || body.type === 'supermassive' ? 0xff6600 : 0x00ffff,
-                    transparent: true,
-                    opacity: 0.2,
-                    blending: THREE.AdditiveBlending
-                });
-                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-                mesh.add(glow);
+                // Add point light for illumination and shadows
+                const light = new THREE.PointLight(lightColor, lightIntensity, 100);
+                light.position.set(0, 0, 0);
+                light.castShadow = true;
+                light.shadow.mapSize.width = 512;
+                light.shadow.mapSize.height = 512;
+                light.shadow.camera.near = 0.5;
+                light.shadow.camera.far = 100;
+                mesh.add(light);
+
+                // Add layered glow effects for better appearance
+                for (let i = 1; i <= 3; i++) {
+                    const glowGeometry = new THREE.SphereGeometry(size * (1 + i * 0.3), 32, 32);
+                    const glowMaterial = new THREE.MeshBasicMaterial({
+                        color: body.type === 'blackhole' || body.type === 'supermassive' ? 0xff6600 :
+                               body.type === 'pulsar' ? 0xff00ff : 0x00ffff,
+                        transparent: true,
+                        opacity: 0.15 / i,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.BackSide
+                    });
+                    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                    mesh.add(glow);
+                }
+
+                // Add accretion disk for black holes
+                if (body.type === 'blackhole' || body.type === 'supermassive') {
+                    const diskSize = size * 2.5;
+                    const diskGeometry = new THREE.RingGeometry(size * 1.5, diskSize, 64);
+                    const diskMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xff6600,
+                        emissive: 0xff3300,
+                        emissiveIntensity: 0.8,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.7,
+                        metalness: 0.5,
+                        roughness: 0.5
+                    });
+                    const disk = new THREE.Mesh(diskGeometry, diskMaterial);
+                    disk.rotation.x = Math.PI / 2;
+                    disk.castShadow = true;
+                    disk.receiveShadow = true;
+                    mesh.add(disk);
+
+                    // Add disk glow
+                    const diskGlowGeometry = new THREE.RingGeometry(size * 1.5, diskSize * 1.2, 64);
+                    const diskGlowMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xff6600,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.2,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const diskGlow = new THREE.Mesh(diskGlowGeometry, diskGlowMaterial);
+                    diskGlow.rotation.x = Math.PI / 2;
+                    mesh.add(diskGlow);
+                }
+
+                // Add surface detail for neutron stars
+                if (body.type === 'neutron') {
+                    const detailGeometry = new THREE.SphereGeometry(size * 1.02, 64, 64);
+                    const detailMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x0088cc,
+                        emissive: 0x00ffff,
+                        emissiveIntensity: 0.5,
+                        metalness: 0.9,
+                        roughness: 0.4,
+                        transparent: true,
+                        opacity: 0.6
+                    });
+                    const detail = new THREE.Mesh(detailGeometry, detailMaterial);
+                    mesh.add(detail);
+                }
+
+                // Add pulsing effect for pulsars
+                if (body.type === 'pulsar') {
+                    const pulseGeometry = new THREE.SphereGeometry(size * 1.05, 64, 64);
+                    const pulseMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.3,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+                    mesh.userData.pulse = pulse;
+                    mesh.add(pulse);
+                }
 
                 massiveBodiesGroup.add(mesh);
             });
@@ -1450,6 +1580,24 @@
             updateCamera();
             updateGravityWaves();
             renderMinimap();
+
+            // Animate massive bodies
+            const time = Date.now() * 0.001;
+            massiveBodiesGroup.children.forEach(bodyMesh => {
+                // Rotate accretion disks
+                bodyMesh.children.forEach(child => {
+                    if (child.geometry && child.geometry.type === 'RingGeometry') {
+                        child.rotation.z = time * 0.5;
+                    }
+                });
+
+                // Pulse effect for pulsars
+                if (bodyMesh.userData.pulse) {
+                    const pulseScale = 1 + Math.sin(time * 5) * 0.15;
+                    bodyMesh.userData.pulse.scale.set(pulseScale, pulseScale, pulseScale);
+                    bodyMesh.userData.pulse.material.opacity = 0.2 + Math.sin(time * 5) * 0.2;
+                }
+            });
 
             // Update spatial audio
             if (config.spatialAudio && spatialAudio.enabled) {
