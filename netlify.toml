@@ -21,6 +21,13 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000"
 
+# WebAssembly files
+[[headers]]
+  for = "*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000"
+
 # Redirect rules (if needed)
 [[redirects]]
   from = "/home"
