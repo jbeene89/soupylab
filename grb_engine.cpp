@@ -38,7 +38,7 @@ private:
 
     // Propagation state
     float currentTime;           // seconds since GRB
-    float wavefrOntDistance;     // light-years traveled
+    float wavefrontDistance;     // light-years traveled
     bool hasReachedEarth;
     float impactTime;            // time when GRB hits Earth
 
