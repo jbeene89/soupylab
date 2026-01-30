@@ -5,75 +5,39 @@
 echo "🚀 Compiling Aerodynamics Simulators to WebAssembly..."
 echo ""
 
-# Check if emcc is available
-if ! command -v emcc &> /dev/null; then
-    echo "❌ Error: emcc not found!"
-    echo "Please install Emscripten SDK:"
-    echo "  git clone https://github.com/emscripten-core/emsdk.git"
-    echo "  cd emsdk"
-    echo "  ./emsdk install latest"
-    echo "  ./emsdk activate latest"
-    echo "  source ./emsdk_env.sh"
+# Get the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Check if the generic build script exists
+if [ ! -f "$SCRIPT_DIR/build_wasm.sh" ]; then
+    echo "❌ Error: build_wasm.sh not found!"
     exit 1
 fi
 
-# Common compilation flags
-COMMON_FLAGS="-s WASM=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s ALLOW_MEMORY_GROWTH=1 -lembind -O3 -s ENVIRONMENT=web"
+# Array of engines to compile: engine_name, display_name, export_name
+declare -a engines=(
+    "glider:📦 Compiling Stratospheric Glider:createGliderModule"
+    "hypersonic:📦 Compiling Hypersonic Flight:createHypersonicModule"
+    "vehicle_aero:📦 Compiling Vehicle Downforce:createVehicleModule"
+    "ground_effect:📦 Compiling Ground Effect Vehicle:createEkranoplanModule"
+)
 
-echo "📦 Compiling Stratospheric Glider..."
-emcc glider_engine.cpp -o glider_engine.js \
-    -s EXPORT_NAME="createGliderModule" \
-    $COMMON_FLAGS
-
-if [ $? -eq 0 ]; then
-    echo "✅ Glider compiled successfully!"
-    ls -lh glider_engine.{js,wasm}
-else
-    echo "❌ Glider compilation failed!"
-    exit 1
-fi
-
-echo ""
-echo "📦 Compiling Hypersonic Flight..."
-emcc hypersonic_engine.cpp -o hypersonic_engine.js \
-    -s EXPORT_NAME="createHypersonicModule" \
-    $COMMON_FLAGS
-
-if [ $? -eq 0 ]; then
-    echo "✅ Hypersonic compiled successfully!"
-    ls -lh hypersonic_engine.{js,wasm}
-else
-    echo "❌ Hypersonic compilation failed!"
-    exit 1
-fi
-
-echo ""
-echo "📦 Compiling Vehicle Downforce..."
-emcc vehicle_aero_engine.cpp -o vehicle_aero_engine.js \
-    -s EXPORT_NAME="createVehicleModule" \
-    $COMMON_FLAGS
-
-if [ $? -eq 0 ]; then
-    echo "✅ Vehicle compiled successfully!"
-    ls -lh vehicle_aero_engine.{js,wasm}
-else
-    echo "❌ Vehicle compilation failed!"
-    exit 1
-fi
-
-echo ""
-echo "📦 Compiling Ground Effect Vehicle..."
-emcc ground_effect_engine.cpp -o ground_effect_engine.js \
-    -s EXPORT_NAME="createEkranoplanModule" \
-    $COMMON_FLAGS
-
-if [ $? -eq 0 ]; then
-    echo "✅ Ground Effect compiled successfully!"
-    ls -lh ground_effect_engine.{js,wasm}
-else
-    echo "❌ Ground Effect compilation failed!"
-    exit 1
-fi
+# Compile each engine
+SUCCESS_COUNT=0
+FAIL_COUNT=0
+for engine_spec in "${engines[@]}"; do
+    IFS=':' read -r engine_name display_name export_name <<< "$engine_spec"
+    
+    echo ""
+    echo "$display_name..."
+    if "$SCRIPT_DIR/build_wasm.sh" "$engine_name" "$display_name" "$export_name"; then
+        echo "✅ ${engine_name} compiled successfully!"
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+    else
+        echo "❌ ${engine_name} compilation failed!"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+done
 
 echo ""
 echo "📊 Compilation Summary:"
@@ -81,35 +45,28 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "Module                    | JS Size | WASM Size"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if [ -f glider_engine.js ]; then
-    JS_SIZE=$(ls -lh glider_engine.js | awk '{print $5}')
-    WASM_SIZE=$(ls -lh glider_engine.wasm | awk '{print $5}')
-    echo "Glider                    | $JS_SIZE    | $WASM_SIZE"
-fi
-
-if [ -f hypersonic_engine.js ]; then
-    JS_SIZE=$(ls -lh hypersonic_engine.js | awk '{print $5}')
-    WASM_SIZE=$(ls -lh hypersonic_engine.wasm | awk '{print $5}')
-    echo "Hypersonic                | $JS_SIZE    | $WASM_SIZE"
-fi
-
-if [ -f vehicle_aero_engine.js ]; then
-    JS_SIZE=$(ls -lh vehicle_aero_engine.js | awk '{print $5}')
-    WASM_SIZE=$(ls -lh vehicle_aero_engine.wasm | awk '{print $5}')
-    echo "Vehicle Downforce         | $JS_SIZE    | $WASM_SIZE"
-fi
-
-if [ -f ground_effect_engine.js ]; then
-    JS_SIZE=$(ls -lh ground_effect_engine.js | awk '{print $5}')
-    WASM_SIZE=$(ls -lh ground_effect_engine.wasm | awk '{print $5}')
-    echo "Ground Effect             | $JS_SIZE    | $WASM_SIZE"
-fi
+for engine_spec in "${engines[@]}"; do
+    IFS=':' read -r engine_name display_name export_name <<< "$engine_spec"
+    
+    if [ -f "${engine_name}_engine.js" ]; then
+        JS_SIZE=$(ls -lh "${engine_name}_engine.js" | awk '{print $5}')
+        WASM_SIZE=$(ls -lh "${engine_name}_engine.wasm" | awk '{print $5}')
+        printf "%-25s | %-7s | %-9s\n" "${engine_name}" "$JS_SIZE" "$WASM_SIZE"
+    fi
+done
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🎉 All simulators compiled successfully!"
-echo ""
-echo "🌐 To run:"
-echo "  python3 -m http.server 8000"
-echo "  Then open http://localhost:8000 in your browser"
-echo ""
+
+if [ $FAIL_COUNT -eq 0 ]; then
+    echo "🎉 All $SUCCESS_COUNT simulators compiled successfully!"
+    echo ""
+    echo "🌐 To run:"
+    echo "  python3 -m http.server 8000"
+    echo "  Then open http://localhost:8000 in your browser"
+    echo ""
+    exit 0
+else
+    echo "⚠️  $SUCCESS_COUNT succeeded, $FAIL_COUNT failed"
+    exit 1
+fi
