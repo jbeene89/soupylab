@@ -27,7 +27,7 @@ DISPLAY_ICON="$2"
 EXPORT_NAME="$3"
 EXTRA_FLAGS="${4:-}"
 
-echo "$DISPLAY_ICON Engine WebAssembly Module..."
+echo "$DISPLAY_ICON..."
 
 # Activate Emscripten
 if [ -d "/tmp/emsdk" ]; then
@@ -66,4 +66,4 @@ echo "✅ Build complete!"
 echo "📁 Generated files:"
 echo "   - ${ENGINE_NAME}_engine.js"
 echo "   - ${ENGINE_NAME}_engine.wasm"
-ls -lh ${ENGINE_NAME}_engine.js ${ENGINE_NAME}_engine.wasm 2>/dev/null || echo "   (Build in progress...)"
+ls -lh "${ENGINE_NAME}_engine.js" "${ENGINE_NAME}_engine.wasm" 2>/dev/null || echo "   (Build in progress...)"

@@ -29,7 +29,6 @@ for engine_spec in "${engines[@]}"; do
     IFS=':' read -r engine_name display_name export_name <<< "$engine_spec"
     
     echo ""
-    echo "$display_name..."
     if "$SCRIPT_DIR/build_wasm.sh" "$engine_name" "$display_name" "$export_name"; then
         echo "✅ ${engine_name} compiled successfully!"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
